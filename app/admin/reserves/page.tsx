@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { format, addMonths, subMonths } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState, useMemo, useEffect } from "react";
+import { format, addMonths, subMonths } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -19,16 +19,22 @@ import {
   BusIcon,
   TicketPlus,
   TicketPlusIcon,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { FormDialog } from '@/components/dashboard/form-dialog';
-import { FormField } from '@/components/dashboard/form-field';
-import { PageHeader } from '@/components/dashboard/page-header';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FormDialog } from "@/components/dashboard/form-dialog";
+import { FormField } from "@/components/dashboard/form-field";
+import { PageHeader } from "@/components/dashboard/page-header";
 import {
   Dialog,
   DialogContent,
@@ -36,16 +42,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { get } from '@/services/api';
-import { ReserveReport } from '@/interfaces/reserve';
-import { PagedResponse } from '@/services/types';
-import { City } from '@/interfaces/city';
-import { SelectOption } from '@/components/dashboard/select';
-import { Passenger } from '@/interfaces/passengers';
-import { PassengerReserveReport } from '@/interfaces/passengerReserve';
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { get } from "@/services/api";
+import { ReserveReport } from "@/interfaces/reserve";
+import { PagedResponse } from "@/services/types";
+import { City } from "@/interfaces/city";
+import { SelectOption } from "@/components/dashboard/select";
+import { Passenger } from "@/interfaces/passengers";
+import { PassengerReserveReport } from "@/interfaces/passengerReserve";
 
 // Mock data for reservations
 
@@ -53,18 +59,18 @@ import { PassengerReserveReport } from '@/interfaces/passengerReserve';
 
 // Mock data for existing clients
 const mockClients = [
-  { id: 1, name: 'Carlos Rodríguez', dni: '28456789' },
-  { id: 2, name: 'Luis Rodríguez', dni: '30987654' },
-  { id: 3, name: 'Juan Rodríguez', dni: '25678901' },
-  { id: 4, name: 'Sofía González', dni: '32456789' },
-  { id: 5, name: 'Elena Torres', dni: '27890123' },
-  { id: 6, name: 'Juan López', dni: '29012345' },
-  { id: 7, name: 'Luis García', dni: '31234567' },
-  { id: 8, name: 'Sofía Pérez', dni: '26789012' },
-  { id: 9, name: 'María Fernández', dni: '33456789' },
-  { id: 10, name: 'Roberto Sánchez', dni: '24567890' },
-  { id: 11, name: 'Ana Martínez', dni: '34567890' },
-  { id: 12, name: 'Pedro Gómez', dni: '23456789' },
+  { id: 1, name: "Carlos Rodríguez", dni: "28456789" },
+  { id: 2, name: "Luis Rodríguez", dni: "30987654" },
+  { id: 3, name: "Juan Rodríguez", dni: "25678901" },
+  { id: 4, name: "Sofía González", dni: "32456789" },
+  { id: 5, name: "Elena Torres", dni: "27890123" },
+  { id: 6, name: "Juan López", dni: "29012345" },
+  { id: 7, name: "Luis García", dni: "31234567" },
+  { id: 8, name: "Sofía Pérez", dni: "26789012" },
+  { id: 9, name: "María Fernández", dni: "33456789" },
+  { id: 10, name: "Roberto Sánchez", dni: "24567890" },
+  { id: 11, name: "Ana Martínez", dni: "34567890" },
+  { id: 12, name: "Pedro Gómez", dni: "23456789" },
 ];
 
 // First, add a mock data structure for client balances after the mockClients definition
@@ -79,14 +85,70 @@ const mockClientBalances = [
 
 // Mock data for vehicles
 const mockVehicles = [
-  { id: 1, name: 'Bus 101', plate: 'ABC123', type: 'Autobús', capacity: 45, status: 'Activo' },
-  { id: 2, name: 'Bus 102', plate: 'DEF456', type: 'Autobús', capacity: 45, status: 'Activo' },
-  { id: 3, name: 'Minibus 201', plate: 'GHI789', type: 'Minibús', capacity: 25, status: 'Activo' },
-  { id: 4, name: 'Minibus 202', plate: 'JKL012', type: 'Minibús', capacity: 25, status: 'Mantenimiento' },
-  { id: 5, name: 'Van 301', plate: 'MNO345', type: 'Van', capacity: 15, status: 'Activo' },
-  { id: 6, name: 'Van 302', plate: 'PQR678', type: 'Van', capacity: 15, status: 'Inactivo' },
-  { id: 7, name: 'Microbus 401', plate: 'STU901', type: 'Microbus', capacity: 20, status: 'Activo' },
-  { id: 8, name: 'Autocar 501', plate: 'VWX234', type: 'Autocar', capacity: 50, status: 'Activo' },
+  {
+    id: 1,
+    name: "Bus 101",
+    plate: "ABC123",
+    type: "Autobús",
+    capacity: 45,
+    status: "Activo",
+  },
+  {
+    id: 2,
+    name: "Bus 102",
+    plate: "DEF456",
+    type: "Autobús",
+    capacity: 45,
+    status: "Activo",
+  },
+  {
+    id: 3,
+    name: "Minibus 201",
+    plate: "GHI789",
+    type: "Minibús",
+    capacity: 25,
+    status: "Activo",
+  },
+  {
+    id: 4,
+    name: "Minibus 202",
+    plate: "JKL012",
+    type: "Minibús",
+    capacity: 25,
+    status: "Mantenimiento",
+  },
+  {
+    id: 5,
+    name: "Van 301",
+    plate: "MNO345",
+    type: "Van",
+    capacity: 15,
+    status: "Activo",
+  },
+  {
+    id: 6,
+    name: "Van 302",
+    plate: "PQR678",
+    type: "Van",
+    capacity: 15,
+    status: "Inactivo",
+  },
+  {
+    id: 7,
+    name: "Microbus 401",
+    plate: "STU901",
+    type: "Microbus",
+    capacity: 20,
+    status: "Activo",
+  },
+  {
+    id: 8,
+    name: "Autocar 501",
+    plate: "VWX234",
+    type: "Autocar",
+    capacity: 50,
+    status: "Activo",
+  },
 ];
 
 // Add a new mock data structure to associate trips with vehicles, after the mockVehicles definition
@@ -103,7 +165,9 @@ const getClientBalance = (dni: string) => {
   const client = mockClients.find((c) => c.dni === dni);
   if (!client) return null;
 
-  const balanceRecord = mockClientBalances.find((b) => b.clientId === client.id);
+  const balanceRecord = mockClientBalances.find(
+    (b) => b.clientId === client.id
+  );
   return balanceRecord ? balanceRecord.balance : null;
 };
 
@@ -144,7 +208,9 @@ const generateCalendarDays = (year: number, month: number) => {
   // Calculate how many days we need from next month
   const totalDaysShown = Math.ceil((startDay + daysInMonth) / 7) * 7;
   const nextMonthDays = Array.from(
-    { length: totalDaysShown - (prevMonthDays.length + currentMonthDays.length) },
+    {
+      length: totalDaysShown - (prevMonthDays.length + currentMonthDays.length),
+    },
     (_, i) => ({
       day: i + 1,
       month: month + 1,
@@ -158,42 +224,51 @@ const generateCalendarDays = (year: number, month: number) => {
 
 // Pickup and dropoff locations for select options
 const locations = [
-  'Avenida Principal 123 16',
-  'Costanera Este 1',
-  'Paseo del Bosque 22',
-  'Biblioteca Central 6',
-  'Hotel Grand 12',
-  'Parque Industrial 3',
-  'Plaza Principal 23',
-  'Hotel Grand 8',
-  'Hospital Central 4',
-  'Parque Industrial 5',
-  'Terminal de Ómnibus 20',
-  'Hospital Central 2',
+  "Avenida Principal 123 16",
+  "Costanera Este 1",
+  "Paseo del Bosque 22",
+  "Biblioteca Central 6",
+  "Hotel Grand 12",
+  "Parque Industrial 3",
+  "Plaza Principal 23",
+  "Hotel Grand 8",
+  "Hospital Central 4",
+  "Parque Industrial 5",
+  "Terminal de Ómnibus 20",
+  "Hospital Central 2",
 ];
 
 // Define the type for sort column
-type SortColumn = 'name' | 'pickup' | 'dropoff' | 'paid' | 'paymentMethod' | 'price';
-type SortDirection = 'asc' | 'desc';
+type SortColumn =
+  | "name"
+  | "pickup"
+  | "dropoff"
+  | "paid"
+  | "paymentMethod"
+  | "price";
+type SortDirection = "asc" | "desc";
 
 // Define the type for delete action
-type DeleteAction = 'delete' | 'favor' | 'debt';
+type DeleteAction = "delete" | "favor" | "debt";
 
 export default function ReservationsPage() {
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);
-  const [selectedDate, setSelectedDate] = useState(today);
+  // const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTrip, setSelectedTrip] = useState<ReserveReport | null>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
-  const [passengersReserves, setPassengersReserves] = useState<PagedResponse<PassengerReserveReport>>({
+  const [passengersReserves, setPassengersReserves] = useState<
+    PagedResponse<PassengerReserveReport>
+  >({
     Items: [],
     PageNumber: 1,
     PageSize: 8,
     TotalRecords: 0,
     TotalPages: 0,
   });
-  const [selectedPassengerReserve, setSelectedPassengerReserve] = useState<PassengerReserveReport | null>(null);
-  const [originFilter, setOriginFilter] = useState<string>('all');
+  const [selectedPassengerReserve, setSelectedPassengerReserve] =
+    useState<PassengerReserveReport | null>(null);
+  const [originFilter, setOriginFilter] = useState<string>("all");
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -213,17 +288,21 @@ export default function ReservationsPage() {
   const [pageSize, setPageSize] = useState(20);
 
   // Add state for sorting
-  const [sortColumn, setSortColumn] = useState<SortColumn>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortColumn, setSortColumn] = useState<SortColumn>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [passengerToDelete, setPassengerToDelete] = useState<number | null>(null);
-  const [deleteAction, setDeleteAction] = useState<DeleteAction>('delete');
+  const [passengerToDelete, setPassengerToDelete] = useState<number | null>(
+    null
+  );
+  const [deleteAction, setDeleteAction] = useState<DeleteAction>("delete");
   const [isPaymentSummaryOpen, setIsPaymentSummaryOpen] = useState(false);
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<(typeof mockClients)[0] | null>(null);
+  const [selectedClient, setSelectedClient] = useState<
+    (typeof mockClients)[0] | null
+  >(null);
   const [cities, setCities] = useState<SelectOption[]>([]);
   // Round-trip states
   const [isRoundTrip, setIsRoundTrip] = useState(false);
@@ -233,56 +312,67 @@ export default function ReservationsPage() {
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
 
   // Add these new state variables after the other return trip related states
-  const [returnPickup, setReturnPickup] = useState<string>('');
-  const [returnDropoff, setReturnDropoff] = useState<string>('');
+  const [returnPickup, setReturnPickup] = useState<string>("");
+  const [returnDropoff, setReturnDropoff] = useState<string>("");
 
   const [newPassenger, setNewPassenger] = useState({
-    name: '',
-    pickup: '',
-    dropoff: '',
-    paymentMethod: 'Efectivo',
+    name: "",
+    pickup: "",
+    dropoff: "",
+    paymentMethod: "Efectivo",
     price: 0,
     paid: false,
     isRoundTrip: false,
   });
 
   const [newClient, setNewClient] = useState({
-    name: '',
-    surname: '',
-    dni: '',
-    phone: '',
-    email: '',
+    name: "",
+    surname: "",
+    dni: "",
+    phone: "",
+    email: "",
   });
 
   // Vehicle selection state
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<(typeof mockVehicles)[0] | null>(null);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedVehicle, setSelectedVehicle] = useState<
+    (typeof mockVehicles)[0] | null
+  >(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
 
   // Update the payment summary dialog to include custom payment entries
   // First, add a new state for custom payments
-  const [customPayments, setCustomPayments] = useState<Array<{ name: string; method: string; amount: number }>>([]);
-  const [newPaymentName, setNewPaymentName] = useState('');
-  const [newPaymentMethod, setNewPaymentMethod] = useState('Efectivo');
-  const [newPaymentAmount, setNewPaymentAmount] = useState('');
+  const [customPayments, setCustomPayments] = useState<
+    Array<{ name: string; method: string; amount: number }>
+  >([]);
+  const [newPaymentName, setNewPaymentName] = useState("");
+  const [newPaymentMethod, setNewPaymentMethod] = useState("Efectivo");
+  const [newPaymentAmount, setNewPaymentAmount] = useState("");
 
   // Add this state variable for client search filtering
   // Add it near the other state variables at the top of the component
-  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
 
   // Add a new state for the selected payment method
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('Efectivo');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<string>("Efectivo");
 
-  const fetchReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
+  const fetchReserves = async (
+    pageToFetch = currentPage,
+    pageSizeToFetch = pageSize
+  ) => {
     setIsLoading(true);
     try {
-      const response = await get<any, ReserveReport>(`/reserve-report/${format(currentDate, 'yyyyMMdd')}`, {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: {},
-      });
+      const response = await get<any, ReserveReport>(
+        `/reserve-report/${format(currentDate, "yyyyMMdd")}`,
+        {
+          pageNumber: pageToFetch,
+          pageSize: pageSizeToFetch,
+          sortBy: "fecha",
+          sortDescending: true,
+          filters: {},
+        }
+      );
       setReserves(response);
       setIsLoading(false);
     } catch (error) {
@@ -290,16 +380,22 @@ export default function ReservationsPage() {
     }
   };
 
-  const fetchPassengersReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
+  const fetchPassengersReserves = async (
+    pageToFetch = currentPage,
+    pageSizeToFetch = pageSize
+  ) => {
     setIsLoading(true);
     try {
-      const response = await get<any, PassengerReserveReport>(`/customer-reserve-report/${selectedTrip}`, {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: {},
-      });
+      const response = await get<any, PassengerReserveReport>(
+        `/customer-reserve-report/${selectedTrip}`,
+        {
+          pageNumber: pageToFetch,
+          pageSize: pageSizeToFetch,
+          sortBy: "fecha",
+          sortDescending: true,
+          filters: {},
+        }
+      );
       setPassengersReserves(response);
       setIsLoading(false);
     } catch (error) {
@@ -325,7 +421,9 @@ export default function ReservationsPage() {
     }
     const query = clientSearchQuery.toLowerCase();
     return mockClients.filter(
-      (client) => client.name.toLowerCase().includes(query) || client.dni.toLowerCase().includes(query)
+      (client) =>
+        client.name.toLowerCase().includes(query) ||
+        client.dni.toLowerCase().includes(query)
     );
   }, [clientSearchQuery]);
 
@@ -337,7 +435,10 @@ export default function ReservationsPage() {
 
   // Return trip calendar days
   const returnCalendarDays = useMemo(() => {
-    return generateCalendarDays(returnCalendarDate.getFullYear(), returnCalendarDate.getMonth());
+    return generateCalendarDays(
+      returnCalendarDate.getFullYear(),
+      returnCalendarDate.getMonth()
+    );
   }, [returnCalendarDate]);
 
   // Calendar navigation
@@ -359,11 +460,14 @@ export default function ReservationsPage() {
   };
 
   // Calendar days
-  const calendarDays = generateCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
+  const calendarDays = generateCalendarDays(
+    currentDate.getFullYear(),
+    currentDate.getMonth()
+  );
 
   // Day selection
   const handleDayClick = (day: number, month: number, year: number) => {
-    setSelectedDate(new Date(year, month, day));
+    setCurrentDate(new Date(year, month, day));
   };
 
   // Return day selection
@@ -373,17 +477,29 @@ export default function ReservationsPage() {
 
   // Check if a date is selected
   const isDateSelected = (day: number, month: number, year: number) => {
-    return selectedDate.getDate() === day && selectedDate.getMonth() === month && selectedDate.getFullYear() === year;
+    return (
+      currentDate.getDate() === day &&
+      currentDate.getMonth() === month &&
+      currentDate.getFullYear() === year
+    );
   };
 
   // Check if a return date is selected
   const isReturnDateSelected = (day: number, month: number, year: number) => {
-    return returnDate.getDate() === day && returnDate.getMonth() === month && returnDate.getFullYear() === year;
+    return (
+      returnDate.getDate() === day &&
+      returnDate.getMonth() === month &&
+      returnDate.getFullYear() === year
+    );
   };
 
   // Check if a date is today
   const isToday = (day: number, month: number, year: number) => {
-    return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+    return (
+      today.getDate() === day &&
+      today.getMonth() === month &&
+      today.getFullYear() === year
+    );
   };
 
   const loadAllOptions = async () => {
@@ -392,10 +508,10 @@ export default function ReservationsPage() {
       setOptionsError(null);
 
       // Llamadas API (pueden ir en paralelo)
-      const cityResponse = await get<any, City>('/city-report', {
+      const cityResponse = await get<any, City>("/city-report", {
         pageNumber: 1,
         pageSize: 10,
-        sortBy: 'fecha',
+        sortBy: "fecha",
         sortDescending: true,
         filters: {},
       });
@@ -410,7 +526,7 @@ export default function ReservationsPage() {
         setCities(formattedCities);
       }
     } catch (error) {
-      setOptionsError('Error al cargar las ciudades');
+      setOptionsError("Error al cargar las ciudades");
     } finally {
       setIsOptionsLoading(false);
     }
@@ -418,12 +534,20 @@ export default function ReservationsPage() {
 
   // Handle passenger checkbox change
   const handlePassengerCheck = (id: number, checked: boolean) => {
-    setPassengers(passengers.map((passenger) => (passenger.CustomerId === id ? { ...passenger, checked } : passenger)));
+    setPassengers(
+      passengers.map((passenger) =>
+        passenger.CustomerId === id ? { ...passenger, checked } : passenger
+      )
+    );
   };
 
   // Handle passenger payment status change
   const handlePassengerPaidChange = (id: number, paid: boolean) => {
-    setPassengers(passengers.map((passenger) => (passenger.CustomerId === id ? { ...passenger, paid } : passenger)));
+    setPassengers(
+      passengers.map((passenger) =>
+        passenger.CustomerId === id ? { ...passenger, paid } : passenger
+      )
+    );
   };
 
   // Handle delete passenger
@@ -507,7 +631,7 @@ export default function ReservationsPage() {
       price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
       checked: true,
       paid: newPassenger.paid,
-      dni: selectedClient ? selectedClient.dni : '',
+      dni: selectedClient ? selectedClient.dni : "",
     };
 
     const updatedPassengers = [...passengers, newPassengerEntry];
@@ -525,7 +649,7 @@ export default function ReservationsPage() {
         price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
         checked: true,
         paid: newPassenger.paid,
-        dni: selectedClient ? selectedClient.dni : '',
+        dni: selectedClient ? selectedClient.dni : "",
         isReturn: true, // Mark as return trip
       };
       updatedPassengers.push(returnPassenger);
@@ -537,13 +661,13 @@ export default function ReservationsPage() {
     setSelectedClient(null);
     setReturnTrip(null);
     setIsRoundTrip(false);
-    setReturnPickup('');
-    setReturnDropoff('');
+    setReturnPickup("");
+    setReturnDropoff("");
     setNewPassenger({
-      name: '',
-      pickup: '',
-      dropoff: '',
-      paymentMethod: 'Efectivo',
+      name: "",
+      pickup: "",
+      dropoff: "",
+      paymentMethod: "Efectivo",
       price: 0,
       paid: false,
       isRoundTrip: false,
@@ -569,17 +693,17 @@ export default function ReservationsPage() {
 
     // Reset the form
     setNewClient({
-      name: '',
-      surname: '',
-      dni: '',
-      phone: '',
-      email: '',
+      name: "",
+      surname: "",
+      dni: "",
+      phone: "",
+      email: "",
     });
   };
 
   // Format date for display
   const formatSelectedDate = () => {
-    return format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
+    return format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
   };
 
   // Format return date for display
@@ -588,7 +712,7 @@ export default function ReservationsPage() {
   };
 
   // Weekday headers
-  const weekdays = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
+  const weekdays = ["lu", "ma", "mi", "ju", "vi", "sá", "do"];
 
   // Update the calculatePaymentTotals function to include the selected payment method
   const calculatePaymentTotals = () => {
@@ -642,9 +766,9 @@ export default function ReservationsPage() {
           amount: Number(newPaymentAmount),
         },
       ]);
-      setNewPaymentName('');
-      setNewPaymentMethod('Efectivo');
-      setNewPaymentAmount('');
+      setNewPaymentName("");
+      setNewPaymentMethod("Efectivo");
+      setNewPaymentAmount("");
     }
   };
 
@@ -652,11 +776,11 @@ export default function ReservationsPage() {
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       // Toggle direction if same column
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       // Set new column and default to ascending
       setSortColumn(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -696,7 +820,7 @@ export default function ReservationsPage() {
       return <ArrowUpDown className="ml-1 h-4 w-4 inline" />;
     }
 
-    return sortDirection === 'asc' ? (
+    return sortDirection === "asc" ? (
       <ChevronUp className="ml-1 h-4 w-4 inline" />
     ) : (
       <ChevronDown className="ml-1 h-4 w-4 inline" />
@@ -723,7 +847,7 @@ export default function ReservationsPage() {
   // Handle removing vehicle selection
   const handleRemoveVehicle = () => {
     setSelectedVehicle(null);
-    setSelectedVehicleId('');
+    setSelectedVehicleId("");
     setIsVehicleDialogOpen(false);
   };
 
@@ -742,7 +866,8 @@ export default function ReservationsPage() {
 
   // Handle price input change
   const handlePriceChange = (id: number, value: string) => {
-    const newPrice = value === '' ? 0 : Number.parseInt(value.replace(/\D/g, ''));
+    const newPrice =
+      value === "" ? 0 : Number.parseInt(value.replace(/\D/g, ""));
     // setPassengers(passengers.map((p) => (p.id === id ? { ...p, price: newPrice } : p)));
   };
 
@@ -799,7 +924,9 @@ export default function ReservationsPage() {
                 <button onClick={handlePrevMonth} className="p-1">
                   <ChevronLeftIcon className="h-5 w-5" />
                 </button>
-                <div className="font-medium">{format(currentDate, 'MMMM yyyy', { locale: es })}</div>
+                <div className="font-medium">
+                  {format(currentDate, "MMMM yyyy", { locale: es })}
+                </div>
                 <button onClick={handleNextMonth} className="p-1">
                   <ChevronRightIcon className="h-5 w-5" />
                 </button>
@@ -815,12 +942,14 @@ export default function ReservationsPage() {
                 {calendarDays.map((day, i) => (
                   <button
                     key={i}
-                    className={`rounded-md p-1 text-sm ${!day.isCurrentMonth ? 'text-gray-400' : ''} ${
+                    className={`rounded-md p-1 text-sm ${
+                      !day.isCurrentMonth ? "text-gray-400" : ""
+                    } ${
                       isDateSelected(day.day, day.month, day.year)
-                        ? 'bg-blue-500 text-white'
+                        ? "bg-blue-500 text-white"
                         : isToday(day.day, day.month, day.year)
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'hover:bg-gray-100'
+                        ? "bg-blue-100 text-blue-700"
+                        : "hover:bg-gray-100"
                     }`}
                     onClick={() => handleDayClick(day.day, day.month, day.year)}
                   >
@@ -832,7 +961,7 @@ export default function ReservationsPage() {
               <div className="space-y-2 pt-4">
                 <div className="flex items-center justify-between">
                   <div className="text-lg font-medium text-blue-500">
-                    Viajes {format(selectedDate, 'd MMM', { locale: es })}
+                    Viajes {format(currentDate, "d MMM", { locale: es })}
                   </div>
                   {/* <div className="flex items-center">
                     <FilterIcon className="mr-2 h-4 w-4 text-gray-500" />
@@ -856,20 +985,24 @@ export default function ReservationsPage() {
                       <button
                         key={trip.ReserveId}
                         className={`flex w-full items-center justify-between rounded-md border p-3 text-left text-sm ${
-                          selectedTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                          selectedTrip?.ReserveId === trip.ReserveId
+                            ? "border-blue-500 bg-blue-50"
+                            : "hover:bg-gray-50"
                         }`}
                         onClick={() => setSelectedTrip(trip)}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{trip.DepartureHour}</span>
+                          <span className="font-medium">
+                            {trip.DepartureHour}
+                          </span>
                           <span
                             className={`text-xs px-1.5 py-0.5 rounded-md ${
-                              trip.ReserveQuantity >= trip.AvailableQuantity
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-green-100 text-green-700'
+                              trip.ReservedQuantity >= trip.AvailableQuantity
+                                ? "bg-red-100 text-red-700"
+                                : "bg-green-100 text-green-700"
                             }`}
                           >
-                            {trip.ReserveQuantity}/{trip.AvailableQuantity}
+                            {trip.ReservedQuantity}/{trip.AvailableQuantity}
                           </span>
                         </div>
                         <div className="text-gray-600">
@@ -896,8 +1029,10 @@ export default function ReservationsPage() {
             <div className="space-y-4">
               <div className="flex items-center text-xl font-semibold text-blue-500">
                 <UserPlusIcon className="mr-2 h-5 w-5" />
-                {formatSelectedDate().charAt(0).toUpperCase() + formatSelectedDate().slice(1)} -{' '}
-                {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
+                {formatSelectedDate().charAt(0).toUpperCase() +
+                  formatSelectedDate().slice(1)}{" "}
+                - {selectedTrip?.OriginName} → {selectedTrip?.DestinationName},{" "}
+                {selectedTrip?.DepartureHour}
                 {selectedVehicle && (
                   <span className="ml-2 text-sm font-normal text-gray-600">
                     | Vehículo: {selectedVehicle.name} ({selectedVehicle.type})
@@ -912,49 +1047,49 @@ export default function ReservationsPage() {
                       <th className="py-3 pr-4 w-[20%]">
                         <button
                           className="flex items-center font-medium text-gray-500 hover:text-gray-700"
-                          onClick={() => handleSort('name')}
+                          onClick={() => handleSort("name")}
                         >
-                          Pasajero {renderSortIndicator('name')}
+                          Pasajero {renderSortIndicator("name")}
                         </button>
                       </th>
                       <th className="py-3 pr-4 w-[20%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort('pickup')}
+                          onClick={() => handleSort("pickup")}
                         >
-                          Subida {renderSortIndicator('pickup')}
+                          Subida {renderSortIndicator("pickup")}
                         </button>
                       </th>
                       <th className="py-3 pr-4 w-[20%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort('dropoff')}
+                          onClick={() => handleSort("dropoff")}
                         >
-                          Bajada {renderSortIndicator('dropoff')}
+                          Bajada {renderSortIndicator("dropoff")}
                         </button>
                       </th>
                       <th className="py-3 pr-4 text-center">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort('paid')}
+                          onClick={() => handleSort("paid")}
                         >
-                          $ {renderSortIndicator('paid')}
+                          $ {renderSortIndicator("paid")}
                         </button>
                       </th>
                       <th className="py-3 pr-4 w-[15%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort('paymentMethod')}
+                          onClick={() => handleSort("paymentMethod")}
                         >
-                          Pago {renderSortIndicator('paymentMethod')}
+                          Pago {renderSortIndicator("paymentMethod")}
                         </button>
                       </th>
                       <th className="py-3 pr-4 text-center w-[10%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort('price')}
+                          onClick={() => handleSort("price")}
                         >
-                          Precio {renderSortIndicator('price')}
+                          Precio {renderSortIndicator("price")}
                         </button>
                       </th>
                       <th className="py-3 pl-4 text-right w-[5%]"></th>
@@ -962,44 +1097,65 @@ export default function ReservationsPage() {
                   </thead>
                   <tbody>
                     {passengersReserves.Items.map((passenger) => (
-                      <tr key={passenger.CustomerReserveId} className="border-b">
+                      <tr
+                        key={passenger.CustomerReserveId}
+                        className="border-b"
+                      >
                         <td className="py-3 pr-4">
                           <div className="flex items-center">
                             <Checkbox
                               id={`passenger-${passenger.CustomerId}`}
                               checked={passenger.HasTraveled}
                               onCheckedChange={(checked) =>
-                                handlePassengerCheck(passenger.CustomerReserveId, checked as boolean)
+                                handlePassengerCheck(
+                                  passenger.CustomerReserveId,
+                                  checked as boolean
+                                )
                               }
                               className="mr-2"
                             />
                             <div>
-                              <label htmlFor={`passenger-${passenger.CustomerReserveId}`} className="font-medium">
+                              <label
+                                htmlFor={`passenger-${passenger.CustomerReserveId}`}
+                                className="font-medium"
+                              >
                                 {passenger.FullName}
                               </label>
                               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                 <span>DNI: {passenger.DocumentNumber}</span>
-                                {passenger.DocumentNumber && getClientBalance(passenger.DocumentNumber) !== null && (
-                                  <span
-                                    className={
-                                      getClientBalance(passenger.DocumentNumber)! < 0
-                                        ? 'text-red-500 font-medium'
-                                        : 'text-green-600 font-medium'
-                                    }
-                                  >
-                                    {getClientBalance(passenger.DocumentNumber)! < 0
-                                      ? `Debe $${Math.abs(
-                                          getClientBalance(passenger.DocumentNumber)!
-                                        ).toLocaleString()}`
-                                      : `A favor $${getClientBalance(passenger.DocumentNumber)!.toLocaleString()}`}
-                                  </span>
-                                )}
+                                {passenger.DocumentNumber &&
+                                  getClientBalance(passenger.DocumentNumber) !==
+                                    null && (
+                                    <span
+                                      className={
+                                        getClientBalance(
+                                          passenger.DocumentNumber
+                                        )! < 0
+                                          ? "text-red-500 font-medium"
+                                          : "text-green-600 font-medium"
+                                      }
+                                    >
+                                      {getClientBalance(
+                                        passenger.DocumentNumber
+                                      )! < 0
+                                        ? `Debe $${Math.abs(
+                                            getClientBalance(
+                                              passenger.DocumentNumber
+                                            )!
+                                          ).toLocaleString()}`
+                                        : `A favor $${getClientBalance(
+                                            passenger.DocumentNumber
+                                          )!.toLocaleString()}`}
+                                    </span>
+                                  )}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select defaultValue={passenger.PickupLocationId.toString()}>
+                          <Select
+                            defaultValue={passenger.PickupLocationId.toString()}
+                          >
                             <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
@@ -1013,7 +1169,9 @@ export default function ReservationsPage() {
                           </Select>
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select defaultValue={passenger.DropoffLocationId.toString()}>
+                          <Select
+                            defaultValue={passenger.DropoffLocationId.toString()}
+                          >
                             <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
@@ -1031,15 +1189,25 @@ export default function ReservationsPage() {
                             id={`paid-${passenger.CustomerReserveId}`}
                             checked={passenger.IsPayment}
                             onCheckedChange={(checked) =>
-                              handlePassengerPaidChange(passenger.CustomerReserveId, checked as boolean)
+                              handlePassengerPaidChange(
+                                passenger.CustomerReserveId,
+                                checked as boolean
+                              )
                             }
                             className="mx-auto"
                           />
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select defaultValue={passenger.PaymentMethod.toString()} disabled={!passenger.IsPayment}>
+                          <Select
+                            defaultValue={passenger.PaymentMethod.toString()}
+                            disabled={!passenger.IsPayment}
+                          >
                             <SelectTrigger
-                              className={`w-full ${!passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              className={`w-full ${
+                                !passenger.IsPayment
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
+                              }`}
                             >
                               <SelectValue />
                             </SelectTrigger>
@@ -1053,9 +1221,16 @@ export default function ReservationsPage() {
                           <Input
                             type="text"
                             value={passenger.Price.toString()}
-                            onChange={(e) => handlePriceChange(passenger.CustomerReserveId, e.target.value)}
+                            onChange={(e) =>
+                              handlePriceChange(
+                                passenger.CustomerReserveId,
+                                e.target.value
+                              )
+                            }
                             className={`w-24 text-right font-mono mx-auto ${
-                              !passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''
+                              !passenger.IsPayment
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
                             }`}
                             disabled={!passenger.IsPayment}
                           />
@@ -1081,11 +1256,16 @@ export default function ReservationsPage() {
       </div>
 
       {/* Client Selector Dialog */}
-      <Dialog open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
+      <Dialog
+        open={isClientSelectorOpen}
+        onOpenChange={setIsClientSelectorOpen}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Seleccionar Pasajero</DialogTitle>
-            <DialogDescription>Selecciona un pasajero existente o crea uno nuevo</DialogDescription>
+            <DialogDescription>
+              Selecciona un pasajero existente o crea uno nuevo
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex flex-col space-y-2">
@@ -1110,7 +1290,9 @@ export default function ReservationsPage() {
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{client.name}</span>
-                      <span className="text-xs text-gray-500">DNI: {client.dni}</span>
+                      <span className="text-xs text-gray-500">
+                        DNI: {client.dni}
+                      </span>
                     </div>
                     <Button variant="ghost" size="sm">
                       Seleccionar
@@ -1121,7 +1303,10 @@ export default function ReservationsPage() {
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsClientSelectorOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsClientSelectorOpen(false)}
+            >
               Cancelar
             </Button>
             <Button
@@ -1142,12 +1327,17 @@ export default function ReservationsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Seleccionar Vehículo</DialogTitle>
-            <DialogDescription>Selecciona un vehículo para este viaje</DialogDescription>
+            <DialogDescription>
+              Selecciona un vehículo para este viaje
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex flex-col space-y-2">
               <Label htmlFor="vehicle-select">Vehículo</Label>
-              <Select value={selectedVehicleId} onValueChange={handleVehicleSelect}>
+              <Select
+                value={selectedVehicleId}
+                onValueChange={handleVehicleSelect}
+              >
                 <SelectTrigger id="vehicle-select">
                   <SelectValue placeholder="Seleccionar vehículo" />
                 </SelectTrigger>
@@ -1156,7 +1346,9 @@ export default function ReservationsPage() {
                     <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
                       <div>
                         <span>{vehicle.name}</span>
-                        <span className="ml-1 text-xs text-gray-500">({vehicle.type})</span>
+                        <span className="ml-1 text-xs text-gray-500">
+                          ({vehicle.type})
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
@@ -1174,10 +1366,16 @@ export default function ReservationsPage() {
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsVehicleDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsVehicleDialogOpen(false)}
+            >
               Cancelar
             </Button>
-            <Button onClick={confirmVehicleSelection} disabled={!selectedVehicle}>
+            <Button
+              onClick={confirmVehicleSelection}
+              disabled={!selectedVehicle}
+            >
               Confirmar
             </Button>
           </DialogFooter>
@@ -1198,7 +1396,7 @@ export default function ReservationsPage() {
             id="name"
             placeholder="Nombre"
             value={newClient.name}
-            onChange={(e) => handleNewClientInputChange('name', e.target.value)}
+            onChange={(e) => handleNewClientInputChange("name", e.target.value)}
           />
         </FormField>
         <FormField label="Apellido">
@@ -1206,7 +1404,9 @@ export default function ReservationsPage() {
             id="surname"
             placeholder="Apellido"
             value={newClient.surname}
-            onChange={(e) => handleNewClientInputChange('surname', e.target.value)}
+            onChange={(e) =>
+              handleNewClientInputChange("surname", e.target.value)
+            }
           />
         </FormField>
         <FormField label="DNI">
@@ -1214,7 +1414,7 @@ export default function ReservationsPage() {
             id="dni"
             placeholder="DNI"
             value={newClient.dni}
-            onChange={(e) => handleNewClientInputChange('dni', e.target.value)}
+            onChange={(e) => handleNewClientInputChange("dni", e.target.value)}
           />
         </FormField>
         <FormField label="Teléfono">
@@ -1222,7 +1422,9 @@ export default function ReservationsPage() {
             id="phone"
             placeholder="Teléfono"
             value={newClient.phone}
-            onChange={(e) => handleNewClientInputChange('phone', e.target.value)}
+            onChange={(e) =>
+              handleNewClientInputChange("phone", e.target.value)
+            }
           />
         </FormField>
         <FormField label="Email">
@@ -1231,7 +1433,9 @@ export default function ReservationsPage() {
             type="email"
             placeholder="Email"
             value={newClient.email}
-            onChange={(e) => handleNewClientInputChange('email', e.target.value)}
+            onChange={(e) =>
+              handleNewClientInputChange("email", e.target.value)
+            }
           />
         </FormField>
       </FormDialog>
@@ -1244,13 +1448,16 @@ export default function ReservationsPage() {
         description={
           selectedClient
             ? `Añadiendo a ${selectedClient.name} (DNI: ${selectedClient.dni})`
-            : 'Añade un nuevo pasajero a este viaje'
+            : "Añade un nuevo pasajero a este viaje"
         }
         onSubmit={submitAddPassenger}
         submitText="Añadir Pasajero"
       >
         <FormField label="Punto de Subida">
-          <Select value={newPassenger.pickup} onValueChange={(value) => handleInputChange('pickup', value)}>
+          <Select
+            value={newPassenger.pickup}
+            onValueChange={(value) => handleInputChange("pickup", value)}
+          >
             <SelectTrigger id="pickup">
               <SelectValue placeholder="Seleccionar punto de subida" />
             </SelectTrigger>
@@ -1264,7 +1471,10 @@ export default function ReservationsPage() {
           </Select>
         </FormField>
         <FormField label="Punto de Bajada">
-          <Select value={newPassenger.dropoff} onValueChange={(value) => handleInputChange('dropoff', value)}>
+          <Select
+            value={newPassenger.dropoff}
+            onValueChange={(value) => handleInputChange("dropoff", value)}
+          >
             <SelectTrigger id="dropoff">
               <SelectValue placeholder="Seleccionar punto de bajada" />
             </SelectTrigger>
@@ -1282,7 +1492,9 @@ export default function ReservationsPage() {
             <Checkbox
               id="round-trip"
               checked={newPassenger.isRoundTrip}
-              onCheckedChange={(checked) => handleRoundTripChange(checked as boolean)}
+              onCheckedChange={(checked) =>
+                handleRoundTripChange(checked as boolean)
+              }
             />
             <Label htmlFor="round-trip" className="text-sm font-normal">
               Reservar viaje de ida y vuelta
@@ -1292,12 +1504,15 @@ export default function ReservationsPage() {
       </FormDialog>
 
       {/* Return Trip Selection Dialog */}
-      <Dialog open={isReturnTripModalOpen} onOpenChange={setIsReturnTripModalOpen}>
+      <Dialog
+        open={isReturnTripModalOpen}
+        onOpenChange={setIsReturnTripModalOpen}
+      >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Seleccionar Viaje de Vuelta</DialogTitle>
             <DialogDescription>
-              Selecciona la fecha y el servicio para el viaje de vuelta de{' '}
+              Selecciona la fecha y el servicio para el viaje de vuelta de{" "}
               {selectedClient ? selectedClient.name : newPassenger.name}
             </DialogDescription>
           </DialogHeader>
@@ -1314,7 +1529,9 @@ export default function ReservationsPage() {
                   <button onClick={handleReturnPrevMonth} className="p-1">
                     <ChevronLeftIcon className="h-5 w-5" />
                   </button>
-                  <div className="font-medium">{format(returnCalendarDate, 'MMMM yyyy', { locale: es })}</div>
+                  <div className="font-medium">
+                    {format(returnCalendarDate, "MMMM yyyy", { locale: es })}
+                  </div>
                   <button onClick={handleReturnNextMonth} className="p-1">
                     <ChevronRightIcon className="h-5 w-5" />
                   </button>
@@ -1330,14 +1547,18 @@ export default function ReservationsPage() {
                   {returnCalendarDays.map((day, i) => (
                     <button
                       key={i}
-                      className={`rounded-md p-1 text-xs ${!day.isCurrentMonth ? 'text-gray-400' : ''} ${
+                      className={`rounded-md p-1 text-xs ${
+                        !day.isCurrentMonth ? "text-gray-400" : ""
+                      } ${
                         isReturnDateSelected(day.day, day.month, day.year)
-                          ? 'bg-blue-500 text-white'
+                          ? "bg-blue-500 text-white"
                           : isToday(day.day, day.month, day.year)
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'hover:bg-gray-100'
+                          ? "bg-blue-100 text-blue-700"
+                          : "hover:bg-gray-100"
                       }`}
-                      onClick={() => handleReturnDayClick(day.day, day.month, day.year)}
+                      onClick={() =>
+                        handleReturnDayClick(day.day, day.month, day.year)
+                      }
                     >
                       {day.day}
                     </button>
@@ -1348,7 +1569,8 @@ export default function ReservationsPage() {
               {/* Right column - Return Trip Selection */}
               <div className="border-l pl-4">
                 <div className="font-medium mb-2">
-                  Viajes disponibles para {format(returnDate, "d 'de' MMMM", { locale: es })}
+                  Viajes disponibles para{" "}
+                  {format(returnDate, "d 'de' MMMM", { locale: es })}
                 </div>
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-4">
                   {/* For simplicity, we're using the same trips, but in a real app you'd fetch trips for the return date */}
@@ -1356,7 +1578,9 @@ export default function ReservationsPage() {
                     <button
                       key={trip.ReserveId}
                       className={`flex w-full items-center justify-between rounded-md border p-3 text-left text-sm ${
-                        returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                        returnTrip?.ReserveId === trip.ReserveId
+                          ? "border-blue-500 bg-blue-50"
+                          : "hover:bg-gray-50"
                       }`}
                       onClick={() => handleReturnTripSelect(trip)}
                     >
@@ -1371,16 +1595,25 @@ export default function ReservationsPage() {
                 {/* Add pickup and dropoff dropdowns */}
                 <div className="space-y-3 mt-4">
                   <div>
-                    <Label htmlFor="return-pickup" className="text-sm font-medium mb-1 block">
+                    <Label
+                      htmlFor="return-pickup"
+                      className="text-sm font-medium mb-1 block"
+                    >
                       Punto de Subida (Vuelta)
                     </Label>
-                    <Select value={returnPickup} onValueChange={setReturnPickup}>
+                    <Select
+                      value={returnPickup}
+                      onValueChange={setReturnPickup}
+                    >
                       <SelectTrigger id="return-pickup" className="w-full">
                         <SelectValue placeholder="Seleccionar punto de subida" />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
-                          <SelectItem key={`pickup-${location}`} value={location}>
+                          <SelectItem
+                            key={`pickup-${location}`}
+                            value={location}
+                          >
                             {location}
                           </SelectItem>
                         ))}
@@ -1389,16 +1622,25 @@ export default function ReservationsPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="return-dropoff" className="text-sm font-medium mb-1 block">
+                    <Label
+                      htmlFor="return-dropoff"
+                      className="text-sm font-medium mb-1 block"
+                    >
                       Punto de Bajada (Vuelta)
                     </Label>
-                    <Select value={returnDropoff} onValueChange={setReturnDropoff}>
+                    <Select
+                      value={returnDropoff}
+                      onValueChange={setReturnDropoff}
+                    >
                       <SelectTrigger id="return-dropoff" className="w-full">
                         <SelectValue placeholder="Seleccionar punto de bajada" />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
-                          <SelectItem key={`dropoff-${location}`} value={location}>
+                          <SelectItem
+                            key={`dropoff-${location}`}
+                            value={location}
+                          >
                             {location}
                           </SelectItem>
                         ))}
@@ -1410,7 +1652,10 @@ export default function ReservationsPage() {
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsReturnTripModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsReturnTripModalOpen(false)}
+            >
               Cancelar
             </Button>
             <Button onClick={finalizeAddPassenger} disabled={!returnTrip}>
@@ -1427,8 +1672,8 @@ export default function ReservationsPage() {
             <DialogTitle>Eliminar Pasajero</DialogTitle>
             <DialogDescription>
               {selectedPassengerReserve?.IsPayment
-                ? 'Este pasajero ya ha pagado. ¿Qué deseas hacer con el pago?'
-                : 'Este pasajero no ha pagado. ¿Qué deseas hacer?'}
+                ? "Este pasajero ya ha pagado. ¿Qué deseas hacer con el pago?"
+                : "Este pasajero no ha pagado. ¿Qué deseas hacer?"}
             </DialogDescription>
           </DialogHeader>
 
@@ -1446,7 +1691,9 @@ export default function ReservationsPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="favor" id="favor" />
-                    <Label htmlFor="favor">Poner el dinero a favor del pasajero</Label>
+                    <Label htmlFor="favor">
+                      Poner el dinero a favor del pasajero
+                    </Label>
                   </div>
                 </>
               ) : (
@@ -1465,7 +1712,10 @@ export default function ReservationsPage() {
           </div>
 
           <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
               Cancelar
             </Button>
             <Button variant="destructive" onClick={confirmDeletePassenger}>
@@ -1476,12 +1726,16 @@ export default function ReservationsPage() {
       </Dialog>
 
       {/* Payment Summary Dialog */}
-      <Dialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen}>
+      <Dialog
+        open={isPaymentSummaryOpen}
+        onOpenChange={setIsPaymentSummaryOpen}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Resumen de Pagos</DialogTitle>
             <DialogDescription>
-              Resumen de pagos para {formatSelectedDate()} - {selectedTrip?.DepartureHour}
+              Resumen de pagos para {formatSelectedDate()} -{" "}
+              {selectedTrip?.DepartureHour}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1514,8 +1768,12 @@ export default function ReservationsPage() {
                 {customPayments.map((payment, index) => (
                   <div key={index} className="flex items-center text-sm">
                     <span className="w-3/5">{payment.name}</span>
-                    <span className="w-1/5 text-center text-gray-500">{payment.method}</span>
-                    <span className="w-1/5 text-right font-medium">${payment.amount.toLocaleString()}</span>
+                    <span className="w-1/5 text-center text-gray-500">
+                      {payment.method}
+                    </span>
+                    <span className="w-1/5 text-right font-medium">
+                      ${payment.amount.toLocaleString()}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1531,14 +1789,19 @@ export default function ReservationsPage() {
                   />
                 </div>
                 <div className="w-1/5">
-                  <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod}>
+                  <Select
+                    value={newPaymentMethod}
+                    onValueChange={setNewPaymentMethod}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Método" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Efectivo">Efectivo</SelectItem>
                       <SelectItem value="Método">Método</SelectItem>
-                      <SelectItem value="Transferencia">Transferencia</SelectItem>
+                      <SelectItem value="Transferencia">
+                        Transferencia
+                      </SelectItem>
                       <SelectItem value="Tarjeta">Tarjeta</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1554,7 +1817,11 @@ export default function ReservationsPage() {
                   <Button
                     size="icon"
                     onClick={handleAddCustomPayment}
-                    disabled={!newPaymentName.trim() || !newPaymentAmount || Number(newPaymentAmount) <= 0}
+                    disabled={
+                      !newPaymentName.trim() ||
+                      !newPaymentAmount ||
+                      Number(newPaymentAmount) <= 0
+                    }
                   >
                     <PlusCircleIcon className="h-4 w-4" />
                   </Button>
@@ -1564,11 +1831,16 @@ export default function ReservationsPage() {
 
             <div className="rounded-lg border bg-blue-50 p-4">
               <div className="text-sm text-blue-700">Total</div>
-              <div className="text-2xl font-bold text-blue-700">${calculatePaymentTotals().Total.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-blue-700">
+                ${calculatePaymentTotals().Total.toLocaleString()}
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPaymentSummaryOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsPaymentSummaryOpen(false)}
+            >
               Cerrar
             </Button>
           </DialogFooter>
