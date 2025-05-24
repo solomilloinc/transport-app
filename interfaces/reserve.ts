@@ -18,5 +18,5 @@ export interface ReserveReport {
     DestinationName: string;
     DepartureHour: string;
     AvailableQuantity: number;
-    ReserveQuantity: number;
+    ReservedQuantity: number;
 }
