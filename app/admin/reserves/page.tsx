@@ -59,7 +59,7 @@ import { PassengerReserveReport } from "@/interfaces/passengerReserve";
 
 // Mock data for existing clients
 const mockClients = [
-  { id: 1, name: "Carlos Rodríguez", dni: "28456789" },
+  { id: 1, name: "Carlos Cimino", dni: "28456789" },
   { id: 2, name: "Luis Rodríguez", dni: "30987654" },
   { id: 3, name: "Juan Rodríguez", dni: "25678901" },
   { id: 4, name: "Sofía González", dni: "32456789" },
