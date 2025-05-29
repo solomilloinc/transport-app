@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useMemo, useEffect } from "react";
-import { format, addMonths, subMonths } from "date-fns";
-import { es } from "date-fns/locale";
+import { useState, useMemo, useEffect } from 'react';
+import { format, addMonths, subMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -19,22 +19,16 @@ import {
   BusIcon,
   TicketPlus,
   TicketPlusIcon,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { FormDialog } from "@/components/dashboard/form-dialog";
-import { FormField } from "@/components/dashboard/form-field";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { FormDialog } from '@/components/dashboard/form-dialog';
+import { FormField } from '@/components/dashboard/form-field';
+import { PageHeader } from '@/components/dashboard/page-header';
 import {
   Dialog,
   DialogContent,
@@ -42,142 +36,26 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { get } from "@/services/api";
-import { ReserveReport } from "@/interfaces/reserve";
-import { PagedResponse } from "@/services/types";
-import { City } from "@/interfaces/city";
-import { SelectOption } from "@/components/dashboard/select";
-import { Passenger } from "@/interfaces/passengers";
-import { PassengerReserveReport } from "@/interfaces/passengerReserve";
-
-// Mock data for reservations
-
-// Mock data for passengers
-
-// Mock data for existing clients
-const mockClients = [
-  { id: 1, name: "Carlos Cimino", dni: "28456789" },
-  { id: 2, name: "Luis Rodríguez", dni: "30987654" },
-  { id: 3, name: "Juan Rodríguez", dni: "25678901" },
-  { id: 4, name: "Sofía González", dni: "32456789" },
-  { id: 5, name: "Elena Torres", dni: "27890123" },
-  { id: 6, name: "Juan López", dni: "29012345" },
-  { id: 7, name: "Luis García", dni: "31234567" },
-  { id: 8, name: "Sofía Pérez", dni: "26789012" },
-  { id: 9, name: "María Fernández", dni: "33456789" },
-  { id: 10, name: "Roberto Sánchez", dni: "24567890" },
-  { id: 11, name: "Ana Martínez", dni: "34567890" },
-  { id: 12, name: "Pedro Gómez", dni: "23456789" },
-];
-
-// First, add a mock data structure for client balances after the mockClients definition
-const mockClientBalances = [
-  { clientId: 1, balance: -15000 }, // Negative balance = debt
-  { clientId: 2, balance: 25000 }, // Positive balance = money in favor
-  { clientId: 4, balance: -8500 },
-  { clientId: 6, balance: 12000 },
-  { clientId: 8, balance: -30000 },
-  { clientId: 9, balance: 5000 },
-];
-
-// Mock data for vehicles
-const mockVehicles = [
-  {
-    id: 1,
-    name: "Bus 101",
-    plate: "ABC123",
-    type: "Autobús",
-    capacity: 45,
-    status: "Activo",
-  },
-  {
-    id: 2,
-    name: "Bus 102",
-    plate: "DEF456",
-    type: "Autobús",
-    capacity: 45,
-    status: "Activo",
-  },
-  {
-    id: 3,
-    name: "Minibus 201",
-    plate: "GHI789",
-    type: "Minibús",
-    capacity: 25,
-    status: "Activo",
-  },
-  {
-    id: 4,
-    name: "Minibus 202",
-    plate: "JKL012",
-    type: "Minibús",
-    capacity: 25,
-    status: "Mantenimiento",
-  },
-  {
-    id: 5,
-    name: "Van 301",
-    plate: "MNO345",
-    type: "Van",
-    capacity: 15,
-    status: "Activo",
-  },
-  {
-    id: 6,
-    name: "Van 302",
-    plate: "PQR678",
-    type: "Van",
-    capacity: 15,
-    status: "Inactivo",
-  },
-  {
-    id: 7,
-    name: "Microbus 401",
-    plate: "STU901",
-    type: "Microbus",
-    capacity: 20,
-    status: "Activo",
-  },
-  {
-    id: 8,
-    name: "Autocar 501",
-    plate: "VWX234",
-    type: "Autocar",
-    capacity: 50,
-    status: "Activo",
-  },
-];
-
-// Add a new mock data structure to associate trips with vehicles, after the mockVehicles definition
-const mockTripVehicles = [
-  { tripId: 1, vehicleId: 1 }, // Trip 1 uses Bus 101 (45 seats)
-  { tripId: 2, vehicleId: 3 }, // Trip 2 uses Minibus 201 (25 seats)
-  { tripId: 3, vehicleId: 5 }, // Trip 3 uses Van 301 (15 seats)
-  { tripId: 4, vehicleId: 7 }, // Trip 4 uses Microbus 401 (20 seats)
-  { tripId: 5, vehicleId: 8 }, // Trip 5 uses Autocar 501 (50 seats)
-];
+} from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { get, post } from '@/services/api';
+import { ReserveReport } from '@/interfaces/reserve';
+import { PagedResponse } from '@/services/types';
+import { City } from '@/interfaces/city';
+import { ApiSelect, SelectOption } from '@/components/dashboard/select';
+import { Passenger } from '@/interfaces/passengers';
+import { PassengerReserveReport } from '@/interfaces/passengerReserve';
+import { Vehicle } from '@/interfaces/vehicle';
+import { toast } from '@/hooks/use-toast';
 
 // Add a helper function to get client balance before the ReservationsPage function
 const getClientBalance = (dni: string) => {
-  const client = mockClients.find((c) => c.dni === dni);
-  if (!client) return null;
-
-  const balanceRecord = mockClientBalances.find(
-    (b) => b.clientId === client.id
-  );
-  return balanceRecord ? balanceRecord.balance : null;
-};
-
-// Add a function to get vehicle capacity for a trip
-const getTripVehicleCapacity = (tripId: number) => {
-  const association = mockTripVehicles.find((tv) => tv.tripId === tripId);
-  if (!association) return 0;
-
-  const vehicle = mockVehicles.find((v) => v.id === association.vehicleId);
-  return vehicle ? vehicle.capacity : 0;
+  // const client = passe.find((c) => c.dni === dni);
+  // if (!client) return null;
+  // const balanceRecord = mockClientBalances.find((b) => b.clientId === client.id);
+  // return balanceRecord ? balanceRecord.balance : null;
+  return 1;
 };
 
 // Generate calendar days
@@ -224,32 +102,26 @@ const generateCalendarDays = (year: number, month: number) => {
 
 // Pickup and dropoff locations for select options
 const locations = [
-  "Avenida Principal 123 16",
-  "Costanera Este 1",
-  "Paseo del Bosque 22",
-  "Biblioteca Central 6",
-  "Hotel Grand 12",
-  "Parque Industrial 3",
-  "Plaza Principal 23",
-  "Hotel Grand 8",
-  "Hospital Central 4",
-  "Parque Industrial 5",
-  "Terminal de Ómnibus 20",
-  "Hospital Central 2",
+  'Avenida Principal 123 16',
+  'Costanera Este 1',
+  'Paseo del Bosque 22',
+  'Biblioteca Central 6',
+  'Hotel Grand 12',
+  'Parque Industrial 3',
+  'Plaza Principal 23',
+  'Hotel Grand 8',
+  'Hospital Central 4',
+  'Parque Industrial 5',
+  'Terminal de Ómnibus 20',
+  'Hospital Central 2',
 ];
 
 // Define the type for sort column
-type SortColumn =
-  | "name"
-  | "pickup"
-  | "dropoff"
-  | "paid"
-  | "paymentMethod"
-  | "price";
-type SortDirection = "asc" | "desc";
+type SortColumn = 'name' | 'pickup' | 'dropoff' | 'paid' | 'paymentMethod' | 'price';
+type SortDirection = 'asc' | 'desc';
 
 // Define the type for delete action
-type DeleteAction = "delete" | "favor" | "debt";
+type DeleteAction = 'delete' | 'favor' | 'debt';
 
 export default function ReservationsPage() {
   const today = new Date();
@@ -257,18 +129,15 @@ export default function ReservationsPage() {
   // const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTrip, setSelectedTrip] = useState<ReserveReport | null>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
-  const [passengersReserves, setPassengersReserves] = useState<
-    PagedResponse<PassengerReserveReport>
-  >({
+  const [passengersReserves, setPassengersReserves] = useState<PagedResponse<PassengerReserveReport>>({
     Items: [],
     PageNumber: 1,
     PageSize: 8,
     TotalRecords: 0,
     TotalPages: 0,
   });
-  const [selectedPassengerReserve, setSelectedPassengerReserve] =
-    useState<PassengerReserveReport | null>(null);
-  const [originFilter, setOriginFilter] = useState<string>("all");
+  const [selectedPassengerReserve, setSelectedPassengerReserve] = useState<PassengerReserveReport | null>(null);
+  const [originFilter, setOriginFilter] = useState<string>('all');
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -288,21 +157,17 @@ export default function ReservationsPage() {
   const [pageSize, setPageSize] = useState(20);
 
   // Add state for sorting
-  const [sortColumn, setSortColumn] = useState<SortColumn>("name");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [sortColumn, setSortColumn] = useState<SortColumn>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [passengerToDelete, setPassengerToDelete] = useState<number | null>(
-    null
-  );
-  const [deleteAction, setDeleteAction] = useState<DeleteAction>("delete");
+  const [passengerToDelete, setPassengerToDelete] = useState<number | null>(null);
+  const [deleteAction, setDeleteAction] = useState<DeleteAction>('delete');
   const [isPaymentSummaryOpen, setIsPaymentSummaryOpen] = useState(false);
-  const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<
-    (typeof mockClients)[0] | null
-  >(null);
+  const [isPassengerSelectorOpen, setIsPassengerSelectorOpen] = useState(false);
+  const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
   const [cities, setCities] = useState<SelectOption[]>([]);
   // Round-trip states
   const [isRoundTrip, setIsRoundTrip] = useState(false);
@@ -312,67 +177,57 @@ export default function ReservationsPage() {
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
 
   // Add these new state variables after the other return trip related states
-  const [returnPickup, setReturnPickup] = useState<string>("");
-  const [returnDropoff, setReturnDropoff] = useState<string>("");
+  const [returnPickup, setReturnPickup] = useState<string>('');
+  const [returnDropoff, setReturnDropoff] = useState<string>('');
 
   const [newPassenger, setNewPassenger] = useState({
-    name: "",
-    pickup: "",
-    dropoff: "",
-    paymentMethod: "Efectivo",
+    name: '',
+    pickup: '',
+    dropoff: '',
+    paymentMethod: 'Efectivo',
     price: 0,
     paid: false,
     isRoundTrip: false,
   });
 
   const [newClient, setNewClient] = useState({
-    name: "",
-    surname: "",
-    dni: "",
-    phone: "",
-    email: "",
+    name: '',
+    surname: '',
+    dni: '',
+    phone: '',
+    email: '',
   });
 
   // Vehicle selection state
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<
-    (typeof mockVehicles)[0] | null
-  >(null);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
 
   // Update the payment summary dialog to include custom payment entries
   // First, add a new state for custom payments
-  const [customPayments, setCustomPayments] = useState<
-    Array<{ name: string; method: string; amount: number }>
-  >([]);
-  const [newPaymentName, setNewPaymentName] = useState("");
-  const [newPaymentMethod, setNewPaymentMethod] = useState("Efectivo");
-  const [newPaymentAmount, setNewPaymentAmount] = useState("");
+  const [customPayments, setCustomPayments] = useState<Array<{ name: string; method: string; amount: number }>>([]);
+  const [newPaymentName, setNewPaymentName] = useState('');
+  const [newPaymentMethod, setNewPaymentMethod] = useState('Efectivo');
+  const [newPaymentAmount, setNewPaymentAmount] = useState('');
 
   // Add this state variable for client search filtering
   // Add it near the other state variables at the top of the component
-  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [passengerSearchQuery, setPassengerSearchQuery] = useState('');
 
   // Add a new state for the selected payment method
-  const [selectedPaymentMethod, setSelectedPaymentMethod] =
-    useState<string>("Efectivo");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('Efectivo');
 
-  const fetchReserves = async (
-    pageToFetch = currentPage,
-    pageSizeToFetch = pageSize
-  ) => {
+  const fetchReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
     setIsLoading(true);
     try {
-      const response = await get<any, ReserveReport>(
-        `/reserve-report/${format(currentDate, "yyyyMMdd")}`,
-        {
-          pageNumber: pageToFetch,
-          pageSize: pageSizeToFetch,
-          sortBy: "fecha",
-          sortDescending: true,
-          filters: {},
-        }
-      );
+      const response = await get<any, ReserveReport>(`/reserve-report/${format(currentDate, 'yyyyMMdd')}`, {
+        pageNumber: pageToFetch,
+        pageSize: pageSizeToFetch,
+        sortBy: 'fecha',
+        sortDescending: true,
+        filters: {},
+      });
       setReserves(response);
       setIsLoading(false);
     } catch (error) {
@@ -380,22 +235,16 @@ export default function ReservationsPage() {
     }
   };
 
-  const fetchPassengersReserves = async (
-    pageToFetch = currentPage,
-    pageSizeToFetch = pageSize
-  ) => {
+  const fetchPassengersReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
     setIsLoading(true);
     try {
-      const response = await get<any, PassengerReserveReport>(
-        `/customer-reserve-report/${selectedTrip}`,
-        {
-          pageNumber: pageToFetch,
-          pageSize: pageSizeToFetch,
-          sortBy: "fecha",
-          sortDescending: true,
-          filters: {},
-        }
-      );
+      const response = await get<any, PassengerReserveReport>(`/customer-reserve-report/${selectedTrip}`, {
+        pageNumber: pageToFetch,
+        pageSize: pageSizeToFetch,
+        sortBy: 'fecha',
+        sortDescending: true,
+        filters: {},
+      });
       setPassengersReserves(response);
       setIsLoading(false);
     } catch (error) {
@@ -415,30 +264,52 @@ export default function ReservationsPage() {
 
   // Then add this filtered clients logic after the other useMemo hooks
   // Add this after the filteredTrips useMemo
-  const filteredClients = useMemo(() => {
-    if (!clientSearchQuery.trim()) {
-      return mockClients;
+  const fetchPassenger = async (dni: string) => {
+    if (!dni) return;
+    try {
+      const response = await get<any, Passenger>('/customer-report', {
+        pageNumber: 1,
+        pageSize: 10,
+        sortBy: 'name',
+        sortDescending: false,
+        filters: { documentNumber: dni },
+      });
+      setPassengers(response.Items);
+    } catch (error) {
+      setPassengers([]);
     }
-    const query = clientSearchQuery.toLowerCase();
-    return mockClients.filter(
-      (client) =>
-        client.name.toLowerCase().includes(query) ||
-        client.dni.toLowerCase().includes(query)
-    );
-  }, [clientSearchQuery]);
+  };
 
-  // Get unique vehicle types for grouping
-  // Sort vehicles by name
-  const sortedVehicles = useMemo(() => {
-    return [...mockVehicles].sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (passengerSearchQuery.length >= 3) {
+        fetchPassenger(passengerSearchQuery);
+      } else {
+        setPassengers([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [passengerSearchQuery]);
+
+  const fetchVehicles = async () => {
+    try {
+      const response = await get<any, Vehicle>('/vehicle-report', {
+        pageNumber: 1,
+        pageSize: 10,
+        sortBy: 'name',
+        sortDescending: false,
+        filters: {},
+      });
+      setVehicles(response.Items);
+    } catch (error) {
+      setPassengers([]);
+    }
+  };
 
   // Return trip calendar days
   const returnCalendarDays = useMemo(() => {
-    return generateCalendarDays(
-      returnCalendarDate.getFullYear(),
-      returnCalendarDate.getMonth()
-    );
+    return generateCalendarDays(returnCalendarDate.getFullYear(), returnCalendarDate.getMonth());
   }, [returnCalendarDate]);
 
   // Calendar navigation
@@ -460,10 +331,7 @@ export default function ReservationsPage() {
   };
 
   // Calendar days
-  const calendarDays = generateCalendarDays(
-    currentDate.getFullYear(),
-    currentDate.getMonth()
-  );
+  const calendarDays = generateCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
 
   // Day selection
   const handleDayClick = (day: number, month: number, year: number) => {
@@ -477,29 +345,17 @@ export default function ReservationsPage() {
 
   // Check if a date is selected
   const isDateSelected = (day: number, month: number, year: number) => {
-    return (
-      currentDate.getDate() === day &&
-      currentDate.getMonth() === month &&
-      currentDate.getFullYear() === year
-    );
+    return currentDate.getDate() === day && currentDate.getMonth() === month && currentDate.getFullYear() === year;
   };
 
   // Check if a return date is selected
   const isReturnDateSelected = (day: number, month: number, year: number) => {
-    return (
-      returnDate.getDate() === day &&
-      returnDate.getMonth() === month &&
-      returnDate.getFullYear() === year
-    );
+    return returnDate.getDate() === day && returnDate.getMonth() === month && returnDate.getFullYear() === year;
   };
 
   // Check if a date is today
   const isToday = (day: number, month: number, year: number) => {
-    return (
-      today.getDate() === day &&
-      today.getMonth() === month &&
-      today.getFullYear() === year
-    );
+    return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
   };
 
   const loadAllOptions = async () => {
@@ -508,10 +364,10 @@ export default function ReservationsPage() {
       setOptionsError(null);
 
       // Llamadas API (pueden ir en paralelo)
-      const cityResponse = await get<any, City>("/city-report", {
+      const cityResponse = await get<any, City>('/city-report', {
         pageNumber: 1,
         pageSize: 10,
-        sortBy: "fecha",
+        sortBy: 'fecha',
         sortDescending: true,
         filters: {},
       });
@@ -526,32 +382,31 @@ export default function ReservationsPage() {
         setCities(formattedCities);
       }
     } catch (error) {
-      setOptionsError("Error al cargar las ciudades");
+      setOptionsError('Error al cargar las ciudades');
     } finally {
       setIsOptionsLoading(false);
     }
   };
 
+  const handleUpdateVehicle = () => {
+    fetchVehicles();
+    setIsVehicleDialogOpen(true);
+  };
+
   // Handle passenger checkbox change
-  const handlePassengerCheck = (id: number, checked: boolean) => {
-    setPassengers(
-      passengers.map((passenger) =>
-        passenger.CustomerId === id ? { ...passenger, checked } : passenger
-      )
-    );
+  const handlePassengerReserveCheck = async (passenger: PassengerReserveReport, checked: boolean) => {
+    const updatedPassenger = { ...passenger, HasTraveled: checked };
+    //aca hacer la llamada api
   };
 
   // Handle passenger payment status change
-  const handlePassengerPaidChange = (id: number, paid: boolean) => {
-    setPassengers(
-      passengers.map((passenger) =>
-        passenger.CustomerId === id ? { ...passenger, paid } : passenger
-      )
-    );
+  const handlePassengerReservePaidChange = async (passenger: PassengerReserveReport, checked: boolean) => {
+    const updatedPassenger = { ...passenger, IsPayment: checked };
+    //aca hacer la llamada pra editar
   };
 
   // Handle delete passenger
-  const handleDeleteClick = (passenger: PassengerReserveReport) => {
+  const handleDeletePassengerReserveClick = (passenger: PassengerReserveReport) => {
     if (passenger) {
       setSelectedPassengerReserve(passenger);
       // setDeleteAction(passenger.paid ? 'favor' : 'delete');
@@ -585,10 +440,10 @@ export default function ReservationsPage() {
     }
   };
 
-  // Handle add passenger
+  // Handle add passenger-reserve
   const handleAddPassenger = () => {
-    setSelectedClient(null);
-    setIsClientSelectorOpen(true);
+    setSelectedPassenger(null);
+    setIsPassengerSelectorOpen(true);
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -605,7 +460,7 @@ export default function ReservationsPage() {
     });
   };
 
-  const submitAddPassenger = () => {
+  const submitAddReserve = () => {
     // If it's a round trip, open the return trip modal
     if (newPassenger.isRoundTrip) {
       setIsAddModalOpen(false);
@@ -618,60 +473,74 @@ export default function ReservationsPage() {
   };
 
   // Modify the finalizeAddPassenger function to use the selected return pickup/dropoff locations
-  const finalizeAddPassenger = () => {
-    const newId = Math.max(...passengers.map((p) => p.CustomerId)) + 1;
-
+  const finalizeAddPassenger = async () => {
     // Add the outbound passenger
-    const newPassengerEntry = {
-      id: newId,
-      name: selectedClient ? selectedClient.name : newPassenger.name,
-      pickup: newPassenger.pickup,
-      dropoff: newPassenger.dropoff,
-      paymentMethod: newPassenger.paymentMethod,
-      price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
-      checked: true,
-      paid: newPassenger.paid,
-      dni: selectedClient ? selectedClient.dni : "",
+    const passengerReserve = {
+      ReserveId: selectedTrip?.ReserveId || 0,
+      CustomerId: selectedPassenger?.CustomerId || 0,
+      IsPayment: true,
+      StatusPayment: 1, // Assuming 1 means paid
+      PaymentMethod: 1,
+      Price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
+      PickupLocationId: 1,
+      DropoffLocationId: 2,
+      HasTraveled: true, // Assuming the passenger has traveled
+      Status: 'active', // Assuming active status
     };
 
-    const updatedPassengers = [...passengers, newPassengerEntry];
-
-    // If it's a round trip and we have a return trip selected, add the return passenger
-    if (newPassenger.isRoundTrip && returnTrip) {
-      const returnId = newId + 1;
-      const returnPassenger = {
-        id: returnId,
-        name: selectedClient ? selectedClient.name : newPassenger.name,
-        // Use the selected return pickup/dropoff if provided, otherwise swap the original ones
-        pickup: returnPickup || newPassenger.dropoff,
-        dropoff: returnDropoff || newPassenger.pickup,
-        paymentMethod: newPassenger.paymentMethod,
-        price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
-        checked: true,
-        paid: newPassenger.paid,
-        dni: selectedClient ? selectedClient.dni : "",
-        isReturn: true, // Mark as return trip
-      };
-      updatedPassengers.push(returnPassenger);
+    try {
+      const response = await post('/passenger-reserves-create', passengerReserve);
+      if (response) {
+        toast({
+          title: 'Reserva creada',
+          description: 'La reserva ha sido creado exitosamente',
+          variant: 'success',
+        });
+        setIsAddModalOpen(false);
+        fetchReserves(); // Refresh the vehicle list
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Error al crear la reserva',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Ocurrió un error al crear la reserva',
+        variant: 'destructive',
+      });
     }
+    // const updatedPassengers = [...passengers, newPassengerEntry];
+
+    // // If it's a round trip and we have a return trip selected, add the return passenger
+    // if (newPassenger.isRoundTrip && returnTrip) {
+    //   const returnId = newId + 1;
+    //   const returnPassenger = {
+    //     id: returnId,
+    //     name: selectedClient ? selectedClient.name : newPassenger.name,
+    //     // Use the selected return pickup/dropoff if provided, otherwise swap the original ones
+    //     pickup: returnPickup || newPassenger.dropoff,
+    //     dropoff: returnDropoff || newPassenger.pickup,
+    //     paymentMethod: newPassenger.paymentMethod,
+    //     price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
+    //     checked: true,
+    //     paid: newPassenger.paid,
+    //     dni: selectedClient ? selectedClient.dni : '',
+    //     isReturn: true, // Mark as return trip
+    //   };
+    //   updatedPassengers.push(returnPassenger);
+    // }
 
     // setPassengers(updatedPassengers);
     setIsAddModalOpen(false);
     setIsReturnTripModalOpen(false);
-    setSelectedClient(null);
+    setSelectedPassenger(null);
     setReturnTrip(null);
     setIsRoundTrip(false);
-    setReturnPickup("");
-    setReturnDropoff("");
-    setNewPassenger({
-      name: "",
-      pickup: "",
-      dropoff: "",
-      paymentMethod: "Efectivo",
-      price: 0,
-      paid: false,
-      isRoundTrip: false,
-    });
+    setReturnPickup('');
+    setReturnDropoff('');
   };
 
   const submitAddNewClient = () => {
@@ -679,25 +548,24 @@ export default function ReservationsPage() {
     const fullName = `${newClient.name} ${newClient.surname}`.trim();
 
     // Create a new client
-    const newClientId = Math.max(...mockClients.map((c) => c.id)) + 1;
+    // const newClientId = Math.max(...mockClients.map((c) => c.id)) + 1;
     const newClientObj = {
-      id: newClientId,
       name: fullName,
       dni: newClient.dni,
     };
 
     // Select the new client and open the passenger form
-    setSelectedClient(newClientObj);
+    // setSelectedPassenger(newClientObj);
     setIsNewClientModalOpen(false);
     setIsAddModalOpen(true);
 
     // Reset the form
     setNewClient({
-      name: "",
-      surname: "",
-      dni: "",
-      phone: "",
-      email: "",
+      name: '',
+      surname: '',
+      dni: '',
+      phone: '',
+      email: '',
     });
   };
 
@@ -712,7 +580,7 @@ export default function ReservationsPage() {
   };
 
   // Weekday headers
-  const weekdays = ["lu", "ma", "mi", "ju", "vi", "sá", "do"];
+  const weekdays = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
 
   // Update the calculatePaymentTotals function to include the selected payment method
   const calculatePaymentTotals = () => {
@@ -766,9 +634,9 @@ export default function ReservationsPage() {
           amount: Number(newPaymentAmount),
         },
       ]);
-      setNewPaymentName("");
-      setNewPaymentMethod("Efectivo");
-      setNewPaymentAmount("");
+      setNewPaymentName('');
+      setNewPaymentMethod('Efectivo');
+      setNewPaymentAmount('');
     }
   };
 
@@ -776,11 +644,11 @@ export default function ReservationsPage() {
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       // Toggle direction if same column
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       // Set new column and default to ascending
       setSortColumn(column);
-      setSortDirection("asc");
+      setSortDirection('asc');
     }
   };
 
@@ -820,7 +688,7 @@ export default function ReservationsPage() {
       return <ArrowUpDown className="ml-1 h-4 w-4 inline" />;
     }
 
-    return sortDirection === "asc" ? (
+    return sortDirection === 'asc' ? (
       <ChevronUp className="ml-1 h-4 w-4 inline" />
     ) : (
       <ChevronDown className="ml-1 h-4 w-4 inline" />
@@ -834,20 +702,21 @@ export default function ReservationsPage() {
 
   // Handle vehicle selection
   const handleVehicleSelect = (vehicleId: string) => {
-    const vehicle = mockVehicles.find((v) => v.id.toString() === vehicleId);
+    const vehicle = vehicles.find((v) => v.VehicleId.toString() === vehicleId);
     setSelectedVehicle(vehicle || null);
     setSelectedVehicleId(vehicleId);
   };
 
   // Handle vehicle selection confirmation
   const confirmVehicleSelection = () => {
+    //Aca llamar a api
     setIsVehicleDialogOpen(false);
   };
 
   // Handle removing vehicle selection
   const handleRemoveVehicle = () => {
     setSelectedVehicle(null);
-    setSelectedVehicleId("");
+    setSelectedVehicleId('');
     setIsVehicleDialogOpen(false);
   };
 
@@ -866,8 +735,7 @@ export default function ReservationsPage() {
 
   // Handle price input change
   const handlePriceChange = (id: number, value: string) => {
-    const newPrice =
-      value === "" ? 0 : Number.parseInt(value.replace(/\D/g, ""));
+    const newPrice = value === '' ? 0 : Number.parseInt(value.replace(/\D/g, ''));
     // setPassengers(passengers.map((p) => (p.id === id ? { ...p, price: newPrice } : p)));
   };
 
@@ -883,12 +751,7 @@ export default function ReservationsPage() {
             </Button>
 
             {/* Vehicle selection button */}
-            <Button
-              variant="outline"
-              size="icon"
-              title="Seleccionar Vehículo"
-              onClick={() => setIsVehicleDialogOpen(true)}
-            >
+            <Button variant="outline" size="icon" title="Seleccionar Vehículo" onClick={() => handleUpdateVehicle()}>
               <BusIcon className="h-4 w-4" />
             </Button>
 
@@ -924,9 +787,7 @@ export default function ReservationsPage() {
                 <button onClick={handlePrevMonth} className="p-1">
                   <ChevronLeftIcon className="h-5 w-5" />
                 </button>
-                <div className="font-medium">
-                  {format(currentDate, "MMMM yyyy", { locale: es })}
-                </div>
+                <div className="font-medium">{format(currentDate, 'MMMM yyyy', { locale: es })}</div>
                 <button onClick={handleNextMonth} className="p-1">
                   <ChevronRightIcon className="h-5 w-5" />
                 </button>
@@ -942,14 +803,12 @@ export default function ReservationsPage() {
                 {calendarDays.map((day, i) => (
                   <button
                     key={i}
-                    className={`rounded-md p-1 text-sm ${
-                      !day.isCurrentMonth ? "text-gray-400" : ""
-                    } ${
+                    className={`rounded-md p-1 text-sm ${!day.isCurrentMonth ? 'text-gray-400' : ''} ${
                       isDateSelected(day.day, day.month, day.year)
-                        ? "bg-blue-500 text-white"
+                        ? 'bg-blue-500 text-white'
                         : isToday(day.day, day.month, day.year)
-                        ? "bg-blue-100 text-blue-700"
-                        : "hover:bg-gray-100"
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'hover:bg-gray-100'
                     }`}
                     onClick={() => handleDayClick(day.day, day.month, day.year)}
                   >
@@ -961,7 +820,7 @@ export default function ReservationsPage() {
               <div className="space-y-2 pt-4">
                 <div className="flex items-center justify-between">
                   <div className="text-lg font-medium text-blue-500">
-                    Viajes {format(currentDate, "d MMM", { locale: es })}
+                    Viajes {format(currentDate, 'd MMM', { locale: es })}
                   </div>
                   {/* <div className="flex items-center">
                     <FilterIcon className="mr-2 h-4 w-4 text-gray-500" />
@@ -985,21 +844,17 @@ export default function ReservationsPage() {
                       <button
                         key={trip.ReserveId}
                         className={`flex w-full items-center justify-between rounded-md border p-3 text-left text-sm ${
-                          selectedTrip?.ReserveId === trip.ReserveId
-                            ? "border-blue-500 bg-blue-50"
-                            : "hover:bg-gray-50"
+                          selectedTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                         }`}
                         onClick={() => setSelectedTrip(trip)}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {trip.DepartureHour}
-                          </span>
+                          <span className="font-medium">{trip.DepartureHour}</span>
                           <span
                             className={`text-xs px-1.5 py-0.5 rounded-md ${
                               trip.ReservedQuantity >= trip.AvailableQuantity
-                                ? "bg-red-100 text-red-700"
-                                : "bg-green-100 text-green-700"
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-green-100 text-green-700'
                             }`}
                           >
                             {trip.ReservedQuantity}/{trip.AvailableQuantity}
@@ -1029,13 +884,11 @@ export default function ReservationsPage() {
             <div className="space-y-4">
               <div className="flex items-center text-xl font-semibold text-blue-500">
                 <UserPlusIcon className="mr-2 h-5 w-5" />
-                {formatSelectedDate().charAt(0).toUpperCase() +
-                  formatSelectedDate().slice(1)}{" "}
-                - {selectedTrip?.OriginName} → {selectedTrip?.DestinationName},{" "}
-                {selectedTrip?.DepartureHour}
+                {formatSelectedDate().charAt(0).toUpperCase() + formatSelectedDate().slice(1)} -{' '}
+                {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
                 {selectedVehicle && (
                   <span className="ml-2 text-sm font-normal text-gray-600">
-                    | Vehículo: {selectedVehicle.name} ({selectedVehicle.type})
+                    | Vehículo: {selectedVehicle.VehicleTypeName} ({selectedVehicle.InternalNumber})
                   </span>
                 )}
               </div>
@@ -1047,49 +900,49 @@ export default function ReservationsPage() {
                       <th className="py-3 pr-4 w-[20%]">
                         <button
                           className="flex items-center font-medium text-gray-500 hover:text-gray-700"
-                          onClick={() => handleSort("name")}
+                          onClick={() => handleSort('name')}
                         >
-                          Pasajero {renderSortIndicator("name")}
+                          Pasajero {renderSortIndicator('name')}
                         </button>
                       </th>
                       <th className="py-3 pr-4 w-[20%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort("pickup")}
+                          onClick={() => handleSort('pickup')}
                         >
-                          Subida {renderSortIndicator("pickup")}
+                          Subida {renderSortIndicator('pickup')}
                         </button>
                       </th>
                       <th className="py-3 pr-4 w-[20%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort("dropoff")}
+                          onClick={() => handleSort('dropoff')}
                         >
-                          Bajada {renderSortIndicator("dropoff")}
+                          Bajada {renderSortIndicator('dropoff')}
                         </button>
                       </th>
                       <th className="py-3 pr-4 text-center">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort("paid")}
+                          onClick={() => handleSort('paid')}
                         >
-                          $ {renderSortIndicator("paid")}
+                          $ {renderSortIndicator('paid')}
                         </button>
                       </th>
                       <th className="py-3 pr-4 w-[15%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort("paymentMethod")}
+                          onClick={() => handleSort('paymentMethod')}
                         >
-                          Pago {renderSortIndicator("paymentMethod")}
+                          Pago {renderSortIndicator('paymentMethod')}
                         </button>
                       </th>
                       <th className="py-3 pr-4 text-center w-[10%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                          onClick={() => handleSort("price")}
+                          onClick={() => handleSort('price')}
                         >
-                          Precio {renderSortIndicator("price")}
+                          Precio {renderSortIndicator('price')}
                         </button>
                       </th>
                       <th className="py-3 pl-4 text-right w-[5%]"></th>
@@ -1097,65 +950,42 @@ export default function ReservationsPage() {
                   </thead>
                   <tbody>
                     {passengersReserves.Items.map((passenger) => (
-                      <tr
-                        key={passenger.CustomerReserveId}
-                        className="border-b"
-                      >
+                      <tr key={passenger.CustomerReserveId} className="border-b">
                         <td className="py-3 pr-4">
                           <div className="flex items-center">
                             <Checkbox
                               id={`passenger-${passenger.CustomerId}`}
                               checked={passenger.HasTraveled}
-                              onCheckedChange={(checked) =>
-                                handlePassengerCheck(
-                                  passenger.CustomerReserveId,
-                                  checked as boolean
-                                )
-                              }
+                              onCheckedChange={(checked) => handlePassengerReserveCheck(passenger, checked as boolean)}
                               className="mr-2"
                             />
                             <div>
-                              <label
-                                htmlFor={`passenger-${passenger.CustomerReserveId}`}
-                                className="font-medium"
-                              >
+                              <label htmlFor={`passenger-${passenger.CustomerReserveId}`} className="font-medium">
                                 {passenger.FullName}
                               </label>
                               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                 <span>DNI: {passenger.DocumentNumber}</span>
-                                {passenger.DocumentNumber &&
-                                  getClientBalance(passenger.DocumentNumber) !==
-                                    null && (
-                                    <span
-                                      className={
-                                        getClientBalance(
-                                          passenger.DocumentNumber
-                                        )! < 0
-                                          ? "text-red-500 font-medium"
-                                          : "text-green-600 font-medium"
-                                      }
-                                    >
-                                      {getClientBalance(
-                                        passenger.DocumentNumber
-                                      )! < 0
-                                        ? `Debe $${Math.abs(
-                                            getClientBalance(
-                                              passenger.DocumentNumber
-                                            )!
-                                          ).toLocaleString()}`
-                                        : `A favor $${getClientBalance(
-                                            passenger.DocumentNumber
-                                          )!.toLocaleString()}`}
-                                    </span>
-                                  )}
+                                {passenger.DocumentNumber && getClientBalance(passenger.DocumentNumber) !== null && (
+                                  <span
+                                    className={
+                                      getClientBalance(passenger.DocumentNumber)! < 0
+                                        ? 'text-red-500 font-medium'
+                                        : 'text-green-600 font-medium'
+                                    }
+                                  >
+                                    {getClientBalance(passenger.DocumentNumber)! < 0
+                                      ? `Debe $${Math.abs(
+                                          getClientBalance(passenger.DocumentNumber)!
+                                        ).toLocaleString()}`
+                                      : `A favor $${getClientBalance(passenger.DocumentNumber)!.toLocaleString()}`}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select
-                            defaultValue={passenger.PickupLocationId.toString()}
-                          >
+                          <Select defaultValue={passenger.PickupLocationId.toString()}>
                             <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
@@ -1169,9 +999,7 @@ export default function ReservationsPage() {
                           </Select>
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select
-                            defaultValue={passenger.DropoffLocationId.toString()}
-                          >
+                          <Select defaultValue={passenger.DropoffLocationId.toString()}>
                             <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
@@ -1189,25 +1017,15 @@ export default function ReservationsPage() {
                             id={`paid-${passenger.CustomerReserveId}`}
                             checked={passenger.IsPayment}
                             onCheckedChange={(checked) =>
-                              handlePassengerPaidChange(
-                                passenger.CustomerReserveId,
-                                checked as boolean
-                              )
+                              handlePassengerReservePaidChange(passenger, checked as boolean)
                             }
                             className="mx-auto"
                           />
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select
-                            defaultValue={passenger.PaymentMethod.toString()}
-                            disabled={!passenger.IsPayment}
-                          >
+                          <Select defaultValue={passenger.PaymentMethod.toString()} disabled={!passenger.IsPayment}>
                             <SelectTrigger
-                              className={`w-full ${
-                                !passenger.IsPayment
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : ""
-                              }`}
+                              className={`w-full ${!passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               <SelectValue />
                             </SelectTrigger>
@@ -1221,16 +1039,9 @@ export default function ReservationsPage() {
                           <Input
                             type="text"
                             value={passenger.Price.toString()}
-                            onChange={(e) =>
-                              handlePriceChange(
-                                passenger.CustomerReserveId,
-                                e.target.value
-                              )
-                            }
+                            onChange={(e) => handlePriceChange(passenger.CustomerReserveId, e.target.value)}
                             className={`w-24 text-right font-mono mx-auto ${
-                              !passenger.IsPayment
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
+                              !passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             disabled={!passenger.IsPayment}
                           />
@@ -1240,7 +1051,7 @@ export default function ReservationsPage() {
                             variant="ghost"
                             size="icon"
                             className="text-red-500 hover:bg-red-50 hover:text-red-600"
-                            onClick={() => handleDeleteClick(passenger)}
+                            onClick={() => handleDeletePassengerReserveClick(passenger)}
                           >
                             <TrashIcon className="h-4 w-4" />
                           </Button>
@@ -1256,43 +1067,38 @@ export default function ReservationsPage() {
       </div>
 
       {/* Client Selector Dialog */}
-      <Dialog
-        open={isClientSelectorOpen}
-        onOpenChange={setIsClientSelectorOpen}
-      >
+      <Dialog open={isPassengerSelectorOpen} onOpenChange={setIsPassengerSelectorOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Seleccionar Pasajero</DialogTitle>
-            <DialogDescription>
-              Selecciona un pasajero existente o crea uno nuevo
-            </DialogDescription>
+            <DialogDescription>Selecciona un pasajero existente o crea uno nuevo</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex flex-col space-y-2">
-              <Label htmlFor="client-search">Buscar cliente</Label>
+              <Label htmlFor="client-search">Buscar pasajero</Label>
               <Input
                 id="client-search"
                 placeholder="Buscar por nombre o DNI..."
                 className="mb-2"
-                value={clientSearchQuery}
-                onChange={(e) => setClientSearchQuery(e.target.value)}
+                value={passengerSearchQuery}
+                onChange={(e) => setPassengerSearchQuery(e.target.value)}
               />
               <div className="max-h-60 overflow-y-auto border rounded-md">
-                {filteredClients.map((client) => (
+                {passengers.map((passenger) => (
                   <div
-                    key={client.id}
+                    key={passenger.CustomerId}
                     className="flex items-center justify-between p-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
                     onClick={() => {
-                      setSelectedClient(client);
-                      setIsClientSelectorOpen(false);
+                      setSelectedPassenger(passenger);
+                      setIsPassengerSelectorOpen(false);
                       setIsAddModalOpen(true);
                     }}
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">{client.name}</span>
-                      <span className="text-xs text-gray-500">
-                        DNI: {client.dni}
+                      <span className="font-medium">
+                        {passenger.FirstName} {passenger.LastName}
                       </span>
+                      <span className="text-xs text-gray-500">DNI: {passenger.DocumentNumber}</span>
                     </div>
                     <Button variant="ghost" size="sm">
                       Seleccionar
@@ -1303,15 +1109,12 @@ export default function ReservationsPage() {
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setIsClientSelectorOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsPassengerSelectorOpen(false)}>
               Cancelar
             </Button>
             <Button
               onClick={() => {
-                setIsClientSelectorOpen(false);
+                setIsPassengerSelectorOpen(false);
                 setIsNewClientModalOpen(true);
               }}
             >
@@ -1327,55 +1130,39 @@ export default function ReservationsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Seleccionar Vehículo</DialogTitle>
-            <DialogDescription>
-              Selecciona un vehículo para este viaje
-            </DialogDescription>
+            <DialogDescription>Selecciona un vehículo para este viaje</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex flex-col space-y-2">
               <Label htmlFor="vehicle-select">Vehículo</Label>
-              <Select
-                value={selectedVehicleId}
-                onValueChange={handleVehicleSelect}
-              >
+              <Select value={selectedVehicleId} onValueChange={handleVehicleSelect}>
                 <SelectTrigger id="vehicle-select">
                   <SelectValue placeholder="Seleccionar vehículo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sortedVehicles.map((vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                  {vehicles.map((vehicle) => (
+                    <SelectItem key={vehicle.VehicleId} value={vehicle.VehicleId.toString()}>
                       <div>
-                        <span>{vehicle.name}</span>
-                        <span className="ml-1 text-xs text-gray-500">
-                          ({vehicle.type})
-                        </span>
+                        <span>{vehicle.VehicleTypeName}</span>
+                        <span className="ml-1 text-xs text-gray-500">({vehicle.InternalNumber})</span>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-
               {selectedVehicle && (
                 <div className="mt-2 text-sm text-gray-500">
-                  <p>Tipo: {selectedVehicle.type}</p>
-                  <p>Placa: {selectedVehicle.plate}</p>
-                  <p>Capacidad: {selectedVehicle.capacity} asientos</p>
-                  <p>Estado: {selectedVehicle.status}</p>
+                  <p>Capacidad: {selectedVehicle.AvailableQuantity} asientos</p>
+                  <p>Estado: {selectedVehicle.Status}</p>
                 </div>
               )}
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setIsVehicleDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsVehicleDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              onClick={confirmVehicleSelection}
-              disabled={!selectedVehicle}
-            >
+            <Button onClick={confirmVehicleSelection} disabled={!selectedVehicle}>
               Confirmar
             </Button>
           </DialogFooter>
@@ -1396,7 +1183,7 @@ export default function ReservationsPage() {
             id="name"
             placeholder="Nombre"
             value={newClient.name}
-            onChange={(e) => handleNewClientInputChange("name", e.target.value)}
+            onChange={(e) => handleNewClientInputChange('name', e.target.value)}
           />
         </FormField>
         <FormField label="Apellido">
@@ -1404,9 +1191,7 @@ export default function ReservationsPage() {
             id="surname"
             placeholder="Apellido"
             value={newClient.surname}
-            onChange={(e) =>
-              handleNewClientInputChange("surname", e.target.value)
-            }
+            onChange={(e) => handleNewClientInputChange('surname', e.target.value)}
           />
         </FormField>
         <FormField label="DNI">
@@ -1414,7 +1199,7 @@ export default function ReservationsPage() {
             id="dni"
             placeholder="DNI"
             value={newClient.dni}
-            onChange={(e) => handleNewClientInputChange("dni", e.target.value)}
+            onChange={(e) => handleNewClientInputChange('dni', e.target.value)}
           />
         </FormField>
         <FormField label="Teléfono">
@@ -1422,9 +1207,7 @@ export default function ReservationsPage() {
             id="phone"
             placeholder="Teléfono"
             value={newClient.phone}
-            onChange={(e) =>
-              handleNewClientInputChange("phone", e.target.value)
-            }
+            onChange={(e) => handleNewClientInputChange('phone', e.target.value)}
           />
         </FormField>
         <FormField label="Email">
@@ -1433,9 +1216,7 @@ export default function ReservationsPage() {
             type="email"
             placeholder="Email"
             value={newClient.email}
-            onChange={(e) =>
-              handleNewClientInputChange("email", e.target.value)
-            }
+            onChange={(e) => handleNewClientInputChange('email', e.target.value)}
           />
         </FormField>
       </FormDialog>
@@ -1446,18 +1227,15 @@ export default function ReservationsPage() {
         onOpenChange={setIsAddModalOpen}
         title="Añadir Pasajero al Viaje"
         description={
-          selectedClient
-            ? `Añadiendo a ${selectedClient.name} (DNI: ${selectedClient.dni})`
-            : "Añade un nuevo pasajero a este viaje"
+          selectedPassenger
+            ? `Añadiendo a ${selectedPassenger.FirstName} ${selectedPassenger.LastName} (DNI: ${selectedPassenger.DocumentNumber})`
+            : 'Añade un nuevo pasajero a este viaje'
         }
-        onSubmit={submitAddPassenger}
-        submitText="Añadir Pasajero"
+        onSubmit={submitAddReserve}
+        submitText="Añadir Reserva"
       >
         <FormField label="Punto de Subida">
-          <Select
-            value={newPassenger.pickup}
-            onValueChange={(value) => handleInputChange("pickup", value)}
-          >
+          <Select value={newPassenger.pickup} onValueChange={(value) => handleInputChange('pickup', value)}>
             <SelectTrigger id="pickup">
               <SelectValue placeholder="Seleccionar punto de subida" />
             </SelectTrigger>
@@ -1471,10 +1249,7 @@ export default function ReservationsPage() {
           </Select>
         </FormField>
         <FormField label="Punto de Bajada">
-          <Select
-            value={newPassenger.dropoff}
-            onValueChange={(value) => handleInputChange("dropoff", value)}
-          >
+          <Select value={newPassenger.dropoff} onValueChange={(value) => handleInputChange('dropoff', value)}>
             <SelectTrigger id="dropoff">
               <SelectValue placeholder="Seleccionar punto de bajada" />
             </SelectTrigger>
@@ -1492,9 +1267,7 @@ export default function ReservationsPage() {
             <Checkbox
               id="round-trip"
               checked={newPassenger.isRoundTrip}
-              onCheckedChange={(checked) =>
-                handleRoundTripChange(checked as boolean)
-              }
+              onCheckedChange={(checked) => handleRoundTripChange(checked as boolean)}
             />
             <Label htmlFor="round-trip" className="text-sm font-normal">
               Reservar viaje de ida y vuelta
@@ -1504,16 +1277,13 @@ export default function ReservationsPage() {
       </FormDialog>
 
       {/* Return Trip Selection Dialog */}
-      <Dialog
-        open={isReturnTripModalOpen}
-        onOpenChange={setIsReturnTripModalOpen}
-      >
+      <Dialog open={isReturnTripModalOpen} onOpenChange={setIsReturnTripModalOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Seleccionar Viaje de Vuelta</DialogTitle>
             <DialogDescription>
-              Selecciona la fecha y el servicio para el viaje de vuelta de{" "}
-              {selectedClient ? selectedClient.name : newPassenger.name}
+              Selecciona la fecha y el servicio para el viaje de vuelta de{' '}
+              {selectedPassenger ? selectedPassenger.FirstName + selectedPassenger.LastName : newPassenger.name}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -1529,9 +1299,7 @@ export default function ReservationsPage() {
                   <button onClick={handleReturnPrevMonth} className="p-1">
                     <ChevronLeftIcon className="h-5 w-5" />
                   </button>
-                  <div className="font-medium">
-                    {format(returnCalendarDate, "MMMM yyyy", { locale: es })}
-                  </div>
+                  <div className="font-medium">{format(returnCalendarDate, 'MMMM yyyy', { locale: es })}</div>
                   <button onClick={handleReturnNextMonth} className="p-1">
                     <ChevronRightIcon className="h-5 w-5" />
                   </button>
@@ -1547,18 +1315,14 @@ export default function ReservationsPage() {
                   {returnCalendarDays.map((day, i) => (
                     <button
                       key={i}
-                      className={`rounded-md p-1 text-xs ${
-                        !day.isCurrentMonth ? "text-gray-400" : ""
-                      } ${
+                      className={`rounded-md p-1 text-xs ${!day.isCurrentMonth ? 'text-gray-400' : ''} ${
                         isReturnDateSelected(day.day, day.month, day.year)
-                          ? "bg-blue-500 text-white"
+                          ? 'bg-blue-500 text-white'
                           : isToday(day.day, day.month, day.year)
-                          ? "bg-blue-100 text-blue-700"
-                          : "hover:bg-gray-100"
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'hover:bg-gray-100'
                       }`}
-                      onClick={() =>
-                        handleReturnDayClick(day.day, day.month, day.year)
-                      }
+                      onClick={() => handleReturnDayClick(day.day, day.month, day.year)}
                     >
                       {day.day}
                     </button>
@@ -1569,8 +1333,7 @@ export default function ReservationsPage() {
               {/* Right column - Return Trip Selection */}
               <div className="border-l pl-4">
                 <div className="font-medium mb-2">
-                  Viajes disponibles para{" "}
-                  {format(returnDate, "d 'de' MMMM", { locale: es })}
+                  Viajes disponibles para {format(returnDate, "d 'de' MMMM", { locale: es })}
                 </div>
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-4">
                   {/* For simplicity, we're using the same trips, but in a real app you'd fetch trips for the return date */}
@@ -1578,9 +1341,7 @@ export default function ReservationsPage() {
                     <button
                       key={trip.ReserveId}
                       className={`flex w-full items-center justify-between rounded-md border p-3 text-left text-sm ${
-                        returnTrip?.ReserveId === trip.ReserveId
-                          ? "border-blue-500 bg-blue-50"
-                          : "hover:bg-gray-50"
+                        returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                       }`}
                       onClick={() => handleReturnTripSelect(trip)}
                     >
@@ -1595,25 +1356,16 @@ export default function ReservationsPage() {
                 {/* Add pickup and dropoff dropdowns */}
                 <div className="space-y-3 mt-4">
                   <div>
-                    <Label
-                      htmlFor="return-pickup"
-                      className="text-sm font-medium mb-1 block"
-                    >
+                    <Label htmlFor="return-pickup" className="text-sm font-medium mb-1 block">
                       Punto de Subida (Vuelta)
                     </Label>
-                    <Select
-                      value={returnPickup}
-                      onValueChange={setReturnPickup}
-                    >
+                    <Select value={returnPickup} onValueChange={setReturnPickup}>
                       <SelectTrigger id="return-pickup" className="w-full">
                         <SelectValue placeholder="Seleccionar punto de subida" />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
-                          <SelectItem
-                            key={`pickup-${location}`}
-                            value={location}
-                          >
+                          <SelectItem key={`pickup-${location}`} value={location}>
                             {location}
                           </SelectItem>
                         ))}
@@ -1622,25 +1374,16 @@ export default function ReservationsPage() {
                   </div>
 
                   <div>
-                    <Label
-                      htmlFor="return-dropoff"
-                      className="text-sm font-medium mb-1 block"
-                    >
+                    <Label htmlFor="return-dropoff" className="text-sm font-medium mb-1 block">
                       Punto de Bajada (Vuelta)
                     </Label>
-                    <Select
-                      value={returnDropoff}
-                      onValueChange={setReturnDropoff}
-                    >
+                    <Select value={returnDropoff} onValueChange={setReturnDropoff}>
                       <SelectTrigger id="return-dropoff" className="w-full">
                         <SelectValue placeholder="Seleccionar punto de bajada" />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
-                          <SelectItem
-                            key={`dropoff-${location}`}
-                            value={location}
-                          >
+                          <SelectItem key={`dropoff-${location}`} value={location}>
                             {location}
                           </SelectItem>
                         ))}
@@ -1652,10 +1395,7 @@ export default function ReservationsPage() {
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setIsReturnTripModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsReturnTripModalOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={finalizeAddPassenger} disabled={!returnTrip}>
@@ -1672,8 +1412,8 @@ export default function ReservationsPage() {
             <DialogTitle>Eliminar Pasajero</DialogTitle>
             <DialogDescription>
               {selectedPassengerReserve?.IsPayment
-                ? "Este pasajero ya ha pagado. ¿Qué deseas hacer con el pago?"
-                : "Este pasajero no ha pagado. ¿Qué deseas hacer?"}
+                ? 'Este pasajero ya ha pagado. ¿Qué deseas hacer con el pago?'
+                : 'Este pasajero no ha pagado. ¿Qué deseas hacer?'}
             </DialogDescription>
           </DialogHeader>
 
@@ -1691,9 +1431,7 @@ export default function ReservationsPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="favor" id="favor" />
-                    <Label htmlFor="favor">
-                      Poner el dinero a favor del pasajero
-                    </Label>
+                    <Label htmlFor="favor">Poner el dinero a favor del pasajero</Label>
                   </div>
                 </>
               ) : (
@@ -1712,10 +1450,7 @@ export default function ReservationsPage() {
           </div>
 
           <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
               Cancelar
             </Button>
             <Button variant="destructive" onClick={confirmDeletePassenger}>
@@ -1726,16 +1461,12 @@ export default function ReservationsPage() {
       </Dialog>
 
       {/* Payment Summary Dialog */}
-      <Dialog
-        open={isPaymentSummaryOpen}
-        onOpenChange={setIsPaymentSummaryOpen}
-      >
+      <Dialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Resumen de Pagos</DialogTitle>
             <DialogDescription>
-              Resumen de pagos para {formatSelectedDate()} -{" "}
-              {selectedTrip?.DepartureHour}
+              Resumen de pagos para {formatSelectedDate()} - {selectedTrip?.DepartureHour}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1768,12 +1499,8 @@ export default function ReservationsPage() {
                 {customPayments.map((payment, index) => (
                   <div key={index} className="flex items-center text-sm">
                     <span className="w-3/5">{payment.name}</span>
-                    <span className="w-1/5 text-center text-gray-500">
-                      {payment.method}
-                    </span>
-                    <span className="w-1/5 text-right font-medium">
-                      ${payment.amount.toLocaleString()}
-                    </span>
+                    <span className="w-1/5 text-center text-gray-500">{payment.method}</span>
+                    <span className="w-1/5 text-right font-medium">${payment.amount.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -1789,19 +1516,14 @@ export default function ReservationsPage() {
                   />
                 </div>
                 <div className="w-1/5">
-                  <Select
-                    value={newPaymentMethod}
-                    onValueChange={setNewPaymentMethod}
-                  >
+                  <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Método" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Efectivo">Efectivo</SelectItem>
                       <SelectItem value="Método">Método</SelectItem>
-                      <SelectItem value="Transferencia">
-                        Transferencia
-                      </SelectItem>
+                      <SelectItem value="Transferencia">Transferencia</SelectItem>
                       <SelectItem value="Tarjeta">Tarjeta</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1817,11 +1539,7 @@ export default function ReservationsPage() {
                   <Button
                     size="icon"
                     onClick={handleAddCustomPayment}
-                    disabled={
-                      !newPaymentName.trim() ||
-                      !newPaymentAmount ||
-                      Number(newPaymentAmount) <= 0
-                    }
+                    disabled={!newPaymentName.trim() || !newPaymentAmount || Number(newPaymentAmount) <= 0}
                   >
                     <PlusCircleIcon className="h-4 w-4" />
                   </Button>
@@ -1831,16 +1549,11 @@ export default function ReservationsPage() {
 
             <div className="rounded-lg border bg-blue-50 p-4">
               <div className="text-sm text-blue-700">Total</div>
-              <div className="text-2xl font-bold text-blue-700">
-                ${calculatePaymentTotals().Total.toLocaleString()}
-              </div>
+              <div className="text-2xl font-bold text-blue-700">${calculatePaymentTotals().Total.toLocaleString()}</div>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsPaymentSummaryOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsPaymentSummaryOpen(false)}>
               Cerrar
             </Button>
           </DialogFooter>
