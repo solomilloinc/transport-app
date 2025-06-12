@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, subMonths, set } from 'date-fns';
-import { es, se } from 'date-fns/locale';
+import { es, is, se } from 'date-fns/locale';
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -172,6 +172,7 @@ export default function ReservationsPage() {
   const [returnDate, setReturnDate] = useState<Date>(today);
   const [returnCalendarDate, setReturnCalendarDate] = useState<Date>(today);
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
   const reserveForm = useFormValidation(initialReserve, {});
 
   const [passengerReserve, setPassengerReserve] = useState<PassengerReserveCreate[]>([]);
@@ -209,13 +210,16 @@ export default function ReservationsPage() {
   const fetchReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
     setIsLoading(true);
     try {
-      const response = await get<any, ReserveReport>(`/reserve-report/${format(currentDate, 'yyyyMMdd')}`, {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: {},
-      });
+      const response = await get<any, ReserveReport>(
+        `/reserve-report/${format(isRoundTrip ? returnDate : currentDate, 'yyyyMMdd')}`,
+        {
+          pageNumber: pageToFetch,
+          pageSize: pageSizeToFetch,
+          sortBy: 'fecha',
+          sortDescending: true,
+          filters: {},
+        }
+      );
       setReserves(response);
       setIsLoading(false);
     } catch (error) {
@@ -475,7 +479,7 @@ export default function ReservationsPage() {
         DropoffLocationId: Number(reserveForm.data.DropoffLocationId),
         Price: returnTrip.Prices.find((price) => price.ReserveTypeId === reserveForm.data.ReserveTypeId)?.Price || 0,
       };
-      payload = [passengerReserve[0], returnReservation];
+      payload = [...passengerReserve, returnReservation];
     } else if (reserves && reserves.length > 0) {
       payload = reserves;
     } else {
@@ -523,6 +527,7 @@ export default function ReservationsPage() {
     setPassengerSearchQuery('');
     setSelectedPassenger(null);
     setReturnTrip(null);
+    setIsRoundTrip(false);
     reserveForm.resetForm();
   };
 
@@ -1241,7 +1246,10 @@ export default function ReservationsPage() {
             <Checkbox
               id="round-trip"
               checked={reserveForm.data.ReserveTypeId === 2}
-              onCheckedChange={(checked) => reserveForm.setField('ReserveTypeId', checked ? 2 : 1)}
+              onCheckedChange={(checked) => {
+                setIsRoundTrip(checked as boolean);
+                reserveForm.setField('ReserveTypeId', checked ? 2 : 1);
+              }}
             />
             <Label htmlFor="round-trip" className="text-sm font-normal">
               Reservar viaje de ida y vuelta
