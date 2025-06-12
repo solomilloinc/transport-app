@@ -109,18 +109,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       path: '/admin/directions',
       key: 'directions',
       roles: ['admin'],
-      submenu: [
-        {
-          name: 'Subidas y bajadas',
-          path: 'admin/direcciones/subidas-bajadas',
-          roles: ['admin'],
-        },
-        {
-          name: 'Ciudades',
-          path: 'admin/direcciones/ciudades',
-          roles: ['admin'],
-        },
-      ],
     },
     {
       name: 'Vehículos',
