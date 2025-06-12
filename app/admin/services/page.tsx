@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon, Wrench } from 'lucide-react';
+import { Bus, Clock, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon, Wrench, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,8 @@ import { City } from '@/interfaces/city';
 import { Vehicle } from '@/interfaces/vehicle';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { getOptionIdByValue } from '@/utils/form-options';
+import { ServiceSchedule } from '@/interfaces/serviceSchedule';
+import { Label } from '@/components/ui/label';
 
 const initialService = {
   name: '',
@@ -40,6 +42,16 @@ const initialService = {
   departureHour: '',
   isHoliday: false,
   vehicleId: 0,
+  schedules: [] as ServiceSchedule[],
+};
+
+const initialSchedule = {
+  ServiceScheduleId: 0,
+  ServiceId: 0,
+  StartDate: '',
+  EndDate: '',
+  IsHoliday: false,
+  DepartureHour: '10:30:00',
 };
 
 const validationSchema = {
@@ -72,6 +84,9 @@ export default function ServiceManagement() {
   const [vehicles, setVehicles] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
+
+  const [schedules, setSchedules] = useState<ServiceSchedule[]>([]);
+  const [editSchedules, setEditSchedules] = useState<ServiceSchedule[]>([]);
 
   // State for the paged response
   const [servicesData, setServicesData] = useState<PagedResponse<Service>>({
@@ -157,6 +172,36 @@ export default function ServiceManagement() {
     }
   };
 
+  const addSchedule = () => {
+    const newSchedule = { ...initialSchedule, ServiceScheduleId: Date.now() };
+    setSchedules([...schedules, newSchedule]);
+  };
+
+  const addEditSchedule = () => {
+    const newSchedule = { ...initialSchedule, ServiceScheduleId: Date.now() };
+    setEditSchedules([...editSchedules, newSchedule]);
+  };
+
+  const removeSchedule = (id: number) => {
+    setSchedules(schedules.filter((schedule) => schedule.ServiceScheduleId !== id));
+  };
+
+  const removeEditSchedule = (id: number) => {
+    setEditSchedules(editSchedules.filter((schedule) => schedule.ServiceScheduleId !== id));
+  };
+
+  const updateSchedule = (id: number, field: keyof ServiceSchedule, value: any) => {
+    setSchedules(
+      schedules.map((schedule) => (schedule.ServiceScheduleId === id ? { ...schedule, [field]: value } : schedule))
+    );
+  };
+
+  const updateEditSchedule = (id: number, field: keyof ServiceSchedule, value: any) => {
+    setEditSchedules(
+      editSchedules.map((schedule) => (schedule.ServiceScheduleId === id ? { ...schedule, [field]: value } : schedule))
+    );
+  };
+
   const submitAddService = async () => {
     addForm.handleSubmit(async (data) => {
       try {
@@ -227,12 +272,9 @@ export default function ServiceManagement() {
     editForm.setField('name', service.Name);
     editForm.setField('originId', service.OriginId);
     editForm.setField('destinationId', service.DestinationId);
-    editForm.setField('startDay', service.StartDay);
-    editForm.setField('endDay', service.EndDay);
     editForm.setField('estimatedDuration', service.EstimatedDuration);
-    editForm.setField('departureHour', service.DepartureHour);
-    editForm.setField('isHoliday', service.IsHoliday);
     editForm.setField('vehicleId', service.Vehicle.VehicleId);
+    setEditSchedules(service.Schedules || []);
     setIsEditModalOpen(true);
     loadAllOptions();
   };
@@ -372,7 +414,7 @@ export default function ServiceManagement() {
                 { label: 'Origen', value: service.OriginName },
                 { label: 'Destino', value: service.DestinationName },
                 { label: 'Duración Estimada', value: service.EstimatedDuration },
-                { label: 'Hora de Partida', value: service.DepartureHour },
+                // { label: 'Hora de Partida', value: service.DepartureHour },
               ]}
               onEdit={() => handleEditService(service)}
               onDelete={() => handleDeleteService(service.ServiceId)}
@@ -511,6 +553,97 @@ export default function ServiceManagement() {
                   emptyMessage="No hay vehículos disponibles"
                 />
               </FormField>
+              <div className="w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="text-base font-medium">Horarios del Servicio</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addSchedule}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agregar Horario
+                  </Button>
+                </div>
+
+                {schedules.length === 0 ? (
+                  <div className="text-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                    <Clock className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                    <p className="text-gray-500">No hay horarios configurados</p>
+                    <p className="text-sm text-gray-400">Haz clic en "Agregar Horario" para comenzar</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {schedules.map((schedule, index) => (
+                      <Card key={schedule.ServiceScheduleId} className="p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium">Horario {index + 1}</h4>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSchedule(schedule.ServiceScheduleId)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField label="Fecha Inicio">
+                            <Input
+                              type="date"
+                              value={schedule.StartDate}
+                              onChange={(e) => updateSchedule(schedule.ServiceScheduleId, 'StartDate', e.target.value)}
+                            />
+                          </FormField>
+
+                          <FormField label="Fecha Fin">
+                            <Input
+                              type="date"
+                              value={schedule.EndDate}
+                              onChange={(e) => updateSchedule(schedule.ServiceScheduleId, 'EndDate', e.target.value)}
+                            />
+                          </FormField>
+
+                          <FormField label="Hora de Partida">
+                            <Input
+                              type="time"
+                              step="1"
+                              value={schedule.DepartureHour}
+                              onChange={(e) =>
+                                updateSchedule(schedule.ServiceScheduleId, 'DepartureHour', e.target.value)
+                              }
+                              className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                            />
+                          </FormField>
+                        </div>
+
+                        <div className="mt-4">
+                          <FormField label="Es Feriado">
+                            <Select
+                              value={schedule.IsHoliday ? 'true' : 'false'}
+                              onValueChange={(value) =>
+                                updateSchedule(schedule.ServiceScheduleId, 'IsHoliday', value === 'true')
+                              }
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Seleccionar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="true">Sí</SelectItem>
+                                <SelectItem value="false">No</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormField>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

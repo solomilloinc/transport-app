@@ -1,5 +1,6 @@
 import { Auditable } from "./auditable";
 import { PassengerReserve } from "./passengerReserve";
+import { ReservePrice } from "./reservePrice";
 
 export interface Reserve extends Auditable {
     ReserveId: number;
@@ -10,6 +11,7 @@ export interface Reserve extends Auditable {
     UserId: number;
     Status: string;
     PassengersReserve: PassengerReserve[];
+    
 }
 
 export interface ReserveReport {
@@ -19,4 +21,5 @@ export interface ReserveReport {
     DepartureHour: string;
     AvailableQuantity: number;
     ReservedQuantity: number;
+    Prices: ReservePrice[];
 }

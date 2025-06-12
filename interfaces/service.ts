@@ -1,16 +1,15 @@
+import { ServiceSchedule } from "./serviceSchedule";
+
 // Define the Vehicle interface
 export interface Service {
-  ServiceId: 0;
+  ServiceId: number;
   Name: string;
   OriginId: number;
   OriginName: string;
   DestinationId: number;
   DestinationName: string;
-  StartDay: string;
-  EndDay: string;
   EstimatedDuration: string;
-  DepartureHour: string;
-  IsHoliday: true;
+  Schedules: ServiceSchedule[];
   Vehicle: {
     internalNumber: string;
     availableQuantity: 0;

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { format, addMonths, subMonths } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { format, addMonths, subMonths, set } from 'date-fns';
+import { es, se } from 'date-fns/locale';
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -45,9 +45,11 @@ import { PagedResponse } from '@/services/types';
 import { City } from '@/interfaces/city';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { Passenger } from '@/interfaces/passengers';
-import { PassengerReserveReport } from '@/interfaces/passengerReserve';
+import { PassengerReserve, PassengerReserveCreate, PassengerReserveReport } from '@/interfaces/passengerReserve';
 import { Vehicle } from '@/interfaces/vehicle';
 import { toast } from '@/hooks/use-toast';
+import { Direction } from '@/interfaces/direction';
+import { useFormValidation } from '@/hooks/use-form-validation';
 
 // Add a helper function to get client balance before the ReservationsPage function
 const getClientBalance = (dni: string) => {
@@ -100,21 +102,18 @@ const generateCalendarDays = (year: number, month: number) => {
   return [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
 };
 
-// Pickup and dropoff locations for select options
-const locations = [
-  'Avenida Principal 123 16',
-  'Costanera Este 1',
-  'Paseo del Bosque 22',
-  'Biblioteca Central 6',
-  'Hotel Grand 12',
-  'Parque Industrial 3',
-  'Plaza Principal 23',
-  'Hotel Grand 8',
-  'Hospital Central 4',
-  'Parque Industrial 5',
-  'Terminal de Ómnibus 20',
-  'Hospital Central 2',
-];
+const initialReserve: PassengerReserveCreate = {
+  ReserveId: 0,
+  CustomerId: 0,
+  PickupLocationId: 0,
+  DropoffLocationId: 0,
+  IsPayment: true,
+  StatusPaymentId: 1, // Assuming 1 means paid
+  PaymentMethod: 1, // Assuming 1 is cash
+  Price: 650,
+  ReserveTypeId: 1,
+  HasTraveled: true,
+};
 
 // Define the type for sort column
 type SortColumn = 'name' | 'pickup' | 'dropoff' | 'paid' | 'paymentMethod' | 'price';
@@ -168,27 +167,16 @@ export default function ReservationsPage() {
   const [isPaymentSummaryOpen, setIsPaymentSummaryOpen] = useState(false);
   const [isPassengerSelectorOpen, setIsPassengerSelectorOpen] = useState(false);
   const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
-  const [cities, setCities] = useState<SelectOption[]>([]);
   // Round-trip states
-  const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [isReturnTripModalOpen, setIsReturnTripModalOpen] = useState(false);
   const [returnDate, setReturnDate] = useState<Date>(today);
   const [returnCalendarDate, setReturnCalendarDate] = useState<Date>(today);
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
+  const reserveForm = useFormValidation(initialReserve, {});
 
-  // Add these new state variables after the other return trip related states
-  const [returnPickup, setReturnPickup] = useState<string>('');
-  const [returnDropoff, setReturnDropoff] = useState<string>('');
+  const [passengerReserve, setPassengerReserve] = useState<PassengerReserveCreate[]>([]);
 
-  const [newPassenger, setNewPassenger] = useState({
-    name: '',
-    pickup: '',
-    dropoff: '',
-    paymentMethod: 'Efectivo',
-    price: 0,
-    paid: false,
-    isRoundTrip: false,
-  });
+  const [directions, setDirections] = useState<SelectOption[]>([]);
 
   const [newClient, setNewClient] = useState({
     name: '',
@@ -238,7 +226,7 @@ export default function ReservationsPage() {
   const fetchPassengersReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
     setIsLoading(true);
     try {
-      const response = await get<any, PassengerReserveReport>(`/customer-reserve-report/${selectedTrip}`, {
+      const response = await get<any, PassengerReserveReport>(`/customer-reserve-report/${selectedTrip?.ReserveId}`, {
         pageNumber: pageToFetch,
         pageSize: pageSizeToFetch,
         sortBy: 'fecha',
@@ -255,11 +243,12 @@ export default function ReservationsPage() {
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
     fetchReserves(1, 10);
-  }, [currentDate]);
+  }, [currentDate, returnDate]);
 
   useEffect(() => {
     if (!selectedTrip) return;
     fetchPassengersReserves(1, 20);
+    loadAllOptions();
   }, [selectedTrip]);
 
   // Then add this filtered clients logic after the other useMemo hooks
@@ -364,7 +353,7 @@ export default function ReservationsPage() {
       setOptionsError(null);
 
       // Llamadas API (pueden ir en paralelo)
-      const cityResponse = await get<any, City>('/city-report', {
+      const directionsResponse = await get<any, Direction>('/direction-report', {
         pageNumber: 1,
         pageSize: 10,
         sortBy: 'fecha',
@@ -372,17 +361,16 @@ export default function ReservationsPage() {
         filters: {},
       });
 
-      // Cargar ciudades
-      if (cityResponse) {
-        const formattedCities = cityResponse.Items.map((city: City) => ({
-          id: city.Id.toString(),
-          value: city.Id.toString(),
-          label: city.Name,
+      if (directionsResponse && directionsResponse.Items) {
+        const formatedDirections: SelectOption[] = directionsResponse.Items.map((direction) => ({
+          id: direction.DirectionId,
+          value: direction.DirectionId.toString(),
+          label: direction.Name,
         }));
-        setCities(formattedCities);
+        setDirections(formatedDirections);
       }
     } catch (error) {
-      setOptionsError('Error al cargar las ciudades');
+      setOptionsError('Error al cargar las direcciones');
     } finally {
       setIsOptionsLoading(false);
     }
@@ -446,13 +434,6 @@ export default function ReservationsPage() {
     setIsPassengerSelectorOpen(true);
   };
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setNewPassenger({
-      ...newPassenger,
-      [field]: value,
-    });
-  };
-
   const handleNewClientInputChange = (field: string, value: string) => {
     setNewClient({
       ...newClient,
@@ -461,43 +442,61 @@ export default function ReservationsPage() {
   };
 
   const submitAddReserve = () => {
-    // If it's a round trip, open the return trip modal
-    if (newPassenger.isRoundTrip) {
+    const reserveData: PassengerReserveCreate = {
+      ...reserveForm.data,
+      ReserveId: selectedTrip?.ReserveId || 0,
+      PickupLocationId: Number(reserveForm.data.PickupLocationId) || 0,
+      DropoffLocationId: Number(reserveForm.data.DropoffLocationId) || 0,
+      Price: selectedTrip?.Prices.find((price) => price.ReserveTypeId === reserveForm.data.ReserveTypeId)?.Price || 0,
+    };
+
+    const updatedReserves = [...passengerReserve, reserveData];
+
+    if (reserveData.ReserveTypeId === 2) {
+      // Si es ida y vuelta, guardamos solo el viaje de ida y abrimos modal de regreso
+      setPassengerReserve([reserveData]); // ✅ guardamos el viaje de ida
       setIsAddModalOpen(false);
       setIsReturnTripModalOpen(true);
       return;
     }
 
-    // Otherwise, proceed with adding the passenger
-    finalizeAddPassenger();
+    finalizeAddPassenger(updatedReserves);
   };
 
-  // Modify the finalizeAddPassenger function to use the selected return pickup/dropoff locations
-  const finalizeAddPassenger = async () => {
-    // Add the outbound passenger
-    const passengerReserve = {
-      ReserveId: selectedTrip?.ReserveId || 0,
-      CustomerId: selectedPassenger?.CustomerId || 0,
-      IsPayment: true,
-      StatusPayment: 1, // Assuming 1 means paid
-      PaymentMethod: 1,
-      Price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
-      PickupLocationId: 1,
-      DropoffLocationId: 2,
-      HasTraveled: true, // Assuming the passenger has traveled
-      Status: 'active', // Assuming active status
-    };
+  const finalizeAddPassenger = async (reserves?: PassengerReserveCreate[]) => {
+    let payload: PassengerReserveCreate[];
+
+    if (returnTrip && reserveForm.data.ReserveTypeId === 2) {
+      // Es un viaje de ida y vuelta, usamos el de ida guardado antes y armamos el de vuelta
+      const returnReservation: PassengerReserveCreate = {
+        ...reserveForm.data,
+        ReserveId: returnTrip.ReserveId,
+        PickupLocationId: Number(reserveForm.data.PickupLocationId),
+        DropoffLocationId: Number(reserveForm.data.DropoffLocationId),
+        Price: returnTrip.Prices.find((price) => price.ReserveTypeId === reserveForm.data.ReserveTypeId)?.Price || 0,
+      };
+      payload = [passengerReserve[0], returnReservation];
+    } else if (reserves && reserves.length > 0) {
+      payload = reserves;
+    } else {
+      toast({
+        title: 'Error',
+        description: 'No se pudo enviar la reserva, faltan datos.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
-      const response = await post('/passenger-reserves-create', passengerReserve);
+      const response = await post('/passenger-reserves-create', { items: payload });
+
       if (response) {
         toast({
           title: 'Reserva creada',
-          description: 'La reserva ha sido creado exitosamente',
+          description: 'La reserva ha sido creada exitosamente',
           variant: 'success',
         });
-        setIsAddModalOpen(false);
-        fetchReserves(); // Refresh the vehicle list
+        fetchReserves();
       } else {
         toast({
           title: 'Error',
@@ -511,36 +510,20 @@ export default function ReservationsPage() {
         description: 'Ocurrió un error al crear la reserva',
         variant: 'destructive',
       });
+    } finally {
+      resetReservaForm();
+      fetchPassengersReserves();
     }
-    // const updatedPassengers = [...passengers, newPassengerEntry];
+  };
 
-    // // If it's a round trip and we have a return trip selected, add the return passenger
-    // if (newPassenger.isRoundTrip && returnTrip) {
-    //   const returnId = newId + 1;
-    //   const returnPassenger = {
-    //     id: returnId,
-    //     name: selectedClient ? selectedClient.name : newPassenger.name,
-    //     // Use the selected return pickup/dropoff if provided, otherwise swap the original ones
-    //     pickup: returnPickup || newPassenger.dropoff,
-    //     dropoff: returnDropoff || newPassenger.pickup,
-    //     paymentMethod: newPassenger.paymentMethod,
-    //     price: newPassenger.price || Math.floor(20000 + Math.random() * 60000),
-    //     checked: true,
-    //     paid: newPassenger.paid,
-    //     dni: selectedClient ? selectedClient.dni : '',
-    //     isReturn: true, // Mark as return trip
-    //   };
-    //   updatedPassengers.push(returnPassenger);
-    // }
-
-    // setPassengers(updatedPassengers);
+  const resetReservaForm = () => {
     setIsAddModalOpen(false);
     setIsReturnTripModalOpen(false);
+    setPassengerReserve([]);
+    setPassengerSearchQuery('');
     setSelectedPassenger(null);
     setReturnTrip(null);
-    setIsRoundTrip(false);
-    setReturnPickup('');
-    setReturnDropoff('');
+    reserveForm.resetForm();
   };
 
   const submitAddNewClient = () => {
@@ -718,14 +701,6 @@ export default function ReservationsPage() {
     setSelectedVehicle(null);
     setSelectedVehicleId('');
     setIsVehicleDialogOpen(false);
-  };
-
-  // Handle round trip checkbox change
-  const handleRoundTripChange = (checked: boolean) => {
-    setNewPassenger({
-      ...newPassenger,
-      isRoundTrip: checked,
-    });
   };
 
   // Handle return trip selection
@@ -990,9 +965,9 @@ export default function ReservationsPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {locations.map((location) => (
-                                <SelectItem key={location} value={location}>
-                                  {location}
+                              {directions.map((location) => (
+                                <SelectItem key={location.id} value={location.id.toString()}>
+                                  {location.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1004,9 +979,9 @@ export default function ReservationsPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {locations.map((location) => (
-                                <SelectItem key={location} value={location}>
-                                  {location}
+                              {directions.map((location) => (
+                                <SelectItem key={location.id} value={location.id.toString()}>
+                                  {location.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1023,7 +998,7 @@ export default function ReservationsPage() {
                           />
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select defaultValue={passenger.PaymentMethod.toString()} disabled={!passenger.IsPayment}>
+                          {/* <Select defaultValue={passenger.PaymentMethod.toString()} disabled={!passenger.IsPayment}>
                             <SelectTrigger
                               className={`w-full ${!passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
@@ -1033,12 +1008,12 @@ export default function ReservationsPage() {
                               <SelectItem value="Efectivo">Efectivo</SelectItem>
                               <SelectItem value="Método">Método</SelectItem>
                             </SelectContent>
-                          </Select>
+                          </Select> */}
                         </td>
                         <td className="py-3 pr-4 text-center">
                           <Input
                             type="text"
-                            value={passenger.Price.toString()}
+                            value={passenger.Price}
                             onChange={(e) => handlePriceChange(passenger.CustomerReserveId, e.target.value)}
                             className={`w-24 text-right font-mono mx-auto ${
                               !passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''
@@ -1092,6 +1067,7 @@ export default function ReservationsPage() {
                       setSelectedPassenger(passenger);
                       setIsPassengerSelectorOpen(false);
                       setIsAddModalOpen(true);
+                      reserveForm.data.CustomerId = passenger.CustomerId;
                     }}
                   >
                     <div className="flex flex-col">
@@ -1221,7 +1197,7 @@ export default function ReservationsPage() {
         </FormField>
       </FormDialog>
 
-      {/* Add Passenger Modal */}
+      {/* Add Reserve Modal */}
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
@@ -1234,40 +1210,38 @@ export default function ReservationsPage() {
         onSubmit={submitAddReserve}
         submitText="Añadir Reserva"
       >
-        <FormField label="Punto de Subida">
-          <Select value={newPassenger.pickup} onValueChange={(value) => handleInputChange('pickup', value)}>
-            <SelectTrigger id="pickup">
-              <SelectValue placeholder="Seleccionar punto de subida" />
-            </SelectTrigger>
-            <SelectContent>
-              {locations.map((location) => (
-                <SelectItem key={location} value={location}>
-                  {location}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <FormField label="Dirección de subida" required error={reserveForm.errors.PickupLocationId}>
+          <ApiSelect
+            value={String(reserveForm.data.PickupLocationId)}
+            onValueChange={(value) => reserveForm.setField('PickupLocationId', Number(value))}
+            placeholder="Seleccionar dirección de subida"
+            options={directions}
+            loading={isOptionsLoading}
+            error={optionsError}
+            loadingMessage="Cargando direcciones..."
+            errorMessage="Error al cargar las direcciones"
+            emptyMessage="No hay direcciones disponibles"
+          />
         </FormField>
-        <FormField label="Punto de Bajada">
-          <Select value={newPassenger.dropoff} onValueChange={(value) => handleInputChange('dropoff', value)}>
-            <SelectTrigger id="dropoff">
-              <SelectValue placeholder="Seleccionar punto de bajada" />
-            </SelectTrigger>
-            <SelectContent>
-              {locations.map((location) => (
-                <SelectItem key={location} value={location}>
-                  {location}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <FormField label="Dirección de Bajada" required error={reserveForm.errors.DropoffLocationId}>
+          <ApiSelect
+            value={String(reserveForm.data.DropoffLocationId)}
+            onValueChange={(value) => reserveForm.setField('DropoffLocationId', Number(value))}
+            placeholder="Seleccionar dirección de bajada"
+            options={directions}
+            loading={isOptionsLoading}
+            error={optionsError}
+            loadingMessage="Cargando direcciones..."
+            errorMessage="Error al cargar las direcciones"
+            emptyMessage="No hay direcciones disponibles"
+          />
         </FormField>
         <FormField label="Ida y Vuelta">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="round-trip"
-              checked={newPassenger.isRoundTrip}
-              onCheckedChange={(checked) => handleRoundTripChange(checked as boolean)}
+              checked={reserveForm.data.ReserveTypeId === 2}
+              onCheckedChange={(checked) => reserveForm.setField('ReserveTypeId', checked ? 2 : 1)}
             />
             <Label htmlFor="round-trip" className="text-sm font-normal">
               Reservar viaje de ida y vuelta
@@ -1283,7 +1257,7 @@ export default function ReservationsPage() {
             <DialogTitle>Seleccionar Viaje de Vuelta</DialogTitle>
             <DialogDescription>
               Selecciona la fecha y el servicio para el viaje de vuelta de{' '}
-              {selectedPassenger ? selectedPassenger.FirstName + selectedPassenger.LastName : newPassenger.name}
+              {selectedPassenger ? `${selectedPassenger.FirstName} ${selectedPassenger.LastName}` : 'el pasajero'}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -1356,39 +1330,35 @@ export default function ReservationsPage() {
                 {/* Add pickup and dropoff dropdowns */}
                 <div className="space-y-3 mt-4">
                   <div>
-                    <Label htmlFor="return-pickup" className="text-sm font-medium mb-1 block">
-                      Punto de Subida (Vuelta)
-                    </Label>
-                    <Select value={returnPickup} onValueChange={setReturnPickup}>
-                      <SelectTrigger id="return-pickup" className="w-full">
-                        <SelectValue placeholder="Seleccionar punto de subida" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={`pickup-${location}`} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormField label="Dirección de subida" required error={reserveForm.errors.PickupLocationId}>
+                      <ApiSelect
+                        value={String(reserveForm.data.PickupLocationId)}
+                        onValueChange={(value) => reserveForm.setField('PickupLocationId', value)}
+                        placeholder="Seleccionar dirección de subida"
+                        options={directions}
+                        loading={isOptionsLoading}
+                        error={optionsError}
+                        loadingMessage="Cargando direcciones..."
+                        errorMessage="Error al cargar las direcciones"
+                        emptyMessage="No hay direcciones disponibles"
+                      />
+                    </FormField>
                   </div>
 
                   <div>
-                    <Label htmlFor="return-dropoff" className="text-sm font-medium mb-1 block">
-                      Punto de Bajada (Vuelta)
-                    </Label>
-                    <Select value={returnDropoff} onValueChange={setReturnDropoff}>
-                      <SelectTrigger id="return-dropoff" className="w-full">
-                        <SelectValue placeholder="Seleccionar punto de bajada" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={`dropoff-${location}`} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormField label="Dirección de bajada" required error={reserveForm.errors.DropoffLocationId}>
+                      <ApiSelect
+                        value={String(reserveForm.data.DropoffLocationId)}
+                        onValueChange={(value) => reserveForm.setField('DropoffLocationId', value)}
+                        placeholder="Seleccionar dirección de subida"
+                        options={directions}
+                        loading={isOptionsLoading}
+                        error={optionsError}
+                        loadingMessage="Cargando direcciones..."
+                        errorMessage="Error al cargar las direcciones"
+                        emptyMessage="No hay direcciones disponibles"
+                      />
+                    </FormField>
                   </div>
                 </div>
               </div>
@@ -1398,7 +1368,7 @@ export default function ReservationsPage() {
             <Button variant="outline" onClick={() => setIsReturnTripModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={finalizeAddPassenger} disabled={!returnTrip}>
+            <Button onClick={() => finalizeAddPassenger()} disabled={!returnTrip}>
               Confirmar Reserva
             </Button>
           </DialogFooter>
