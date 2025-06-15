@@ -19,6 +19,7 @@ export interface ReserveReport {
     OriginName: string;
     DestinationName: string;
     DepartureHour: string;
+    VehicleId: number;
     AvailableQuantity: number;
     ReservedQuantity: number;
     Prices: ReservePrice[];

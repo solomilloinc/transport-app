@@ -19,6 +19,8 @@ import {
   BusIcon,
   TicketPlus,
   TicketPlusIcon,
+  Edit2Icon,
+  Edit2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -40,7 +42,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { get, post } from '@/services/api';
-import { ReserveReport } from '@/interfaces/reserve';
+import { Reserve, ReserveReport } from '@/interfaces/reserve';
 import { PagedResponse } from '@/services/types';
 import { City } from '@/interfaces/city';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
@@ -50,6 +52,7 @@ import { Vehicle } from '@/interfaces/vehicle';
 import { toast } from '@/hooks/use-toast';
 import { Direction } from '@/interfaces/direction';
 import { useFormValidation } from '@/hooks/use-form-validation';
+import { Calendar } from '@/components/ui/calendar';
 
 // Add a helper function to get client balance before the ReservationsPage function
 const getClientBalance = (dni: string) => {
@@ -102,7 +105,7 @@ const generateCalendarDays = (year: number, month: number) => {
   return [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
 };
 
-const initialReserve: PassengerReserveCreate = {
+const initialPassengerReserve: PassengerReserveCreate = {
   ReserveId: 0,
   CustomerId: 0,
   PickupLocationId: 0,
@@ -115,6 +118,47 @@ const initialReserve: PassengerReserveCreate = {
   HasTraveled: true,
 };
 
+const initialReserve = {
+  VehicleId: 0,
+  DepartureHour: '',
+};
+
+const initialPassengers = {
+  FirstName: '',
+  LastName: '',
+  Email: '',
+  DocumentNumber: '',
+  Phone1: '',
+  Phone2: '',
+};
+
+const validationConfigPassenger = {
+  FirstName: {
+    required: { message: 'El nombre es requerido' },
+  },
+  LastName: {
+    required: { message: 'El apellido es requerido' },
+  },
+  Email: {
+    required: { message: 'El email es requerido' },
+  },
+  DocumentNumber: {
+    required: { message: 'El número de documento es requerido' },
+  },
+  Phone1: {
+    required: { message: 'El teléfono 1 es requerido' },
+  },
+};
+
+const validationConfigReserve = {
+  VehicleId: {
+    required: { message: 'El vehículo es requerido' },
+  },
+  DepartureHour: {
+    required: { message: 'La hora de salida es requerida' },
+  },
+};
+
 // Define the type for sort column
 type SortColumn = 'name' | 'pickup' | 'dropoff' | 'paid' | 'paymentMethod' | 'price';
 type SortDirection = 'asc' | 'desc';
@@ -124,7 +168,8 @@ type DeleteAction = 'delete' | 'favor' | 'debt';
 
 export default function ReservationsPage() {
   const today = new Date();
-  const [currentDate, setCurrentDate] = useState(today);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
+  const [month, setMonth] = useState<Date>(new Date());
   // const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTrip, setSelectedTrip] = useState<ReserveReport | null>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
@@ -169,29 +214,21 @@ export default function ReservationsPage() {
   const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
   // Round-trip states
   const [isReturnTripModalOpen, setIsReturnTripModalOpen] = useState(false);
-  const [returnDate, setReturnDate] = useState<Date>(today);
-  const [returnCalendarDate, setReturnCalendarDate] = useState<Date>(today);
+  const [returnDate, setReturnDate] = useState<Date | undefined>(undefined);
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
-  const reserveForm = useFormValidation(initialReserve, {});
+  const reserveForm = useFormValidation(initialPassengerReserve, {});
 
   const [passengerReserve, setPassengerReserve] = useState<PassengerReserveCreate[]>([]);
 
   const [directions, setDirections] = useState<SelectOption[]>([]);
 
-  const [newClient, setNewClient] = useState({
-    name: '',
-    surname: '',
-    dni: '',
-    phone: '',
-    email: '',
-  });
-
+  const addForm = useFormValidation(initialPassengers, validationConfigPassenger);
+  const editFormReserve = useFormValidation(initialReserve, validationConfigReserve);
   // Vehicle selection state
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
+  const [vehicles, setVehicles] = useState<SelectOption[]>([]);
+  const [isReserveDialogOpen, setIsReserveDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
 
   // Update the payment summary dialog to include custom payment entries
   // First, add a new state for custom payments
@@ -211,7 +248,7 @@ export default function ReservationsPage() {
     setIsLoading(true);
     try {
       const response = await get<any, ReserveReport>(
-        `/reserve-report/${format(isRoundTrip ? returnDate : currentDate, 'yyyyMMdd')}`,
+        `/reserve-report/${format(isRoundTrip ? (returnDate as Date) : (selectedDate as Date), 'yyyyMMdd')}`,
         {
           pageNumber: pageToFetch,
           pageSize: pageSizeToFetch,
@@ -247,7 +284,8 @@ export default function ReservationsPage() {
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
     fetchReserves(1, 10);
-  }, [currentDate, returnDate]);
+    setSelectedTrip(null);
+  }, [selectedDate, returnDate]);
 
   useEffect(() => {
     if (!selectedTrip) return;
@@ -294,61 +332,17 @@ export default function ReservationsPage() {
         sortDescending: false,
         filters: {},
       });
-      setVehicles(response.Items);
+      if (response && response.Items) {
+        const formattedVehicles: SelectOption[] = response.Items.map((vehicle) => ({
+          id: vehicle.VehicleId,
+          value: vehicle.VehicleId.toString(),
+          label: `${vehicle.VehicleTypeName} (${vehicle.InternalNumber})`,
+        }));
+        setVehicles(formattedVehicles);
+      }
     } catch (error) {
       setPassengers([]);
     }
-  };
-
-  // Return trip calendar days
-  const returnCalendarDays = useMemo(() => {
-    return generateCalendarDays(returnCalendarDate.getFullYear(), returnCalendarDate.getMonth());
-  }, [returnCalendarDate]);
-
-  // Calendar navigation
-  const handlePrevMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1));
-  };
-
-  // Return calendar navigation
-  const handleReturnPrevMonth = () => {
-    setReturnCalendarDate(subMonths(returnCalendarDate, 1));
-  };
-
-  const handleReturnNextMonth = () => {
-    setReturnCalendarDate(addMonths(returnCalendarDate, 1));
-  };
-
-  // Calendar days
-  const calendarDays = generateCalendarDays(currentDate.getFullYear(), currentDate.getMonth());
-
-  // Day selection
-  const handleDayClick = (day: number, month: number, year: number) => {
-    setCurrentDate(new Date(year, month, day));
-  };
-
-  // Return day selection
-  const handleReturnDayClick = (day: number, month: number, year: number) => {
-    setReturnDate(new Date(year, month, day));
-  };
-
-  // Check if a date is selected
-  const isDateSelected = (day: number, month: number, year: number) => {
-    return currentDate.getDate() === day && currentDate.getMonth() === month && currentDate.getFullYear() === year;
-  };
-
-  // Check if a return date is selected
-  const isReturnDateSelected = (day: number, month: number, year: number) => {
-    return returnDate.getDate() === day && returnDate.getMonth() === month && returnDate.getFullYear() === year;
-  };
-
-  // Check if a date is today
-  const isToday = (day: number, month: number, year: number) => {
-    return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
   };
 
   const loadAllOptions = async () => {
@@ -379,12 +373,6 @@ export default function ReservationsPage() {
       setIsOptionsLoading(false);
     }
   };
-
-  const handleUpdateVehicle = () => {
-    fetchVehicles();
-    setIsVehicleDialogOpen(true);
-  };
-
   // Handle passenger checkbox change
   const handlePassengerReserveCheck = async (passenger: PassengerReserveReport, checked: boolean) => {
     const updatedPassenger = { ...passenger, HasTraveled: checked };
@@ -434,15 +422,10 @@ export default function ReservationsPage() {
 
   // Handle add passenger-reserve
   const handleAddPassenger = () => {
-    setSelectedPassenger(null);
-    setIsPassengerSelectorOpen(true);
-  };
-
-  const handleNewClientInputChange = (field: string, value: string) => {
-    setNewClient({
-      ...newClient,
-      [field]: value,
-    });
+    if (selectedTrip) {
+      setSelectedPassenger(null);
+      setIsPassengerSelectorOpen(true);
+    }
   };
 
   const submitAddReserve = () => {
@@ -458,7 +441,8 @@ export default function ReservationsPage() {
 
     if (reserveData.ReserveTypeId === 2) {
       // Si es ida y vuelta, guardamos solo el viaje de ida y abrimos modal de regreso
-      setPassengerReserve([reserveData]); // ✅ guardamos el viaje de ida
+      setPassengerReserve([reserveData]);
+      setReturnDate(today);
       setIsAddModalOpen(false);
       setIsReturnTripModalOpen(true);
       return;
@@ -531,40 +515,92 @@ export default function ReservationsPage() {
     reserveForm.resetForm();
   };
 
-  const submitAddNewClient = () => {
-    // In a real app, you would save the new client to the database
-    const fullName = `${newClient.name} ${newClient.surname}`.trim();
+  const submitEditReserve = () => {
+    editFormReserve.handleSubmit(async (data) => {
+      try {
+        const response = await post('/reserve-update', {
+          ...selectedTrip,
+          ...data,
+        });
 
-    // Create a new client
-    // const newClientId = Math.max(...mockClients.map((c) => c.id)) + 1;
-    const newClientObj = {
-      name: fullName,
-      dni: newClient.dni,
-    };
-
-    // Select the new client and open the passenger form
-    // setSelectedPassenger(newClientObj);
-    setIsNewClientModalOpen(false);
-    setIsAddModalOpen(true);
-
-    // Reset the form
-    setNewClient({
-      name: '',
-      surname: '',
-      dni: '',
-      phone: '',
-      email: '',
+        if (response) {
+          toast({
+            title: 'Reserva actualizada',
+            description: 'La reserva ha sido actualizada exitosamente',
+            variant: 'success',
+          });
+          fetchReserves();
+          setIsAddModalOpen(false);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al actualizar la reserva',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Ocurrió un error al actualizar la reserva',
+          variant: 'destructive',
+        });
+      }
     });
+  };
+
+  const submitAddNewClient = () => {
+    addForm.handleSubmit(async (data) => {
+      try {
+        const response = await post('/customer-create', data);
+        if (response) {
+          toast({
+            title: 'Pasajero creado',
+            description: 'El pasajero ha sido creado exitosamente',
+            variant: 'success',
+          });
+          //Aca debe mandar el passenger completo para
+          // setSelectedPassenger({
+          //   ...data,
+          //   CustomerId: 1,
+          //   Status: 'Activo',
+          // });
+          setIsNewClientModalOpen(false);
+          setIsAddModalOpen(true);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al crear el pasajero',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Ocurrió un error al crear el pasajero',
+          variant: 'destructive',
+        });
+      }
+    });
+  };
+
+  // Handle edit reserve
+  const handleEditReserve = (selectedTrip?: ReserveReport) => {
+    if (selectedTrip) {
+      editFormReserve.setField('VehicleId', selectedTrip.VehicleId);
+      editFormReserve.setField('DepartureHour', selectedTrip.DepartureHour);
+      setIsReserveDialogOpen(true);
+      fetchVehicles();
+    }
   };
 
   // Format date for display
   const formatSelectedDate = () => {
-    return format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
+    return format(selectedDate as Date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
   };
 
   // Format return date for display
   const formatReturnDate = () => {
-    return format(returnDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
+    return format(returnDate as Date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
   };
 
   // Weekday headers
@@ -688,26 +724,6 @@ export default function ReservationsPage() {
   //   return passengerToDelete ? passengers.find((p) => p.id === passengerToDelete) : null;
   // };
 
-  // Handle vehicle selection
-  const handleVehicleSelect = (vehicleId: string) => {
-    const vehicle = vehicles.find((v) => v.VehicleId.toString() === vehicleId);
-    setSelectedVehicle(vehicle || null);
-    setSelectedVehicleId(vehicleId);
-  };
-
-  // Handle vehicle selection confirmation
-  const confirmVehicleSelection = () => {
-    //Aca llamar a api
-    setIsVehicleDialogOpen(false);
-  };
-
-  // Handle removing vehicle selection
-  const handleRemoveVehicle = () => {
-    setSelectedVehicle(null);
-    setSelectedVehicleId('');
-    setIsVehicleDialogOpen(false);
-  };
-
   // Handle return trip selection
   const handleReturnTripSelect = (trip: ReserveReport) => {
     setReturnTrip(trip);
@@ -731,8 +747,13 @@ export default function ReservationsPage() {
             </Button>
 
             {/* Vehicle selection button */}
-            <Button variant="outline" size="icon" title="Seleccionar Vehículo" onClick={() => handleUpdateVehicle()}>
-              <BusIcon className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="icon"
+              title="Editar reserva"
+              onClick={() => handleEditReserve(selectedTrip ?? undefined)}
+            >
+              <Edit2 className="h-4 w-4" />
             </Button>
 
             <Button
@@ -750,57 +771,32 @@ export default function ReservationsPage() {
           </div>
         }
       />
-
       <div className="grid gap-2 md:grid-cols-[minmax(200px,250px)_1fr] w-full">
         {/* Calendar Card */}
         <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-xl font-semibold">
-                  <CalendarIcon className="mr-2 h-5 w-5 text-blue-500" />
-                  Calendario
-                </div>
+          <CardContent className="p-2 sm:p-4">
+            <div className="space-y-2">
+              <div className="w-full max-w-full sm:max-w-[300px] mx-auto">
+                <Calendar
+                  className="text-xs sm:text-sm" // tamaño de fuente responsivo
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  month={month}
+                  onMonthChange={setMonth}
+                  locale={es}
+                  fromMonth={new Date()}
+                  classNames={{
+                    cell: 'h-6 w-6 sm:h-7 sm:w-7 text-center text-[10px] sm:text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+                    day: 'h-6 w-6 sm:h-7 sm:w-7 p-0 font-normal text-[10px] sm:text-xs aria-selected:opacity-100',
+                    head_cell: 'text-muted-foreground rounded-md w-6 sm:w-7 font-normal text-[10px] sm:text-xs',
+                  }}
+                />
               </div>
-
-              <div className="flex items-center justify-between">
-                <button onClick={handlePrevMonth} className="p-1">
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </button>
-                <div className="font-medium">{format(currentDate, 'MMMM yyyy', { locale: es })}</div>
-                <button onClick={handleNextMonth} className="p-1">
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                {weekdays.map((day) => (
-                  <div key={day} className="py-1 font-medium text-gray-500">
-                    {day}
-                  </div>
-                ))}
-
-                {calendarDays.map((day, i) => (
-                  <button
-                    key={i}
-                    className={`rounded-md p-1 text-sm ${!day.isCurrentMonth ? 'text-gray-400' : ''} ${
-                      isDateSelected(day.day, day.month, day.year)
-                        ? 'bg-blue-500 text-white'
-                        : isToday(day.day, day.month, day.year)
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'hover:bg-gray-100'
-                    }`}
-                    onClick={() => handleDayClick(day.day, day.month, day.year)}
-                  >
-                    {day.day}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-2 pt-4">
+              <div className="space-y-2 p-3">
                 <div className="flex items-center justify-between">
                   <div className="text-lg font-medium text-blue-500">
-                    Viajes {format(currentDate, 'd MMM', { locale: es })}
+                    Viajes {format(selectedDate as Date, 'd MMM', { locale: es })}
                   </div>
                   {/* <div className="flex items-center">
                     <FilterIcon className="mr-2 h-4 w-4 text-gray-500" />
@@ -823,12 +819,12 @@ export default function ReservationsPage() {
                     return (
                       <button
                         key={trip.ReserveId}
-                        className={`flex w-full items-center justify-between rounded-md border p-3 text-left text-sm ${
+                        className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
                           selectedTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                         }`}
                         onClick={() => setSelectedTrip(trip)}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center gap-2">
                           <span className="font-medium">{trip.DepartureHour}</span>
                           <span
                             className={`text-xs px-1.5 py-0.5 rounded-md ${
@@ -1107,48 +1103,38 @@ export default function ReservationsPage() {
       </Dialog>
 
       {/* Vehicle Selector Dialog */}
-      <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Seleccionar Vehículo</DialogTitle>
-            <DialogDescription>Selecciona un vehículo para este viaje</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex flex-col space-y-2">
-              <Label htmlFor="vehicle-select">Vehículo</Label>
-              <Select value={selectedVehicleId} onValueChange={handleVehicleSelect}>
-                <SelectTrigger id="vehicle-select">
-                  <SelectValue placeholder="Seleccionar vehículo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehicles.map((vehicle) => (
-                    <SelectItem key={vehicle.VehicleId} value={vehicle.VehicleId.toString()}>
-                      <div>
-                        <span>{vehicle.VehicleTypeName}</span>
-                        <span className="ml-1 text-xs text-gray-500">({vehicle.InternalNumber})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedVehicle && (
-                <div className="mt-2 text-sm text-gray-500">
-                  <p>Capacidad: {selectedVehicle.AvailableQuantity} asientos</p>
-                  <p>Estado: {selectedVehicle.Status}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsVehicleDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={confirmVehicleSelection} disabled={!selectedVehicle}>
-              Confirmar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormDialog
+        open={isReserveDialogOpen}
+        onOpenChange={setIsReserveDialogOpen}
+        title="Editar reserva"
+        description="Realiza cambios en los detalles de la reserva a continuación."
+        onSubmit={() => submitEditReserve()}
+        submitText="Guardar Cambios"
+        isLoading={editFormReserve.isSubmitting}
+      >
+        <FormField label="Vehiculo" required error={editFormReserve.errors.VehicleId}>
+          <ApiSelect
+            value={String(editFormReserve.data.VehicleId)}
+            onValueChange={(value) => editFormReserve.setField('VehicleId', Number(value))}
+            placeholder="Seleccionar vehiculo"
+            options={vehicles}
+            loading={isOptionsLoading}
+            error={optionsError}
+            loadingMessage="Cargando vehiculos..."
+            errorMessage="Error al cargar los vehiculos"
+            emptyMessage="No hay vehiculos disponibles"
+          />
+        </FormField>
+        <FormField label="Hora de partida" required error={editFormReserve.errors.DepartureHour}>
+          <Input
+            id="departure-hour"
+            type="text"
+            placeholder="Hora de partida"
+            value={editFormReserve.data.DepartureHour}
+            onChange={(e) => editFormReserve.setField('DepartureHour', e.target.value)}
+          />
+        </FormField>
+      </FormDialog>
 
       {/* New Client Modal */}
       <FormDialog
@@ -1158,47 +1144,43 @@ export default function ReservationsPage() {
         description="Crea un nuevo cliente completando el formulario a continuación"
         onSubmit={submitAddNewClient}
         submitText="Crear Cliente"
+        isLoading={addForm.isSubmitting}
       >
-        <FormField label="Nombre">
+        <FormField label="Nombre" required error={addForm.errors.FirstName}>
           <Input
-            id="name"
+            id="first-name"
+            value={addForm.data.FirstName}
+            type="text"
             placeholder="Nombre"
-            value={newClient.name}
-            onChange={(e) => handleNewClientInputChange('name', e.target.value)}
+            onChange={(e) => addForm.setField('FirstName', e.target.value)}
           />
         </FormField>
-        <FormField label="Apellido">
+        <FormField label="Apellido" required error={addForm.errors.LastName}>
           <Input
-            id="surname"
+            id="last-name"
+            value={addForm.data.LastName}
             placeholder="Apellido"
-            value={newClient.surname}
-            onChange={(e) => handleNewClientInputChange('surname', e.target.value)}
+            type="text"
+            onChange={(e) => addForm.setField('LastName', e.target.value)}
           />
         </FormField>
-        <FormField label="DNI">
+        <FormField label="Email" required error={addForm.errors.Email}>
+          <Input id="email" value={addForm.data.Email} onChange={(e) => addForm.setField('Email', e.target.value)} />
+        </FormField>
+        <FormField label="Número de documento" required error={addForm.errors.DocumentNumber}>
           <Input
-            id="dni"
-            placeholder="DNI"
-            value={newClient.dni}
-            onChange={(e) => handleNewClientInputChange('dni', e.target.value)}
+            id="documentNumber"
+            value={addForm.data.DocumentNumber}
+            placeholder="Número de documento"
+            type="number"
+            onChange={(e) => addForm.setField('DocumentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono">
-          <Input
-            id="phone"
-            placeholder="Teléfono"
-            value={newClient.phone}
-            onChange={(e) => handleNewClientInputChange('phone', e.target.value)}
-          />
+        <FormField label="Teléfono 1" required error={addForm.errors.Phone1}>
+          <Input id="phone1" value={addForm.data.Phone1} onChange={(e) => addForm.setField('Phone1', e.target.value)} />
         </FormField>
-        <FormField label="Email">
-          <Input
-            id="email"
-            type="email"
-            placeholder="Email"
-            value={newClient.email}
-            onChange={(e) => handleNewClientInputChange('email', e.target.value)}
-          />
+        <FormField label="Teléfono 2">
+          <Input id="phone2" value={addForm.data.Phone2} onChange={(e) => addForm.setField('Phone2', e.target.value)} />
         </FormField>
       </FormDialog>
 
@@ -1276,65 +1258,54 @@ export default function ReservationsPage() {
                 <div className="flex items-center justify-between">
                   <div className="font-medium">Fecha de vuelta</div>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <button onClick={handleReturnPrevMonth} className="p-1">
-                    <ChevronLeftIcon className="h-5 w-5" />
-                  </button>
-                  <div className="font-medium">{format(returnCalendarDate, 'MMMM yyyy', { locale: es })}</div>
-                  <button onClick={handleReturnNextMonth} className="p-1">
-                    <ChevronRightIcon className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                  {weekdays.map((day) => (
-                    <div key={day} className="py-1 font-medium text-gray-500">
-                      {day}
-                    </div>
-                  ))}
-
-                  {returnCalendarDays.map((day, i) => (
-                    <button
-                      key={i}
-                      className={`rounded-md p-1 text-xs ${!day.isCurrentMonth ? 'text-gray-400' : ''} ${
-                        isReturnDateSelected(day.day, day.month, day.year)
-                          ? 'bg-blue-500 text-white'
-                          : isToday(day.day, day.month, day.year)
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'hover:bg-gray-100'
-                      }`}
-                      onClick={() => handleReturnDayClick(day.day, day.month, day.year)}
-                    >
-                      {day.day}
-                    </button>
-                  ))}
-                </div>
+                <Calendar
+                  className="text-xs sm:text-sm"
+                  mode="single"
+                  selected={returnDate}
+                  onSelect={setReturnDate}
+                  month={month}
+                  onMonthChange={setMonth}
+                  locale={es}
+                  fromMonth={new Date()}
+                  classNames={{
+                    cell: 'h-6 w-6 sm:h-7 sm:w-7 text-center text-[10px] sm:text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+                    day: 'h-6 w-6 sm:h-7 sm:w-7 p-0 font-normal text-[10px] sm:text-xs aria-selected:opacity-100',
+                    head_cell: 'text-muted-foreground rounded-md w-6 sm:w-7 font-normal text-[10px] sm:text-xs',
+                  }}
+                />
               </div>
 
               {/* Right column - Return Trip Selection */}
               <div className="border-l pl-4">
-                <div className="font-medium mb-2">
-                  Viajes disponibles para {format(returnDate, "d 'de' MMMM", { locale: es })}
-                </div>
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-4">
-                  {/* For simplicity, we're using the same trips, but in a real app you'd fetch trips for the return date */}
-                  {reserves.Items.map((trip) => (
-                    <button
-                      key={trip.ReserveId}
-                      className={`flex w-full items-center justify-between rounded-md border p-3 text-left text-sm ${
-                        returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => handleReturnTripSelect(trip)}
-                    >
-                      <div className="font-medium">{trip.DepartureHour}</div>
-                      <div className="text-gray-600">
-                        {trip.OriginName} → {trip.DestinationName}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
+                {returnDate && !isLoading && (
+                  <>
+                    <div className="font-medium mb-2">
+                      Viajes disponibles para {format(returnDate, "d 'de' MMMM", { locale: es })}
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-4">
+                      {/* For simplicity, we're using the same trips, but in a real app you'd fetch trips for the return date */}
+                      {reserves.Items.map((trip) => (
+                        <button
+                          key={trip.ReserveId}
+                          className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
+                            returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                          }`}
+                          onClick={() => handleReturnTripSelect(trip)}
+                        >
+                          <div className="font-medium">{trip.DepartureHour}</div>
+                          <div className="text-gray-600">
+                            {trip.OriginName} → {trip.DestinationName}
+                          </div>
+                        </button>
+                      ))}
+                      {reserves.Items.length === 0 && (
+                        <div className="text-center py-4 text-gray-500">
+                          No hay viajes disponibles con el origen seleccionado.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
                 {/* Add pickup and dropoff dropdowns */}
                 <div className="space-y-3 mt-4">
                   <div>
