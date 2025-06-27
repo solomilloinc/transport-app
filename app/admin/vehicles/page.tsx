@@ -2,7 +2,7 @@
 
 import type React from 'react';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,14 @@ import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
+import { PagedResponse, PaginationParams } from '@/services/types';
 import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
 import { VehicleType } from '@/interfaces/vehicleType';
 import { Vehicle } from '@/interfaces/vehicle';
 import { useFormValidation } from '@/hooks/use-form-validation';
+import { useApi } from '@/hooks/use-api';
+import { getVehicles } from '@/services/vehicle';
+import { usePaginationParams, withDefaultPagination } from '@/utils/pagination';
 
 const initialVehicleForm = {
   vehicleTypeId: 0,
@@ -52,69 +55,65 @@ const validationConfig = {
 
 export default function VehicleManagement() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentVehicleId, setCurrentVehicleId] = useState<number | null>(null);
-
   const addForm = useFormValidation(initialVehicleForm, validationConfig);
-
-  // Form state for editing a vehicle
   const editForm = useFormValidation(initialVehicleForm, validationConfig);
   const [vehicleTypes, setVehicleTypes] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
   // State for the paged response
-  const [vehiclesData, setVehiclesData] = useState<PagedResponse<Vehicle>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
-  });
-  // Function to fetch vehicles data
-  const fetchVehicles = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, Vehicle>('/vehicle-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery ? { search: searchQuery } : {},
-      });
-      setVehiclesData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
+  // const [vehiclesData, setVehiclesData] = useState<PagedResponse<Vehicle>>({
+  //   Items: [],
+  //   PageNumber: 1,
+  //   PageSize: 8,
+  //   TotalRecords: 0,
+  //   TotalPages: 0,
+  // });
+  // // Function to fetch vehicles data
+  // const fetchVehicles = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
+  //   setIsLoading(true);
+  //   try {
+  //     const response = await get<any, Vehicle>('/vehicle-report', {
+  //       pageNumber: pageToFetch,
+  //       pageSize: pageSizeToFetch,
+  //       sortBy: 'fecha',
+  //       sortDescending: true,
+  //       filters: searchQuery ? { search: searchQuery } : {},
+  //     });
+  //     setVehiclesData(response);
+  //     setIsLoading(false);
+  //   } catch (error) {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  // Fetch vehicles when search changes or on initial load
-  useEffect(() => {
-    fetchVehicles(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
+  // // Fetch vehicles when search changes or on initial load
+  // useEffect(() => {
+  //   fetchVehicles(currentPage, pageSize);
+  // }, [searchQuery, pageSize, currentPage]);
+
+  const params = usePaginationParams({
+    pageNumber: currentPage,
+    filters: { search: searchQuery },
+  });
+
+  const { data, loading, error, fetch } = useApi<Vehicle, PaginationParams>(getVehicles, {
+    autoFetch: true,
+    params: params,
+  });
 
   const loadAllOptions = async () => {
     try {
       setIsOptionsLoading(true);
       setOptionsError(null);
-      const response = await get<any, VehicleType>('/vehicle-type-report', {
-        pageNumber: 1,
-        pageSize: 10,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery ? { search: searchQuery } : {},
-      });
+      const response = await get<any, VehicleType>('/vehicle-type-report', withDefaultPagination());
       if (response) {
-        const formattedTypes = response.Items.map((type: VehicleType) => ({
+        const formattedTypes: SelectOption[] = response.Items.map((type: VehicleType) => ({
           id: type.VehicleTypeId.toString(),
           value: type.VehicleTypeId.toString(),
           label: type.Name,
@@ -140,7 +139,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetchVehicles(); // Refresh the vehicle list
+          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -169,7 +168,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetchVehicles(); // Refresh the vehicle list
+          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -218,7 +217,7 @@ export default function VehicleManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentVehicleId(null);
-    fetchVehicles();
+    fetch({ pageNumber: currentPage });
   };
 
   const resetFilters = () => {
@@ -284,40 +283,46 @@ export default function VehicleManagement() {
         }
       />
 
-      <Card className="w-full">
-        <CardContent className="pt-6 w-full">
-          <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
-            </FilterBar>
+      {loading && data?.Items?.length === 0 ? (
+        <div className="flex justify-center items-center h-64">
+          <Skeleton className="h-8 w-48" />
+        </div>
+      ) : (
+        <Card className="w-full">
+          <CardContent className="pt-6 w-full">
+            <div className="space-y-4 w-full">
+              <FilterBar onReset={resetFilters}>
+                <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+              </FilterBar>
 
-            <div className="hidden md:block w-full">
-              <DashboardTable
-                columns={columns}
-                data={vehiclesData.Items}
-                emptyMessage="No se encontraron vehiculos."
-                isLoading={isLoading}
-                skeletonRows={vehiclesData.PageSize}
-              />
+              <div className="hidden md:block w-full">
+                <DashboardTable
+                  columns={columns}
+                  data={data?.Items ?? []}
+                  emptyMessage="No se encontraron vehiculos."
+                  isLoading={loading}
+                  skeletonRows={data?.PageSize}
+                />
+              </div>
+
+              {data?.Items?.length > 0 && (
+                <TablePagination
+                  currentPage={currentPage}
+                  totalPages={data?.TotalPages}
+                  totalItems={data?.TotalRecords}
+                  itemsPerPage={data?.PageSize}
+                  onPageChange={setCurrentPage}
+                  itemName="vehiculos"
+                />
+              )}
             </div>
-
-            {vehiclesData.Items.length > 0 && (
-              <TablePagination
-                currentPage={currentPage}
-                totalPages={vehiclesData.TotalPages}
-                totalItems={vehiclesData.TotalRecords}
-                itemsPerPage={vehiclesData.PageSize}
-                onPageChange={setCurrentPage}
-                itemName="vehiculos"
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {loading && data?.Items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -337,8 +342,8 @@ export default function VehicleManagement() {
               </CardContent>
             </Card>
           ))
-        ) : vehiclesData.Items.length > 0 ? (
-          vehiclesData.Items.map((vehicle) => (
+        ) : data?.Items?.length > 0 ? (
+          data?.Items?.map((vehicle) => (
             <MobileCard
               key={vehicle.VehicleId}
               title={vehicle.VehicleTypeName}

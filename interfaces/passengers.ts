@@ -8,3 +8,13 @@ export interface Passenger {
     DocumentNumber: string;
     Status: string;
 }
+
+export const emptyPassenger:Omit<Passenger, 'CustomerId'> = {
+    FirstName: '',
+  LastName: '',
+  Email: '',
+  DocumentNumber: '',
+  Phone1: '',
+  Phone2: '',
+  Status: 'Activo'
+}

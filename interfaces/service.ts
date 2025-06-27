@@ -1,23 +1,30 @@
+import { emptyServiceSchedule, ServiceSchedule } from "./serviceSchedule";
+import { Vehicle } from "./vehicle";
+
 // Define the Vehicle interface
 export interface Service {
-  ServiceId: 0;
+  ServiceId: number;
   Name: string;
   OriginId: number;
   OriginName: string;
   DestinationId: number;
   DestinationName: string;
-  StartDay: string;
-  EndDay: string;
   EstimatedDuration: string;
-  DepartureHour: string;
-  IsHoliday: true;
-  Vehicle: {
-    internalNumber: string;
-    availableQuantity: 0;
-    fullQuantity: 0;
-    vehicleTypeName: string;
-    image: string;
-    VehicleId: number;
-  };
+  StartDay: number,
+  EndDay: number,
+  Schedules: ServiceSchedule[];
+  Vehicle: Vehicle
   Status: string;
+}
+
+export const emptyService = {
+  Name: "",
+  OriginId: 0,
+  DestinationId: 0,
+  EstimatedDuration: "",
+  VehicleId: 0,
+  StartDay: 0,
+  EndDay: 0,
+  Schedules: [emptyServiceSchedule],
+  Status: 'Activo'
 }

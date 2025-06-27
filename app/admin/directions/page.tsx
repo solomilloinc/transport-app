@@ -31,14 +31,14 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 
 const initialDirectionForm = {
   cityId: 0,
-  directionName: '',
+  name: '',
 };
 
 const validationConfig = {
   cityId: {
     required: { message: 'La ciudad es requerida' },
   },
-  directionName: {
+  name: {
     required: { message: 'La direccion es requerida' },
   },
 };
@@ -187,13 +187,13 @@ export default function DirectionManagement() {
   };
 
   const handleSetCity = (value: string, quantity?: string) => {
-    addForm.setField('Id', Number(value));
+    addForm.setField('cityId', Number(value));
   };
 
   const handleEditDirection = (direction: Direction) => {
     setCurrentDirectionId(direction.DirectionId);
     editForm.setField('CityId', direction.CityId);
-    editForm.setField('DirectionName', direction.DirectionName);
+    editForm.setField('Name', direction.Name);
     setIsEditModalOpen(true);
     loadAllOptions();
   };
@@ -217,8 +217,8 @@ export default function DirectionManagement() {
   };
 
   const columns = [
-    { header: 'Ciudad', accessor: 'Name', width: '30%' },
-    { header: 'Direccion', accessor: 'DirectionName', width: '50%' },
+    { header: 'Ciudad', accessor: 'CityName', width: '30%' },
+    { header: 'Direccion', accessor: 'Name', width: '50%' },
     {
       header: 'Acciones',
       accessor: 'actions',
@@ -317,11 +317,9 @@ export default function DirectionManagement() {
           directionsData.Items.map((direction) => (
             <MobileCard
               key={direction.DirectionId}
-              title={direction.DirectionName}
+              title={direction.Name}
               subtitle={direction.DirectionId.toString()}
-              fields={[
-                { label: 'Nombre', value: direction.DirectionName },
-              ]}
+              fields={[{ label: 'Nombre', value: direction.Name }]}
               onEdit={() => handleEditDirection(direction)}
               onDelete={() => handleDeleteDirection(direction.DirectionId)}
             />
@@ -344,9 +342,7 @@ export default function DirectionManagement() {
         <FormField label="Ciudad" required error={addForm.errors.cityId}>
           <ApiSelect
             value={String(addForm.data.cityId)}
-            onValueChange={(value) =>
-              handleSetCity(value, cities.find((city) => city.id === value)?.defaultQuantity)
-            }
+            onValueChange={(value) => handleSetCity(value, cities.find((city) => city.id === value)?.defaultQuantity)}
             placeholder="Seleccionar ciudad"
             options={cities}
             loading={isOptionsLoading}
@@ -356,12 +352,12 @@ export default function DirectionManagement() {
             emptyMessage="No hay ciudades disponibles"
           />
         </FormField>
-        <FormField label="Nombre" required error={addForm.errors.DirectionName}>
+        <FormField label="Nombre" required error={addForm.errors.name}>
           <Input
-            id="directionName"
+            id="name"
             placeholder="Nombre de la dirección"
-            value={addForm.data.directionName}
-            onChange={(e) => addForm.setField('directionName', e.target.value)}
+            value={addForm.data.name}
+            onChange={(e) => addForm.setField('name', e.target.value)}
           />
         </FormField>
       </FormDialog>
@@ -391,11 +387,11 @@ export default function DirectionManagement() {
             emptyMessage="No hay ciudades disponibles"
           />
         </FormField>
-        <FormField label="Nombre" required error={editForm.errors.directionName}>
+        <FormField label="Nombre" required error={editForm.errors.name}>
           <Input
-            id="edit-directionName"
-            value={editForm.data.directionName}
-            onChange={(e) => editForm.setField('directionName', e.target.value)}
+            id="edit-name"
+            value={editForm.data.name}
+            onChange={(e) => editForm.setField('name', e.target.value)}
           />
         </FormField>
       </FormDialog>
