@@ -2,7 +2,7 @@
 
 import type React from 'react';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,92 +11,43 @@ import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { SearchFilter } from '@/components/dashboard/search-filter';
-import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
 import { MobileCard } from '@/components/dashboard/mobile-card';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
-import { VehicleType } from '@/interfaces/vehicleType';
+import { PagedResponse, PaginationParams } from '@/services/types';
+import { emptyVehicleType, VehicleType } from '@/interfaces/vehicleType';
 import { maxLengthRule, maxValueRule, minLengthRule, minValueRule } from '@/utils/validation-rules';
-import { rule } from 'postcss';
 import { useFormValidation } from '@/hooks/use-form-validation';
-
-const initialVehicleTypeForm = {
-  name: '',
-  quantity: 0,
-};
-
-const validationConfig = {
-  name: {
-    required: true,
-    rules: [minLengthRule(3), maxLengthRule(50)],
-  },
-  quantity: {
-    required: true,
-    rules: [minValueRule(1), maxValueRule(100)],
-  },
-};
+import { useApi } from '@/hooks/use-api';
+import { getTypesVehicle } from '@/services/vehicle';
+import { usePaginationParams } from '@/utils/pagination';
+import { validationConfig } from '@/validations/vehicletTypeSchema';
 
 export default function VehicleManagement() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentVehicleTypeId, setCurrentVehicleTypeId] = useState<number | null>(null);
-  const addForm = useFormValidation(initialVehicleTypeForm, validationConfig);
+  const addForm = useFormValidation(emptyVehicleType, validationConfig);
+  const editForm = useFormValidation(emptyVehicleType, validationConfig);
 
-  // Form state for editing a vehicle
-  const editForm = useFormValidation(initialVehicleTypeForm, validationConfig);
-
-  // State for the paged response
-  const [vehiclesTypesData, setVehiclesTypesData] = useState<PagedResponse<VehicleType>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
+  const params = usePaginationParams({
+    pageNumber: currentPage,
+    filters: { search: searchQuery },
   });
-  // Function to fetch vehicles data
-  const fetchTypeVehicles = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, VehicleType>('/vehicle-type-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery
-          ? {
-              search: searchQuery,
-            }
-          : {},
-      });
-      setVehiclesTypesData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
 
-  // Fetch vehicles when search changes or on initial load
-  useEffect(() => {
-    fetchTypeVehicles(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
-
+  const { loading, data, error, fetch } = useApi<VehicleType, PaginationParams>(getTypesVehicle, {
+    autoFetch: true,
+    params: params,
+  });
   const submitAddTypeVehicle = async () => {
     addForm.handleSubmit(async (data) => {
       try {
@@ -108,7 +59,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetchTypeVehicles(); // Refresh the vehicle list
+          fetch(params); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -137,7 +88,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetchTypeVehicles(); // Refresh the vehicle list
+          fetch(params); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -163,8 +114,8 @@ export default function VehicleManagement() {
 
   const handleEditTypeVehicle = (vehicle: VehicleType) => {
     setCurrentVehicleTypeId(vehicle.VehicleTypeId);
-    editForm.setField('name', vehicle.Name);
-    editForm.setField('quantity', vehicle.Quantity);
+    editForm.setField('Name', vehicle.Name);
+    editForm.setField('Quantity', vehicle.Quantity);
     setIsEditModalOpen(true);
   };
 
@@ -178,7 +129,7 @@ export default function VehicleManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentVehicleTypeId(null);
-    fetchTypeVehicles();
+    //fetchTypeVehicles();
   };
 
   const resetFilters = () => {
@@ -236,41 +187,46 @@ export default function VehicleManagement() {
           </Button>
         }
       />
+      {loading && data?.Items?.length === 0 ? (
+        <div className="flex justify-center items-center h-64">
+          <Skeleton className="h-8 w-48" />
+        </div>
+      ) : (
+        <Card className="w-full">
+          <CardContent className="pt-6 w-full">
+            <div className="space-y-4 w-full">
+              <FilterBar onReset={resetFilters}>
+                <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+              </FilterBar>
 
-      <Card className="w-full">
-        <CardContent className="pt-6 w-full">
-          <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
-            </FilterBar>
+              <div className="hidden md:block w-full">
+                <DashboardTable
+                  columns={columns}
+                  data={data?.Items ?? []}
+                  emptyMessage="No se encontraron tipos de vehiculos."
+                  isLoading={loading}
+                  skeletonRows={data?.PageSize}
+                />
+              </div>
 
-            <div className="hidden md:block w-full">
-              <DashboardTable
-                columns={columns}
-                data={vehiclesTypesData.Items}
-                emptyMessage="No se encontraron vehiculos."
-                isLoading={isLoading}
-                skeletonRows={vehiclesTypesData.PageSize}
-              />
+              {data?.Items?.length > 0 && (
+                <TablePagination
+                  currentPage={currentPage}
+                  totalPages={data?.TotalPages}
+                  totalItems={data?.TotalRecords}
+                  itemsPerPage={data?.PageSize}
+                  onPageChange={setCurrentPage}
+                  itemName="vehiculos"
+                />
+              )}
             </div>
-
-            {vehiclesTypesData.Items.length > 0 && (
-              <TablePagination
-                currentPage={currentPage}
-                totalPages={vehiclesTypesData.TotalPages}
-                totalItems={vehiclesTypesData.TotalRecords}
-                itemsPerPage={vehiclesTypesData.PageSize}
-                onPageChange={setCurrentPage}
-                itemName="vehiculos"
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {loading ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -290,8 +246,8 @@ export default function VehicleManagement() {
               </CardContent>
             </Card>
           ))
-        ) : vehiclesTypesData.Items.length > 0 ? (
-          vehiclesTypesData.Items.map((vehicle) => (
+        ) : data?.Items?.length > 0 ? (
+          data?.Items?.map((vehicle) => (
             <MobileCard
               key={vehicle.VehicleTypeId}
               title={vehicle.Name}
@@ -316,20 +272,20 @@ export default function VehicleManagement() {
         onSubmit={() => submitAddTypeVehicle()}
         submitText="Crear Vehiculo"
       >
-        <FormField label="Nombre" required error={editForm.errors.name}>
+        <FormField label="Nombre" required error={addForm.errors.Name}>
           <Input
             id="name"
             placeholder="Nombre"
-            value={addForm.data.name}
-            onChange={(e) => addForm.setField('name', e.target.value)}
+            value={addForm.data.Name}
+            onChange={(e) => addForm.setField('Name', e.target.value)}
           />
         </FormField>
-        <FormField label="Capacidad" required error={editForm.errors.quantity}>
+        <FormField label="Capacidad" required error={addForm.errors.Quantity}>
           <Input
             id="quantity"
             placeholder="Capacidad"
-            value={addForm.data.quantity}
-            onChange={(e) => addForm.setField('quantity', Number(e.target.value))}
+            value={addForm.data.Quantity}
+            onChange={(e) => addForm.setField('Quantity', Number(e.target.value))}
           />
         </FormField>
       </FormDialog>
@@ -343,18 +299,18 @@ export default function VehicleManagement() {
         onSubmit={() => submitEditTypeVehicle()}
         submitText="Guardar Cambios"
       >
-        <FormField label="Nombre" required error={editForm.errors.name}>
+        <FormField label="Nombre" required error={editForm.errors.Name}>
           <Input
             id="edit-name"
-            value={editForm.data.name}
-            onChange={(e) => editForm.setField('name', e.target.value)}
+            value={editForm.data.Name}
+            onChange={(e) => editForm.setField('Name', e.target.value)}
           />
         </FormField>
-        <FormField label="Capacidad" required error={editForm.errors.quantity}>
+        <FormField label="Capacidad" required error={editForm.errors.Quantity}>
           <Input
             id="edit-capacidad"
-            value={editForm.data.quantity}
-            onChange={(e) => editForm.setField('quantity', Number(e.target.value))}
+            value={editForm.data.Quantity}
+            onChange={(e) => editForm.setField('Quantity', Number(e.target.value))}
           />
         </FormField>
       </FormDialog>

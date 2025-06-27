@@ -4,9 +4,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, subMonths, set } from 'date-fns';
 import { es, is, se } from 'date-fns/locale';
 import {
-  CalendarIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   PrinterIcon,
   UserPlusIcon,
   TrashIcon,
@@ -15,12 +12,9 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
-  FilterIcon,
-  BusIcon,
   TicketPlus,
-  TicketPlusIcon,
-  Edit2Icon,
   Edit2,
+  CurrencyIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -31,28 +25,29 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { PageHeader } from '@/components/dashboard/page-header';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { get, post } from '@/services/api';
-import { Reserve, ReserveReport } from '@/interfaces/reserve';
-import { PagedResponse } from '@/services/types';
-import { City } from '@/interfaces/city';
+import { deleteLogic, get, post } from '@/services/api';
+import { emptyEditReserve, Reserve, ReserveReport } from '@/interfaces/reserve';
+import { PagedResponse, PaginationParams } from '@/services/types';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
-import { Passenger } from '@/interfaces/passengers';
-import { PassengerReserve, PassengerReserveCreate, PassengerReserveReport } from '@/interfaces/passengerReserve';
+import { emptyPassenger, Passenger } from '@/interfaces/passengers';
+import { emptyPassengerCreate, PassengerReserveCreate, PassengerReserveReport } from '@/interfaces/passengerReserve';
 import { Vehicle } from '@/interfaces/vehicle';
 import { toast } from '@/hooks/use-toast';
 import { Direction } from '@/interfaces/direction';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { Calendar } from '@/components/ui/calendar';
+import { useApi } from '@/hooks/use-api';
+import { usePaginationParams, withDefaultPagination } from '@/utils/pagination';
+import { getPassengerReserves, getReserves } from '@/services/reserves';
+import { validationConfigPassenger } from '@/validations/passengerSchema';
+import { validationConfigEditReserve } from '@/validations/reserveSchema';
+import { getPassengers } from '@/services/passenger';
+import { emptyPaymentCreate, Payment, PaymentMethod } from '@/interfaces/payment';
+import { validationConfigPayment } from '@/validations/paymentSchema';
+import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 
 // Add a helper function to get client balance before the ReservationsPage function
 const getClientBalance = (dni: string) => {
@@ -61,102 +56,6 @@ const getClientBalance = (dni: string) => {
   // const balanceRecord = mockClientBalances.find((b) => b.clientId === client.id);
   // return balanceRecord ? balanceRecord.balance : null;
   return 1;
-};
-
-// Generate calendar days
-const generateCalendarDays = (year: number, month: number) => {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  const daysInMonth = lastDay.getDate();
-  const startDay = firstDay.getDay();
-
-  // Get days from previous month to fill the first week
-  const prevMonthLastDay = new Date(year, month, 0).getDate();
-  const prevMonthDays = Array.from({ length: startDay }, (_, i) => ({
-    day: prevMonthLastDay - startDay + i + 1,
-    month: month - 1,
-    year,
-    isCurrentMonth: false,
-  }));
-
-  // Current month days
-  const currentMonthDays = Array.from({ length: daysInMonth }, (_, i) => ({
-    day: i + 1,
-    month,
-    year,
-    isCurrentMonth: true,
-  }));
-
-  // Calculate how many days we need from next month
-  const totalDaysShown = Math.ceil((startDay + daysInMonth) / 7) * 7;
-  const nextMonthDays = Array.from(
-    {
-      length: totalDaysShown - (prevMonthDays.length + currentMonthDays.length),
-    },
-    (_, i) => ({
-      day: i + 1,
-      month: month + 1,
-      year,
-      isCurrentMonth: false,
-    })
-  );
-
-  return [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
-};
-
-const initialPassengerReserve: PassengerReserveCreate = {
-  ReserveId: 0,
-  CustomerId: 0,
-  PickupLocationId: 0,
-  DropoffLocationId: 0,
-  IsPayment: true,
-  StatusPaymentId: 1, // Assuming 1 means paid
-  PaymentMethod: 1, // Assuming 1 is cash
-  Price: 650,
-  ReserveTypeId: 1,
-  HasTraveled: true,
-};
-
-const initialReserve = {
-  VehicleId: 0,
-  DepartureHour: '',
-};
-
-const initialPassengers = {
-  FirstName: '',
-  LastName: '',
-  Email: '',
-  DocumentNumber: '',
-  Phone1: '',
-  Phone2: '',
-};
-
-const validationConfigPassenger = {
-  FirstName: {
-    required: { message: 'El nombre es requerido' },
-  },
-  LastName: {
-    required: { message: 'El apellido es requerido' },
-  },
-  Email: {
-    required: { message: 'El email es requerido' },
-  },
-  DocumentNumber: {
-    required: { message: 'El número de documento es requerido' },
-  },
-  Phone1: {
-    required: { message: 'El teléfono 1 es requerido' },
-  },
-};
-
-const validationConfigReserve = {
-  VehicleId: {
-    required: { message: 'El vehículo es requerido' },
-  },
-  DepartureHour: {
-    required: { message: 'La hora de salida es requerida' },
-  },
 };
 
 // Define the type for sort column
@@ -172,59 +71,45 @@ export default function ReservationsPage() {
   const [month, setMonth] = useState<Date>(new Date());
   // const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTrip, setSelectedTrip] = useState<ReserveReport | null>(null);
-  const [passengers, setPassengers] = useState<Passenger[]>([]);
-  const [passengersReserves, setPassengersReserves] = useState<PagedResponse<PassengerReserveReport>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
-  });
   const [selectedPassengerReserve, setSelectedPassengerReserve] = useState<PassengerReserveReport | null>(null);
-  const [originFilter, setOriginFilter] = useState<string>('all');
-
   const [isLoading, setIsLoading] = useState(true);
-
-  const [reserves, setReserves] = useState<PagedResponse<ReserveReport>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
-  });
 
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
   // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
 
   // Add state for sorting
   const [sortColumn, setSortColumn] = useState<SortColumn>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddPassengerModalOpen, setIsAddPassengerModalOpen] = useState(false);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [passengerToDelete, setPassengerToDelete] = useState<number | null>(null);
   const [deleteAction, setDeleteAction] = useState<DeleteAction>('delete');
   const [isPaymentSummaryOpen, setIsPaymentSummaryOpen] = useState(false);
   const [isPassengerSelectorOpen, setIsPassengerSelectorOpen] = useState(false);
+  const [isEditPassengerReserveModalOpen, setIsEditPassengerReserveModalOpen] = useState(false);
   const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
   // Round-trip states
   const [isReturnTripModalOpen, setIsReturnTripModalOpen] = useState(false);
   const [returnDate, setReturnDate] = useState<Date | undefined>(undefined);
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
-  const reserveForm = useFormValidation(initialPassengerReserve, {});
+  const reserveForm = useFormValidation(emptyPassengerCreate, reserveValidationSchema);
 
   const [passengerReserve, setPassengerReserve] = useState<PassengerReserveCreate[]>([]);
 
   const [directions, setDirections] = useState<SelectOption[]>([]);
 
-  const addForm = useFormValidation(initialPassengers, validationConfigPassenger);
-  const editFormReserve = useFormValidation(initialReserve, validationConfigReserve);
+  const addFormPassenger = useFormValidation(emptyPassenger, validationConfigPassenger);
+  const editFormReserve = useFormValidation(emptyEditReserve, validationConfigEditReserve);
+  const editPassengerReserve = useFormValidation(emptyPassengerCreate, validationConfigEditReserve);
+  const addFormPayment = useFormValidation(emptyPaymentCreate, validationConfigPayment);
+
+  const [paymentMethod, setPaymentMethod] = useState<SelectOption[]>([]);
   // Vehicle selection state
   const [vehicles, setVehicles] = useState<SelectOption[]>([]);
   const [isReserveDialogOpen, setIsReserveDialogOpen] = useState(false);
@@ -240,83 +125,60 @@ export default function ReservationsPage() {
   // Add this state variable for client search filtering
   // Add it near the other state variables at the top of the component
   const [passengerSearchQuery, setPassengerSearchQuery] = useState('');
+  const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
+
+  const [isAddPaymentReserveModalOpen, setIsAddPaymentReserveModalOpen] = useState(false);
 
   // Add a new state for the selected payment method
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('Efectivo');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
+  const [paymentAmount, setPaymentAmount] = useState<string>('');
+  const [reservationPayments, setReservationPayments] = useState<Payment[]>([]);
 
-  const fetchReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, ReserveReport>(
-        `/reserve-report/${format(isRoundTrip ? (returnDate as Date) : (selectedDate as Date), 'yyyyMMdd')}`,
-        {
-          pageNumber: pageToFetch,
-          pageSize: pageSizeToFetch,
-          sortBy: 'fecha',
-          sortDescending: true,
-          filters: {},
-        }
-      );
-      setReserves(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
+  const {
+    loading: loadingReserves,
+    data: dataReserves,
+    error: errorReserve,
+    fetch: fetchReserves,
+  } = useApi<ReserveReport, string>(getReserves, {
+    autoFetch: false,
+  });
 
-  const fetchPassengersReserves = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, PassengerReserveReport>(`/customer-reserve-report/${selectedTrip?.ReserveId}`, {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: {},
-      });
-      setPassengersReserves(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
+  const {
+    loading: loadingPassengerReserve,
+    data: dataPassengerReserves,
+    error: errorPassengerReserve,
+    fetch: fetchPassengerReserves,
+  } = useApi<PassengerReserveReport, number>(getPassengerReserves, {
+    autoFetch: false,
+  });
+
+  const {
+    loading: loadingPassenger,
+    data: dataPassenger,
+    error: errorPassenger,
+    fetch: fetchPassenger,
+    reset: resetDataPassenger,
+  } = useApi<Passenger, PaginationParams>(getPassengers, {
+    autoFetch: false,
+    params: { filters: { documentNumber: passengerSearchQuery } },
+  });
 
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
-    fetchReserves(1, 10);
+    fetchReserves(format(isRoundTrip ? (returnDate as Date) : (selectedDate as Date), 'yyyyMMdd'));
     setSelectedTrip(null);
   }, [selectedDate, returnDate]);
 
   useEffect(() => {
     if (!selectedTrip) return;
-    fetchPassengersReserves(1, 20);
+    fetchPassengerReserves(selectedTrip.ReserveId);
     loadAllOptions();
   }, [selectedTrip]);
-
-  // Then add this filtered clients logic after the other useMemo hooks
-  // Add this after the filteredTrips useMemo
-  const fetchPassenger = async (dni: string) => {
-    if (!dni) return;
-    try {
-      const response = await get<any, Passenger>('/customer-report', {
-        pageNumber: 1,
-        pageSize: 10,
-        sortBy: 'name',
-        sortDescending: false,
-        filters: { documentNumber: dni },
-      });
-      setPassengers(response.Items);
-    } catch (error) {
-      setPassengers([]);
-    }
-  };
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (passengerSearchQuery.length >= 3) {
-        fetchPassenger(passengerSearchQuery);
-      } else {
-        setPassengers([]);
+        fetchPassenger({ filters: { documentNumber: passengerSearchQuery } });
       }
     }, 500);
 
@@ -341,8 +203,19 @@ export default function ReservationsPage() {
         setVehicles(formattedVehicles);
       }
     } catch (error) {
-      setPassengers([]);
+      setVehicles([]);
     }
+  };
+
+  const loadPaymentMethod = async () => {
+    const formatedDirections: SelectOption[] = Object.entries(PaymentMethod)
+      .filter(([key, value]) => typeof value === 'number')
+      .map(([key, value]) => ({
+        id: value as number,
+        value: value.toString(),
+        label: key, // Si querés un texto más bonito, abajo te muestro cómo
+      }));
+    setPaymentMethod(formatedDirections);
   };
 
   const loadAllOptions = async () => {
@@ -379,12 +252,6 @@ export default function ReservationsPage() {
     //aca hacer la llamada api
   };
 
-  // Handle passenger payment status change
-  const handlePassengerReservePaidChange = async (passenger: PassengerReserveReport, checked: boolean) => {
-    const updatedPassenger = { ...passenger, IsPayment: checked };
-    //aca hacer la llamada pra editar
-  };
-
   // Handle delete passenger
   const handleDeletePassengerReserveClick = (passenger: PassengerReserveReport) => {
     if (passenger) {
@@ -394,29 +261,13 @@ export default function ReservationsPage() {
     }
   };
 
-  const confirmDeletePassenger = () => {
-    if (passengerToDelete) {
-      // const passenger = passengers.find((p) => p.id === passengerToDelete);
-      // if (passenger) {
-      //   // Handle different delete actions
-      //   if (deleteAction === 'delete') {
-      //     // Just delete the passenger
-      //     setPassengers(passengers.filter((p) => p.id !== passengerToDelete));
-      //   } else if (deleteAction === 'favor') {
-      //     // Put money in favor (in a real app, you would update the client's balance)
-      //     console.log(`Money in favor for ${passenger.name}: $${passenger.price}`);
-      //     setPassengers(passengers.filter((p) => p.id !== passengerToDelete));
-      //     // Here you would add the money to the client's account
-      //   } else if (deleteAction === 'debt') {
-      //     // Add a debt (in a real app, you would create a debt record)
-      //     console.log(`Debt added for ${passenger.name}: $${passenger.price}`);
-      //     setPassengers(passengers.filter((p) => p.id !== passengerToDelete));
-      //     // Here you would create a debt record
-      //   }
-      // }
-      // setIsDeleteModalOpen(false);
-      // setPassengerToDelete(null);
-      // setDeleteAction('delete');
+  const confirmDeletePassenger = async () => {
+    if (selectedPassengerReserve) {
+      const id = await deleteLogic(`/customer-reserve-delete/${selectedPassengerReserve.CustomerReserveId}`);
+      setIsDeleteModalOpen(false);
+      setSelectedPassengerReserve(null);
+      if (!selectedTrip) return;
+      fetchPassengerReserves(selectedTrip.ReserveId);
     }
   };
 
@@ -424,95 +275,108 @@ export default function ReservationsPage() {
   const handleAddPassenger = () => {
     if (selectedTrip) {
       setSelectedPassenger(null);
+      reserveForm.resetForm();
       setIsPassengerSelectorOpen(true);
     }
   };
 
   const submitAddReserve = () => {
-    const reserveData: PassengerReserveCreate = {
-      ...reserveForm.data,
-      ReserveId: selectedTrip?.ReserveId || 0,
-      PickupLocationId: Number(reserveForm.data.PickupLocationId) || 0,
-      DropoffLocationId: Number(reserveForm.data.DropoffLocationId) || 0,
-      Price: selectedTrip?.Prices.find((price) => price.ReserveTypeId === reserveForm.data.ReserveTypeId)?.Price || 0,
-    };
+    reserveForm.handleSubmit(async (data) => {
+      const reserveData: PassengerReserveCreate = {
+        ...reserveForm.data,
+        ReserveId: returnTrip ? returnTrip?.ReserveId : selectedTrip?.ReserveId || 0,
+        CustomerId: selectedPassenger?.CustomerId || 0,
+        PickupLocationId: returnTrip ? Number(reserveForm.data.PickupLocationReturnId) || 0 : Number(reserveForm.data.PickupLocationId),
+        DropoffLocationId: returnTrip ? Number(reserveForm.data.DropoffLocationReturnId) || 0 : Number(reserveForm.data.DropoffLocationId),
+        Price: returnTrip
+          ? returnTrip?.Prices.find((price) => price.ReserveTypeId === reserveForm.data.ReserveTypeId)?.Price || 0
+          : selectedTrip?.Prices.find((price) => price.ReserveTypeId === reserveForm.data.ReserveTypeId)?.Price || 0,
+      };
 
-    const updatedReserves = [...passengerReserve, reserveData];
+      setPassengerReserve([...passengerReserve, reserveData]);
 
-    if (reserveData.ReserveTypeId === 2) {
-      // Si es ida y vuelta, guardamos solo el viaje de ida y abrimos modal de regreso
-      setPassengerReserve([reserveData]);
-      setReturnDate(today);
-      setIsAddModalOpen(false);
-      setIsReturnTripModalOpen(true);
-      return;
-    }
+      if (reserveData.ReserveTypeId === 1 && !returnTrip) {
+        // Si es solo ida, guardamos el viaje y cerramos el modal
+        setIsAddPassengerModalOpen(false);
+        setIsPaymentFormOpen(true);
+        return;
+      }
 
-    finalizeAddPassenger(updatedReserves);
+      if (reserveData.ReserveTypeId === 2 && !returnTrip) {
+        // Si es ida y vuelta, guardamos solo el viaje de ida y abrimos modal de regreso
+        setReturnDate(today);
+        setIsAddPassengerModalOpen(false);
+        setIsReturnTripModalOpen(true);
+        return;
+      }
+
+      if (reserveData.ReserveTypeId === 2 && returnTrip) {
+        setIsReturnTripModalOpen(false);
+        setIsPaymentFormOpen(true);
+      }
+    });
   };
 
-  const finalizeAddPassenger = async (reserves?: PassengerReserveCreate[]) => {
-    let payload: PassengerReserveCreate[];
-
-    if (returnTrip && reserveForm.data.ReserveTypeId === 2) {
-      // Es un viaje de ida y vuelta, usamos el de ida guardado antes y armamos el de vuelta
-      const returnReservation: PassengerReserveCreate = {
-        ...reserveForm.data,
-        ReserveId: returnTrip.ReserveId,
-        PickupLocationId: Number(reserveForm.data.PickupLocationId),
-        DropoffLocationId: Number(reserveForm.data.DropoffLocationId),
-        Price: returnTrip.Prices.find((price) => price.ReserveTypeId === reserveForm.data.ReserveTypeId)?.Price || 0,
-      };
-      payload = [...passengerReserve, returnReservation];
-    } else if (reserves && reserves.length > 0) {
-      payload = reserves;
-    } else {
-      toast({
-        title: 'Error',
-        description: 'No se pudo enviar la reserva, faltan datos.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      const response = await post('/passenger-reserves-create', { items: payload });
-
-      if (response) {
-        toast({
-          title: 'Reserva creada',
-          description: 'La reserva ha sido creada exitosamente',
-          variant: 'success',
+  const finalizeAddReserve = async () => {
+    reserveForm.handleSubmit(async () => {
+      try {
+        const response = await post('/passenger-reserves-create', {
+          items: passengerReserve,
+          payments: reservationPayments,
         });
-        fetchReserves();
-      } else {
+
+        if (response) {
+          toast({
+            title: 'Reserva creada',
+            description: 'La reserva ha sido creada exitosamente',
+            variant: 'success',
+          });
+          fetchReserves(format(isRoundTrip ? (returnDate as Date) : (selectedDate as Date), 'yyyyMMdd'));
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al crear la reserva',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
         toast({
           title: 'Error',
-          description: 'Error al crear la reserva',
+          description: 'Ocurrió un error al crear la reserva',
           variant: 'destructive',
         });
+      } finally {
+        resetReservaForm();
+        if (!selectedTrip) return;
+        fetchPassengerReserves(selectedTrip.ReserveId);
       }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error al crear la reserva',
-        variant: 'destructive',
-      });
-    } finally {
-      resetReservaForm();
-      fetchPassengersReserves();
-    }
+    });
   };
 
   const resetReservaForm = () => {
-    setIsAddModalOpen(false);
+    setIsAddPassengerModalOpen(false);
     setIsReturnTripModalOpen(false);
     setPassengerReserve([]);
     setPassengerSearchQuery('');
     setSelectedPassenger(null);
     setReturnTrip(null);
     setIsRoundTrip(false);
+    setIsPaymentFormOpen(false);
     reserveForm.resetForm();
+  };
+
+  const handleOpenChangePassengerModal = (open: boolean) => {
+    setIsAddPassengerModalOpen(open);
+    if (!open) {
+      resetReservaForm();
+    }
+  };
+
+  const handleOpenReturnTripModal = (open: boolean) => {
+    setIsReturnTripModalOpen(open);
+    if (!open) {
+      resetReservaForm();
+    }
   };
 
   const submitEditReserve = () => {
@@ -529,8 +393,8 @@ export default function ReservationsPage() {
             description: 'La reserva ha sido actualizada exitosamente',
             variant: 'success',
           });
-          fetchReserves();
-          setIsAddModalOpen(false);
+          fetchReserves(format(isRoundTrip ? (returnDate as Date) : (selectedDate as Date), 'yyyyMMdd'));
+          setIsAddPassengerModalOpen(false);
         } else {
           toast({
             title: 'Error',
@@ -549,7 +413,7 @@ export default function ReservationsPage() {
   };
 
   const submitAddNewClient = () => {
-    addForm.handleSubmit(async (data) => {
+    addFormPassenger.handleSubmit(async (data) => {
       try {
         const response = await post('/customer-create', data);
         if (response) {
@@ -558,14 +422,12 @@ export default function ReservationsPage() {
             description: 'El pasajero ha sido creado exitosamente',
             variant: 'success',
           });
-          //Aca debe mandar el passenger completo para
-          // setSelectedPassenger({
-          //   ...data,
-          //   CustomerId: 1,
-          //   Status: 'Activo',
-          // });
+          setSelectedPassenger({
+            ...data,
+            CustomerId: response,
+          });
           setIsNewClientModalOpen(false);
-          setIsAddModalOpen(true);
+          setIsAddPassengerModalOpen(true);
         } else {
           toast({
             title: 'Error',
@@ -593,6 +455,117 @@ export default function ReservationsPage() {
     }
   };
 
+  const handleEditPassengerReserve = (passengerReserve: PassengerReserveReport) => {
+    if (passengerReserve) {
+      setSelectedPassengerReserve(passengerReserve);
+      editPassengerReserve.setField('PickupLocationId', passengerReserve.PickupLocationId);
+      editPassengerReserve.setField('DropoffLocationId', passengerReserve.DropoffLocationId);
+      setIsEditPassengerReserveModalOpen(true);
+    }
+  };
+
+  const handleAddPaymentPassengerReserve = (passengerReserve: PassengerReserveReport) => {
+    if (passengerReserve) {
+      setSelectedPassengerReserve(passengerReserve);
+      setIsAddPaymentReserveModalOpen(true);
+    }
+  };
+
+  const handleAddReservationPayment = () => {
+    if (Number(paymentAmount) > 0) {
+      setReservationPayments([
+        ...reservationPayments,
+        {
+          PaymentMethod: Number(selectedPaymentMethod),
+          TransactionAmount: Number(paymentAmount),
+        },
+      ]);
+      setSelectedPaymentMethod('1');
+      setPaymentAmount('');
+    }
+  };
+
+  const handleAddPayment = () => {
+    setReservationPayments([
+      ...reservationPayments,
+      {
+        PaymentMethod: Number(addFormPayment.data.PaymentMethod),
+        TransactionAmount: Number(addFormPayment.data.TransactionAmount),
+      },
+    ]);
+  };
+
+  const submitEditPassengerReserve = () => {
+    editPassengerReserve.handleSubmit(async (data) => {
+      try {
+        const response = await post('/customer-reserve-update', {
+          ...data,
+        });
+
+        if (response) {
+          toast({
+            title: 'Reserva actualizada',
+            description: 'La reserva ha sido actualizada exitosamente',
+            variant: 'success',
+          });
+          fetchReserves(format(isRoundTrip ? (returnDate as Date) : (selectedDate as Date), 'yyyyMMdd'));
+          setIsEditPassengerReserveModalOpen(false);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al actualizar la reserva',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Ocurrió un error al actualizar la reserva',
+          variant: 'destructive',
+        });
+      }
+    });
+  };
+
+  const submitAddPaymentReserve = () => {
+    addFormPayment.handleSubmit(async (data) => {
+      try {
+        const response = await post(`/reserve-create-payments/${selectedPassengerReserve?.ReserveId}/${selectedPassengerReserve?.CustomerId}`, data);
+        if (response) {
+          toast({
+            title: 'Pago cargado',
+            description: 'El pago ha sido cargado exitosamente',
+            variant: 'success',
+          });
+          setReservationPayments([]);
+          setIsAddPaymentReserveModalOpen(false);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al crear el pago',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Ocurrió un error al crear el pago',
+          variant: 'destructive',
+        });
+      }
+    });
+  };
+
+  // Remove payment from reservation
+  const handleRemoveReservationPayment = (index: number) => {
+    setReservationPayments(reservationPayments.filter((_, i) => i !== index));
+  };
+
+  // Calculate total payment amount
+  const getTotalPaymentAmount = () => {
+    return reservationPayments.reduce((total, payment) => total + payment.TransactionAmount, 0);
+  };
+
   // Format date for display
   const formatSelectedDate = () => {
     return format(selectedDate as Date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
@@ -602,9 +575,6 @@ export default function ReservationsPage() {
   const formatReturnDate = () => {
     return format(returnDate as Date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
   };
-
-  // Weekday headers
-  const weekdays = ['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'];
 
   // Update the calculatePaymentTotals function to include the selected payment method
   const calculatePaymentTotals = () => {
@@ -712,11 +682,7 @@ export default function ReservationsPage() {
       return <ArrowUpDown className="ml-1 h-4 w-4 inline" />;
     }
 
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="ml-1 h-4 w-4 inline" />
-    ) : (
-      <ChevronDown className="ml-1 h-4 w-4 inline" />
-    );
+    return sortDirection === 'asc' ? <ChevronUp className="ml-1 h-4 w-4 inline" /> : <ChevronDown className="ml-1 h-4 w-4 inline" />;
   };
 
   // Get passenger to delete for the dialog
@@ -747,21 +713,11 @@ export default function ReservationsPage() {
             </Button>
 
             {/* Vehicle selection button */}
-            <Button
-              variant="outline"
-              size="icon"
-              title="Editar reserva"
-              onClick={() => handleEditReserve(selectedTrip ?? undefined)}
-            >
+            <Button variant="outline" size="icon" title="Editar reserva" onClick={() => handleEditReserve(selectedTrip ?? undefined)}>
               <Edit2 className="h-4 w-4" />
             </Button>
 
-            <Button
-              variant="outline"
-              size="icon"
-              title="Resumen de pagos"
-              onClick={() => setIsPaymentSummaryOpen(true)}
-            >
+            <Button variant="outline" size="icon" title="Resumen de pagos" onClick={() => setIsPaymentSummaryOpen(true)}>
               <DollarSignIcon className="h-4 w-4" />
             </Button>
             <Button onClick={handleAddPassenger}>
@@ -795,9 +751,7 @@ export default function ReservationsPage() {
               </div>
               <div className="space-y-2 p-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-lg font-medium text-blue-500">
-                    Viajes {format(selectedDate as Date, 'd MMM', { locale: es })}
-                  </div>
+                  <div className="text-lg font-medium text-blue-500">Viajes {format(selectedDate as Date, 'd MMM', { locale: es })}</div>
                   {/* <div className="flex items-center">
                     <FilterIcon className="mr-2 h-4 w-4 text-gray-500" />
                     <Select value={originFilter} onValueChange={setOriginFilter}>
@@ -815,7 +769,7 @@ export default function ReservationsPage() {
                   </div> */}
                 </div>
                 <div className="space-y-2">
-                  {reserves.Items.map((trip) => {
+                  {dataReserves?.Items?.map((trip) => {
                     return (
                       <button
                         key={trip.ReserveId}
@@ -828,9 +782,7 @@ export default function ReservationsPage() {
                           <span className="font-medium">{trip.DepartureHour}</span>
                           <span
                             className={`text-xs px-1.5 py-0.5 rounded-md ${
-                              trip.ReservedQuantity >= trip.AvailableQuantity
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-green-100 text-green-700'
+                              trip.ReservedQuantity >= trip.AvailableQuantity ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                             }`}
                           >
                             {trip.ReservedQuantity}/{trip.AvailableQuantity}
@@ -843,10 +795,8 @@ export default function ReservationsPage() {
                     );
                   })}
 
-                  {reserves.Items.length === 0 && (
-                    <div className="text-center py-4 text-gray-500">
-                      No hay viajes disponibles con el origen seleccionado.
-                    </div>
+                  {dataReserves?.Items?.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">No hay viajes disponibles con el origen seleccionado.</div>
                   )}
                 </div>
               </div>
@@ -860,8 +810,8 @@ export default function ReservationsPage() {
             <div className="space-y-4">
               <div className="flex items-center text-xl font-semibold text-blue-500">
                 <UserPlusIcon className="mr-2 h-5 w-5" />
-                {formatSelectedDate().charAt(0).toUpperCase() + formatSelectedDate().slice(1)} -{' '}
-                {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
+                {formatSelectedDate().charAt(0).toUpperCase() + formatSelectedDate().slice(1)} - {selectedTrip?.OriginName} →{' '}
+                {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
                 {selectedVehicle && (
                   <span className="ml-2 text-sm font-normal text-gray-600">
                     | Vehículo: {selectedVehicle.VehicleTypeName} ({selectedVehicle.InternalNumber})
@@ -874,10 +824,7 @@ export default function ReservationsPage() {
                   <thead>
                     <tr className="border-b text-left text-sm font-medium text-gray-500">
                       <th className="py-3 pr-4 w-[20%]">
-                        <button
-                          className="flex items-center font-medium text-gray-500 hover:text-gray-700"
-                          onClick={() => handleSort('name')}
-                        >
+                        <button className="flex items-center font-medium text-gray-500 hover:text-gray-700" onClick={() => handleSort('name')}>
                           Pasajero {renderSortIndicator('name')}
                         </button>
                       </th>
@@ -889,20 +836,20 @@ export default function ReservationsPage() {
                           Subida {renderSortIndicator('pickup')}
                         </button>
                       </th>
-                      <th className="py-3 pr-4 w-[20%]">
+                      {/* <th className="py-3 pr-4 w-[20%]">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                           onClick={() => handleSort('dropoff')}
                         >
                           Bajada {renderSortIndicator('dropoff')}
                         </button>
-                      </th>
+                      </th> */}
                       <th className="py-3 pr-4 text-center">
                         <button
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                           onClick={() => handleSort('paid')}
                         >
-                          $ {renderSortIndicator('paid')}
+                          Pagado {renderSortIndicator('paid')}
                         </button>
                       </th>
                       <th className="py-3 pr-4 w-[15%]">
@@ -910,7 +857,7 @@ export default function ReservationsPage() {
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                           onClick={() => handleSort('paymentMethod')}
                         >
-                          Pago {renderSortIndicator('paymentMethod')}
+                          Medio de pago {renderSortIndicator('paymentMethod')}
                         </button>
                       </th>
                       <th className="py-3 pr-4 text-center w-[10%]">
@@ -918,14 +865,14 @@ export default function ReservationsPage() {
                           className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                           onClick={() => handleSort('price')}
                         >
-                          Precio {renderSortIndicator('price')}
+                          Monto {renderSortIndicator('price')}
                         </button>
                       </th>
-                      <th className="py-3 pl-4 text-right w-[5%]"></th>
+                      <th className="py-3 pl-4 text-right w-[10%]"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {passengersReserves.Items.map((passenger) => (
+                    {dataPassengerReserves?.Items?.map((passenger) => (
                       <tr key={passenger.CustomerReserveId} className="border-b">
                         <td className="py-3 pr-4">
                           <div className="flex items-center">
@@ -944,15 +891,11 @@ export default function ReservationsPage() {
                                 {passenger.DocumentNumber && getClientBalance(passenger.DocumentNumber) !== null && (
                                   <span
                                     className={
-                                      getClientBalance(passenger.DocumentNumber)! < 0
-                                        ? 'text-red-500 font-medium'
-                                        : 'text-green-600 font-medium'
+                                      getClientBalance(passenger.DocumentNumber)! < 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'
                                     }
                                   >
                                     {getClientBalance(passenger.DocumentNumber)! < 0
-                                      ? `Debe $${Math.abs(
-                                          getClientBalance(passenger.DocumentNumber)!
-                                        ).toLocaleString()}`
+                                      ? `Debe $${Math.abs(getClientBalance(passenger.DocumentNumber)!).toLocaleString()}`
                                       : `A favor $${getClientBalance(passenger.DocumentNumber)!.toLocaleString()}`}
                                   </span>
                                 )}
@@ -961,7 +904,7 @@ export default function ReservationsPage() {
                           </div>
                         </td>
                         <td className="py-3 pr-4 text-center">
-                          <Select defaultValue={passenger.PickupLocationId.toString()}>
+                          {/* <Select defaultValue={passenger.PickupLocationId.toString()}>
                             <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
@@ -972,9 +915,9 @@ export default function ReservationsPage() {
                                 </SelectItem>
                               ))}
                             </SelectContent>
-                          </Select>
+                          </Select> */}
                         </td>
-                        <td className="py-3 pr-4 text-center">
+                        {/* <td className="py-3 pr-4 text-center">
                           <Select defaultValue={passenger.DropoffLocationId.toString()}>
                             <SelectTrigger className="w-full">
                               <SelectValue />
@@ -987,16 +930,9 @@ export default function ReservationsPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </td>
+                        </td> */}
                         <td className="py-3 pr-4 text-center">
-                          <Checkbox
-                            id={`paid-${passenger.CustomerReserveId}`}
-                            checked={passenger.IsPayment}
-                            onCheckedChange={(checked) =>
-                              handlePassengerReservePaidChange(passenger, checked as boolean)
-                            }
-                            className="mx-auto"
-                          />
+                          <Checkbox id={`paid-${passenger.CustomerReserveId}`} checked={passenger.IsPayment} className="mx-auto" />
                         </td>
                         <td className="py-3 pr-4 text-center">
                           {/* <Select defaultValue={passenger.PaymentMethod.toString()} disabled={!passenger.IsPayment}>
@@ -1016,11 +952,30 @@ export default function ReservationsPage() {
                             type="text"
                             value={passenger.Price}
                             onChange={(e) => handlePriceChange(passenger.CustomerReserveId, e.target.value)}
-                            className={`w-24 text-right font-mono mx-auto ${
-                              !passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                            className={`w-24 text-right font-mono mx-auto ${!passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
                             disabled={!passenger.IsPayment}
                           />
+                        </td>
+                        <td className="py-3 pl-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                            onClick={() => handleAddPaymentPassengerReserve(passenger)}
+                            disabled={!passenger.IsPayment}
+                          >
+                            <CurrencyIcon className="h-4 w-4" />
+                          </Button>
+                        </td>
+                        <td className="py-3 pl-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                            onClick={() => handleEditPassengerReserve(passenger)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
                         </td>
                         <td className="py-3 pl-4 text-right">
                           <Button
@@ -1060,15 +1015,16 @@ export default function ReservationsPage() {
                 onChange={(e) => setPassengerSearchQuery(e.target.value)}
               />
               <div className="max-h-60 overflow-y-auto border rounded-md">
-                {passengers.map((passenger) => (
+                {dataPassenger?.Items?.map((passenger) => (
                   <div
                     key={passenger.CustomerId}
                     className="flex items-center justify-between p-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
                     onClick={() => {
                       setSelectedPassenger(passenger);
                       setIsPassengerSelectorOpen(false);
-                      setIsAddModalOpen(true);
-                      reserveForm.data.CustomerId = passenger.CustomerId;
+                      setIsAddPassengerModalOpen(true);
+                      setPassengerSearchQuery('');
+                      resetDataPassenger();
                     }}
                   >
                     <div className="flex flex-col">
@@ -1102,7 +1058,7 @@ export default function ReservationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Vehicle Selector Dialog */}
+      {/* Edit Reserve */}
       <FormDialog
         open={isReserveDialogOpen}
         onOpenChange={setIsReserveDialogOpen}
@@ -1144,58 +1100,59 @@ export default function ReservationsPage() {
         description="Crea un nuevo cliente completando el formulario a continuación"
         onSubmit={submitAddNewClient}
         submitText="Crear Cliente"
-        isLoading={addForm.isSubmitting}
+        isLoading={addFormPassenger.isSubmitting}
       >
-        <FormField label="Nombre" required error={addForm.errors.FirstName}>
+        <FormField label="Nombre" required error={addFormPassenger.errors.FirstName}>
           <Input
             id="first-name"
-            value={addForm.data.FirstName}
+            value={addFormPassenger.data.FirstName}
             type="text"
             placeholder="Nombre"
-            onChange={(e) => addForm.setField('FirstName', e.target.value)}
+            onChange={(e) => addFormPassenger.setField('FirstName', e.target.value)}
           />
         </FormField>
-        <FormField label="Apellido" required error={addForm.errors.LastName}>
+        <FormField label="Apellido" required error={addFormPassenger.errors.LastName}>
           <Input
             id="last-name"
-            value={addForm.data.LastName}
+            value={addFormPassenger.data.LastName}
             placeholder="Apellido"
             type="text"
-            onChange={(e) => addForm.setField('LastName', e.target.value)}
+            onChange={(e) => addFormPassenger.setField('LastName', e.target.value)}
           />
         </FormField>
-        <FormField label="Email" required error={addForm.errors.Email}>
-          <Input id="email" value={addForm.data.Email} onChange={(e) => addForm.setField('Email', e.target.value)} />
+        <FormField label="Email" required error={addFormPassenger.errors.Email}>
+          <Input id="email" value={addFormPassenger.data.Email} onChange={(e) => addFormPassenger.setField('Email', e.target.value)} />
         </FormField>
-        <FormField label="Número de documento" required error={addForm.errors.DocumentNumber}>
+        <FormField label="Número de documento" required error={addFormPassenger.errors.DocumentNumber}>
           <Input
             id="documentNumber"
-            value={addForm.data.DocumentNumber}
+            value={addFormPassenger.data.DocumentNumber}
             placeholder="Número de documento"
             type="number"
-            onChange={(e) => addForm.setField('DocumentNumber', e.target.value)}
+            onChange={(e) => addFormPassenger.setField('DocumentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono 1" required error={addForm.errors.Phone1}>
-          <Input id="phone1" value={addForm.data.Phone1} onChange={(e) => addForm.setField('Phone1', e.target.value)} />
+        <FormField label="Teléfono 1" required error={addFormPassenger.errors.Phone1}>
+          <Input id="phone1" value={addFormPassenger.data.Phone1} onChange={(e) => addFormPassenger.setField('Phone1', e.target.value)} />
         </FormField>
         <FormField label="Teléfono 2">
-          <Input id="phone2" value={addForm.data.Phone2} onChange={(e) => addForm.setField('Phone2', e.target.value)} />
+          <Input id="phone2" value={addFormPassenger.data.Phone2} onChange={(e) => addFormPassenger.setField('Phone2', e.target.value)} />
         </FormField>
       </FormDialog>
 
       {/* Add Reserve Modal */}
       <FormDialog
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
+        open={isAddPassengerModalOpen}
+        onOpenChange={handleOpenChangePassengerModal}
         title="Añadir Pasajero al Viaje"
         description={
           selectedPassenger
             ? `Añadiendo a ${selectedPassenger.FirstName} ${selectedPassenger.LastName} (DNI: ${selectedPassenger.DocumentNumber})`
             : 'Añade un nuevo pasajero a este viaje'
         }
-        onSubmit={submitAddReserve}
+        onSubmit={() => submitAddReserve()}
         submitText="Añadir Reserva"
+        isLoading={reserveForm.isSubmitting}
       >
         <FormField label="Dirección de subida" required error={reserveForm.errors.PickupLocationId}>
           <ApiSelect
@@ -1241,78 +1198,294 @@ export default function ReservationsPage() {
       </FormDialog>
 
       {/* Return Trip Selection Dialog */}
-      <Dialog open={isReturnTripModalOpen} onOpenChange={setIsReturnTripModalOpen}>
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Seleccionar Viaje de Vuelta</DialogTitle>
-            <DialogDescription>
-              Selecciona la fecha y el servicio para el viaje de vuelta de{' '}
-              {selectedPassenger ? `${selectedPassenger.FirstName} ${selectedPassenger.LastName}` : 'el pasajero'}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {/* Grid layout with calendar on left, trips on right */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Left column - Return Calendar */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="font-medium">Fecha de vuelta</div>
+      <FormDialog
+        open={isReturnTripModalOpen}
+        onOpenChange={handleOpenReturnTripModal}
+        title="Seleccionar Viaje de Vuelta"
+        description={`Selecciona la fecha y el servicio para el viaje de vuelta de ${
+          selectedPassenger ? `${selectedPassenger.FirstName} ${selectedPassenger.LastName}` : 'el pasajero'
+        }`}
+        onSubmit={submitAddReserve}
+        submitText="Añadir Reserva"
+        isLoading={reserveForm.isSubmitting}
+      >
+        <div className="py-4">
+          {/* Grid layout with calendar on left, trips on right */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Left column - Return Calendar */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="font-medium">Fecha de vuelta</div>
+              </div>
+              <Calendar
+                className="text-xs sm:text-sm"
+                mode="single"
+                selected={returnDate}
+                onSelect={setReturnDate}
+                month={month}
+                onMonthChange={setMonth}
+                locale={es}
+                fromMonth={new Date()}
+                classNames={{
+                  cell: 'h-6 w-6 sm:h-7 sm:w-7 text-center text-[10px] sm:text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+                  day: 'h-6 w-6 sm:h-7 sm:w-7 p-0 font-normal text-[10px] sm:text-xs aria-selected:opacity-100',
+                  head_cell: 'text-muted-foreground rounded-md w-6 sm:w-7 font-normal text-[10px] sm:text-xs',
+                }}
+              />
+            </div>
+
+            {/* Right column - Return Trip Selection */}
+            <div className="border-l pl-4">
+              {returnDate && (
+                <>
+                  <div className="font-medium mb-2">Viajes disponibles para {format(returnDate, "d 'de' MMMM", { locale: es })}</div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-4">
+                    {/* For simplicity, we're using the same trips, but in a real app you'd fetch trips for the return date */}
+                    {dataReserves?.Items?.map((trip) => (
+                      <button
+                        key={trip.ReserveId}
+                        className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
+                          returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleReturnTripSelect(trip)}
+                      >
+                        <div className="font-medium">{trip.DepartureHour}</div>
+                        <div className="text-gray-600">
+                          {trip.OriginName} → {trip.DestinationName}
+                        </div>
+                      </button>
+                    ))}
+                    {dataReserves?.Items?.length === 0 && (
+                      <div className="text-center py-4 text-gray-500">No hay viajes disponibles con el origen seleccionado.</div>
+                    )}
+                  </div>
+                </>
+              )}
+              {/* Add pickup and dropoff dropdowns */}
+              <div className="space-y-3 mt-4">
+                <div>
+                  <FormField label="Dirección de subida" error={reserveForm.errors.PickupLocationReturnId}>
+                    <ApiSelect
+                      value={String(reserveForm.data.PickupLocationReturnId)}
+                      onValueChange={(value) => reserveForm.setField('PickupLocationReturnId', value)}
+                      placeholder="Seleccionar dirección de subida"
+                      options={directions}
+                      loading={isOptionsLoading}
+                      error={optionsError}
+                      loadingMessage="Cargando direcciones..."
+                      errorMessage="Error al cargar las direcciones"
+                      emptyMessage="No hay direcciones disponibles"
+                    />
+                  </FormField>
                 </div>
-                <Calendar
-                  className="text-xs sm:text-sm"
-                  mode="single"
-                  selected={returnDate}
-                  onSelect={setReturnDate}
-                  month={month}
-                  onMonthChange={setMonth}
-                  locale={es}
-                  fromMonth={new Date()}
-                  classNames={{
-                    cell: 'h-6 w-6 sm:h-7 sm:w-7 text-center text-[10px] sm:text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
-                    day: 'h-6 w-6 sm:h-7 sm:w-7 p-0 font-normal text-[10px] sm:text-xs aria-selected:opacity-100',
-                    head_cell: 'text-muted-foreground rounded-md w-6 sm:w-7 font-normal text-[10px] sm:text-xs',
+
+                <div>
+                  <FormField label="Dirección de bajada" error={reserveForm.errors.DropoffLocationReturnId}>
+                    <ApiSelect
+                      value={String(reserveForm.data.DropoffLocationReturnId)}
+                      onValueChange={(value) => reserveForm.setField('DropoffLocationReturnId', value)}
+                      placeholder="Seleccionar dirección de subida"
+                      options={directions}
+                      loading={isOptionsLoading}
+                      error={optionsError}
+                      loadingMessage="Cargando direcciones..."
+                      errorMessage="Error al cargar las direcciones"
+                      emptyMessage="No hay direcciones disponibles"
+                    />
+                  </FormField>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </FormDialog>
+      {/* Payment Summary Dialog */}
+      <FormDialog
+        open={isPaymentFormOpen}
+        onOpenChange={handleOpenChangePassengerModal}
+        title="Confirmar reserva y pago"
+        description={'Revisa los datos de la reserva y configura el pago'}
+        onSubmit={() => finalizeAddReserve()}
+        submitText="Confirmar Reserva"
+        isLoading={reserveForm.isSubmitting}
+      >
+        <div className="flex-1 overflow-y-auto py-4">
+          <div className="space-y-6 py-4">
+            {/* Reservation Summary */}
+            <div className="rounded-lg border p-4 bg-gray-50">
+              <h3 className="font-semibold text-lg mb-3">Resumen de la Reserva</h3>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Pasajero:</span>
+                  <p>
+                    {selectedPassenger?.FirstName} {selectedPassenger?.LastName}
+                  </p>
+                  {selectedPassenger && <p className="text-gray-500">DNI: {selectedPassenger.DocumentNumber}</p>}
+                </div>
+
+                <div>
+                  <span className="font-medium">Fecha:</span>
+                  <p>{formatSelectedDate()}</p>
+                </div>
+
+                <div>
+                  <span className="font-medium">Viaje de Ida</span>
+                  <p>
+                    {selectedTrip?.DepartureHour} - {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Subida: {directions.find((d) => d.id == reserveForm.data.PickupLocationId)?.label} | Bajada:{' '}
+                    {directions.find((d) => d.id == reserveForm.data.DropoffLocationId)?.label}
+                  </p>
+                </div>
+
+                {isRoundTrip && returnTrip && (
+                  <div>
+                    <span className="font-medium">Viaje de Vuelta:</span>
+                    <p>
+                      {returnTrip?.DepartureHour} - {returnTrip.OriginName} → {returnTrip.DestinationName}
+                    </p>
+                    <p className="text-sm text-gray-500">Fecha: {formatReturnDate()}</p>
+                    <p className="text-sm text-gray-500">
+                      Subida: {directions.find((d) => d.id == reserveForm.data.PickupLocationReturnId)?.label} | Bajada:{' '}
+                      {directions.find((d) => d.id == reserveForm.data.DropoffLocationReturnId)?.label}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Section */}
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  id="payment-enabled"
+                  checked={reserveForm.data.IsPayment}
+                  onCheckedChange={(checked) => {
+                    reserveForm.setField('IsPayment', checked);
                   }}
                 />
+                <Label htmlFor="payment-enabled" className="text-sm font-medium">
+                  Registrar pago con la reserva
+                </Label>
               </div>
+              {reserveForm.data.IsPayment && (
+                <>
+                  <h3 className="font-semibold text-lg mb-3">Configurar Pagos</h3>
 
-              {/* Right column - Return Trip Selection */}
-              <div className="border-l pl-4">
-                {returnDate && !isLoading && (
-                  <>
-                    <div className="font-medium mb-2">
-                      Viajes disponibles para {format(returnDate, "d 'de' MMMM", { locale: es })}
+                  {/* Add Payment Form */}
+                  <div className="flex gap-2 mb-4">
+                    <div className="flex-1">
+                      <Label htmlFor="payment-method" className="text-sm font-medium mb-1 block">
+                        Método de Pago
+                      </Label>
+                      <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                        <SelectTrigger id="payment-method">
+                          <SelectValue placeholder="Seleccionar método" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Efectivo</SelectItem>
+                          <SelectItem value="2">Método</SelectItem>
+                          <SelectItem value="3">Transferencia</SelectItem>
+                          <SelectItem value="4">Tarjeta</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 mb-4">
-                      {/* For simplicity, we're using the same trips, but in a real app you'd fetch trips for the return date */}
-                      {reserves.Items.map((trip) => (
-                        <button
-                          key={trip.ReserveId}
-                          className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
-                            returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                          }`}
-                          onClick={() => handleReturnTripSelect(trip)}
-                        >
-                          <div className="font-medium">{trip.DepartureHour}</div>
-                          <div className="text-gray-600">
-                            {trip.OriginName} → {trip.DestinationName}
+
+                    <div className="flex-1">
+                      <Label htmlFor="payment-amount" className="text-sm font-medium mb-1 block">
+                        Monto
+                      </Label>
+                      <div className="flex gap-1">
+                        <Input
+                          id="payment-amount"
+                          type="number"
+                          placeholder="Monto"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button size="icon" onClick={handleAddReservationPayment} disabled={!paymentAmount || Number(paymentAmount) <= 0}>
+                          <PlusCircleIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment List */}
+                  {reservationPayments.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      <Label className="text-sm font-medium">Pagos Agregados:</Label>
+                      <div className="max-h-32 overflow-y-auto">
+                        {reservationPayments.map((payment, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{payment.PaymentMethod}</span>
+                              <span className="text-sm font-medium">${payment.TransactionAmount.toLocaleString()}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-red-500 hover:bg-red-50"
+                              onClick={() => handleRemoveReservationPayment(index)}
+                            >
+                              <TrashIcon className="h-3 w-3" />
+                            </Button>
                           </div>
-                        </button>
-                      ))}
-                      {reserves.Items.length === 0 && (
-                        <div className="text-center py-4 text-gray-500">
-                          No hay viajes disponibles con el origen seleccionado.
-                        </div>
-                      )}
+                        ))}
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="font-medium">Total:</span>
+                        <span className="font-bold text-lg">${getTotalPaymentAmount().toLocaleString()}</span>
+                      </div>
                     </div>
-                  </>
-                )}
-                {/* Add pickup and dropoff dropdowns */}
-                <div className="space-y-3 mt-4">
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </FormDialog>
+
+      {/* Edit Passenger Reserve */}
+      <FormDialog
+        open={isEditPassengerReserveModalOpen}
+        onOpenChange={setIsEditPassengerReserveModalOpen}
+        title="Editar Reserva"
+        description={`Edita los detalles de la reserva de ${selectedPassengerReserve?.FullName}`}
+        onSubmit={submitEditPassengerReserve}
+        submitText={`Edita los detalles de la reserva de ${selectedPassengerReserve?.FullName}`}
+        isLoading={editPassengerReserve.isSubmitting}
+      >
+        <div className="flex-1 overflow-y-auto py-4">
+          <div className="space-y-6">
+            {/* Passenger Info */}
+            <div className="rounded-lg border p-4 bg-gray-50">
+              <h3 className="font-semibold text-lg mb-3">Información del Pasajero</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Nombre:</span>
+                  <p>{selectedPassengerReserve?.FullName}</p>
+                </div>
+                <div>
+                  <span className="font-medium">DNI:</span>
+                  <p>{selectedPassengerReserve?.DocumentNumber}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Trip Details */}
+            <div className="rounded-lg border p-4">
+              <h3 className="font-semibold text-lg mb-3">Detalles del Viaje</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <FormField label="Dirección de subida" required error={reserveForm.errors.PickupLocationId}>
+                    <FormField label="Dirección de subida" required error={editPassengerReserve.errors.PickupLocationId}>
                       <ApiSelect
-                        value={String(reserveForm.data.PickupLocationId)}
-                        onValueChange={(value) => reserveForm.setField('PickupLocationId', value)}
+                        value={String(editPassengerReserve.data.PickupLocationId)}
+                        onValueChange={(value) => editPassengerReserve.setField('PickupLocationId', Number(value))}
                         placeholder="Seleccionar dirección de subida"
                         options={directions}
                         loading={isOptionsLoading}
@@ -1323,13 +1496,12 @@ export default function ReservationsPage() {
                       />
                     </FormField>
                   </div>
-
                   <div>
-                    <FormField label="Dirección de bajada" required error={reserveForm.errors.DropoffLocationId}>
+                    <FormField label="Dirección de Bajada" required error={editPassengerReserve.errors.DropoffLocationId}>
                       <ApiSelect
-                        value={String(reserveForm.data.DropoffLocationId)}
-                        onValueChange={(value) => reserveForm.setField('DropoffLocationId', value)}
-                        placeholder="Seleccionar dirección de subida"
+                        value={String(editPassengerReserve.data.DropoffLocationId)}
+                        onValueChange={(value) => editPassengerReserve.setField('DropoffLocationId', Number(value))}
+                        placeholder="Seleccionar dirección de bajada"
                         options={directions}
                         loading={isOptionsLoading}
                         error={optionsError}
@@ -1343,16 +1515,112 @@ export default function ReservationsPage() {
               </div>
             </div>
           </div>
-          <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsReturnTripModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={() => finalizeAddPassenger()} disabled={!returnTrip}>
-              Confirmar Reserva
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormDialog>
+
+      {/* Add Payment Customer Reserve*/}
+      <FormDialog
+        open={isAddPaymentReserveModalOpen}
+        onOpenChange={setIsAddPaymentReserveModalOpen}
+        title="Agregar pago"
+        description={`Agrega pago de la reserva de ${selectedPassengerReserve?.FullName}`}
+        onSubmit={submitAddPaymentReserve}
+        submitText="Agrega pago"
+        isLoading={addFormPayment.isSubmitting}
+      >
+        <div className="flex-1 overflow-y-auto py-4">
+          <div className="space-y-6">
+            {/* Passenger Info */}
+            <div className="rounded-lg border p-4 bg-gray-50">
+              <h3 className="font-semibold text-lg mb-3">Información del Pasajero</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Nombre:</span>
+                  <p>{selectedPassengerReserve?.FullName}</p>
+                </div>
+                <div>
+                  <span className="font-medium">DNI:</span>
+                  <p>{selectedPassengerReserve?.DocumentNumber}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Section */}
+            <div className="rounded-lg border p-4">
+              <h3 className="font-semibold text-lg mb-3">Gestión de Pagos</h3>
+
+              <div className="flex gap-2 mb-4">
+                <div className="flex-1">
+                  <FormField label="Medio de pago" required error={addFormPayment.errors.PaymentMethod}>
+                    <ApiSelect
+                      value={String(addFormPayment.data.PaymentMethod)}
+                      onValueChange={(value) => addFormPayment.setField('PaymentMethod', Number(value))}
+                      placeholder="Seleccionar medio de pago"
+                      options={paymentMethod}
+                      loading={isOptionsLoading}
+                      error={optionsError}
+                      loadingMessage="Cargando medios de pago..."
+                      errorMessage="Error al medios de pago"
+                      emptyMessage="No hay medios de pago disponibles"
+                    />
+                  </FormField>
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex gap-1">
+                    <FormField label="Monto">
+                      <Input
+                        id="monto"
+                        value={addFormPayment.data.TransactionAmount}
+                        onChange={(e) => addFormPayment.setField('TransactionAmount', e.target.value)}
+                      />
+                    </FormField>
+                    <Button size="icon" onClick={handleAddPayment} disabled={Number(addFormPayment.data.TransactionAmount) <= 0}>
+                      <PlusCircleIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment List */}
+              {reservationPayments.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <Label className="text-sm font-medium">Pagos Registrados:</Label>
+                  <div className="max-h-40 overflow-y-auto border rounded p-2 bg-gray-50">
+                    <div className="space-y-2">
+                      {reservationPayments.map((payment, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{payment.PaymentMethod}</span>
+                            <span className="text-sm font-medium">${payment.TransactionAmount.toLocaleString()}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-red-500 hover:bg-red-50"
+                            onClick={() => handleRemoveReservationPayment(index)}
+                          >
+                            <TrashIcon className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="font-medium">Total Pagos:</span>
+                    <span className="font-bold text-lg">${getTotalPaymentAmount().toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+
+              {reservationPayments.length === 0 && (
+                <div className="text-sm text-gray-500 bg-gray-100 p-3 rounded">No hay pagos registrados para esta reserva.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </FormDialog>
 
       {/* Custom Delete Dialog */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
@@ -1367,11 +1635,7 @@ export default function ReservationsPage() {
           </DialogHeader>
 
           <div className="py-4">
-            <RadioGroup
-              value={deleteAction}
-              onValueChange={(value) => setDeleteAction(value as DeleteAction)}
-              className="space-y-3"
-            >
+            <RadioGroup value={deleteAction} onValueChange={(value) => setDeleteAction(value as DeleteAction)} className="space-y-3">
               {selectedPassengerReserve?.IsPayment ? (
                 <>
                   <div className="flex items-center space-x-2">
@@ -1402,7 +1666,7 @@ export default function ReservationsPage() {
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDeletePassenger}>
+            <Button variant="destructive" onClick={() => confirmDeletePassenger()}>
               Confirmar
             </Button>
           </DialogFooter>
@@ -1422,15 +1686,11 @@ export default function ReservationsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg border p-4">
                 <div className="text-sm text-gray-500">Efectivo</div>
-                <div className="text-2xl font-bold text-blue-500">
-                  ${calculatePaymentTotals().Efectivo.toLocaleString()}
-                </div>
+                <div className="text-2xl font-bold text-blue-500">${calculatePaymentTotals().Efectivo.toLocaleString()}</div>
               </div>
               <div className="rounded-lg border p-4">
                 <div className="text-sm text-gray-500">Método</div>
-                <div className="text-2xl font-bold text-blue-500">
-                  ${calculatePaymentTotals().Método.toLocaleString()}
-                </div>
+                <div className="text-2xl font-bold text-blue-500">${calculatePaymentTotals().Método.toLocaleString()}</div>
               </div>
             </div>
 
@@ -1438,9 +1698,7 @@ export default function ReservationsPage() {
             <div className="rounded-lg border p-4">
               <div className="flex justify-between items-center mb-2">
                 <div className="text-sm text-gray-500">Otros Pagos</div>
-                <div className="text-lg font-bold text-blue-500">
-                  ${calculatePaymentTotals().Custom.toLocaleString()}
-                </div>
+                <div className="text-lg font-bold text-blue-500">${calculatePaymentTotals().Custom.toLocaleString()}</div>
               </div>
 
               {/* List of custom payments */}
@@ -1457,12 +1715,7 @@ export default function ReservationsPage() {
               {/* Add new custom payment */}
               <div className="flex gap-2 mt-2">
                 <div className="w-3/5">
-                  <Input
-                    placeholder="Nombre"
-                    value={newPaymentName}
-                    onChange={(e) => setNewPaymentName(e.target.value)}
-                    className="w-full"
-                  />
+                  <Input placeholder="Nombre" value={newPaymentName} onChange={(e) => setNewPaymentName(e.target.value)} className="w-full" />
                 </div>
                 <div className="w-1/5">
                   <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod}>

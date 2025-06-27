@@ -17,6 +17,18 @@ export interface PagedResponse<T = any> {
   TotalPages: number;
 }
 
+export interface UseApiCall<T> {
+  call: Promise<PagedResponse<T>>;
+}
+
+export interface PaginationParams {
+  pageNumber?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDescending?: boolean;
+  filters?: Record<string, any>;
+}
+
 // declare module 'axios' {
 //   export interface AxiosRequestConfig {
 //     skipAuth?: boolean;

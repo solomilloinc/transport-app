@@ -6,7 +6,7 @@ export interface Reserve extends Auditable {
     ReserveId: number;
     ReserveDate: string;
     VehicleId: number;
-    DriverId: string;
+    DriverId: number;
     ServiceId: number;
     UserId: number;
     Status: string;
@@ -20,7 +20,14 @@ export interface ReserveReport {
     DestinationName: string;
     DepartureHour: string;
     VehicleId: number;
+    DriverId: number;
     AvailableQuantity: number;
     ReservedQuantity: number;
     Prices: ReservePrice[];
+}
+
+export const emptyEditReserve ={
+    VehicleId: 0,
+    DriverId: 0,
+    DepartureHour: ''
 }
