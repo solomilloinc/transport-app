@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bus, Clock, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon, Wrench, X } from 'lucide-react';
+import { Bus, Clock, Edit, Plus, Search, Trash, Trash2, TruckIcon, UserPlusIcon, Wrench, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,13 +23,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
 import { PagedResponse } from '@/services/types';
-import { Service } from '@/interfaces/service';
+import { emptyService, Service } from '@/interfaces/service';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { City } from '@/interfaces/city';
 import { Vehicle } from '@/interfaces/vehicle';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { getOptionIdByValue } from '@/utils/form-options';
-import { ServiceSchedule } from '@/interfaces/serviceSchedule';
+import { emptyServiceSchedule, ServiceSchedule } from '@/interfaces/serviceSchedule';
 import { Label } from '@/components/ui/label';
 
 const initialService = {
@@ -78,7 +78,7 @@ export default function ServiceManagement() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentServiceId, setCurrentServiceId] = useState<number | null>(null);
-  const addForm = useFormValidation(initialService, validationSchema);
+  const addForm = useFormValidation(emptyService, validationSchema);
   const editForm = useFormValidation(initialService, validationSchema);
   const [cities, setCities] = useState<SelectOption[]>([]);
   const [vehicles, setVehicles] = useState<SelectOption[]>([]);
@@ -173,33 +173,14 @@ export default function ServiceManagement() {
   };
 
   const addSchedule = () => {
-    const newSchedule = { ...initialSchedule, ServiceScheduleId: Date.now() };
-    setSchedules([...schedules, newSchedule]);
+    const newSchedule = emptyServiceSchedule;
+    addForm.setField('Schedules', [...addForm.data.Schedules, newSchedule]);
   };
 
-  const addEditSchedule = () => {
-    const newSchedule = { ...initialSchedule, ServiceScheduleId: Date.now() };
-    setEditSchedules([...editSchedules, newSchedule]);
-  };
-
-  const removeSchedule = (id: number) => {
-    setSchedules(schedules.filter((schedule) => schedule.ServiceScheduleId !== id));
-  };
-
-  const removeEditSchedule = (id: number) => {
-    setEditSchedules(editSchedules.filter((schedule) => schedule.ServiceScheduleId !== id));
-  };
-
-  const updateSchedule = (id: number, field: keyof ServiceSchedule, value: any) => {
-    setSchedules(
-      schedules.map((schedule) => (schedule.ServiceScheduleId === id ? { ...schedule, [field]: value } : schedule))
-    );
-  };
-
-  const updateEditSchedule = (id: number, field: keyof ServiceSchedule, value: any) => {
-    setEditSchedules(
-      editSchedules.map((schedule) => (schedule.ServiceScheduleId === id ? { ...schedule, [field]: value } : schedule))
-    );
+  const removeSchedule = (index: number) => {
+    const updatedSchedules = [...addForm.data.Schedules];
+    updatedSchedules.splice(index, 1);
+    addForm.setField('Schedules', updatedSchedules);
   };
 
   const submitAddService = async () => {
@@ -258,6 +239,15 @@ export default function ServiceManagement() {
         });
       }
     });
+  };
+
+  const handleScheduleChange = (index: number, field: string, value: any) => {
+    const updatedSchedules = [...addForm.data.Schedules];
+    updatedSchedules[index] = {
+      ...updatedSchedules[index],
+      [field]: value,
+    };
+    addForm.setField('Schedules', updatedSchedules);
   };
 
   const handleAddService = () => {
@@ -438,20 +428,15 @@ export default function ServiceManagement() {
           <div className="grid grid-cols-1 gap-4">
             {/* Información Personal */}
             <div className="w-full">
-              <FormField label="Nombre" required error={addForm.errors.name}>
-                <Input
-                  id="name"
-                  placeholder="Nombre"
-                  value={addForm.data.name}
-                  onChange={(e) => addForm.setField('name', e.target.value)}
-                />
+              <FormField label="Nombre" required error={addForm.errors.Name}>
+                <Input id="name" placeholder="Nombre" value={addForm.data.Name} onChange={(e) => addForm.setField('name', e.target.value)} />
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Origen" required error={addForm.errors.originId}>
+              <FormField label="Origen" required error={addForm.errors.OriginId}>
                 <ApiSelect
-                  value={String(addForm.data.originId)}
-                  onValueChange={(value) => addForm.setField('originId', Number(value))}
+                  value={String(addForm.data.OriginId)}
+                  onValueChange={(value) => addForm.setField('OriginId', Number(value))}
                   placeholder="Seleccionar origen"
                   options={cities}
                   loading={isOptionsLoading}
@@ -461,13 +446,13 @@ export default function ServiceManagement() {
                   emptyMessage="No hay ciudades disponibles"
                 />
               </FormField>
-              <FormField label="Destino" required error={addForm.errors.destinationId}>
+              <FormField label="Destino" required error={addForm.errors.DestinationId}>
                 <ApiSelect
-                  value={String(addForm.data.destinationId)}
-                  onValueChange={(value) => addForm.setField('destinationId', Number(value))}
+                  value={String(addForm.data.DestinationId)}
+                  onValueChange={(value) => addForm.setField('DestinationId', Number(value))}
                   placeholder="Seleccionar destino"
-                  options={cities.filter((city) => city.id !== String(addForm.data.originId))}
-                  disabled={addForm.data.originId === 0}
+                  options={cities.filter((city) => city.id !== String(addForm.data.OriginId))}
+                  disabled={addForm.data.OriginId === 0}
                   loading={isOptionsLoading}
                   error={optionsError}
                   loadingMessage="Cargando destinos..."
@@ -477,8 +462,8 @@ export default function ServiceManagement() {
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Dia Inicio" required error={addForm.errors.startDay}>
-                <Select onValueChange={(value) => addForm.setField('startDay', Number(value))}>
+              <FormField label="Dia Inicio" required error={addForm.errors.StartDay}>
+                <Select onValueChange={(value) => addForm.setField('StartDay', Number(value))}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -493,8 +478,8 @@ export default function ServiceManagement() {
                   </SelectContent>
                 </Select>
               </FormField>
-              <FormField label="Dia Fin" required error={addForm.errors.endDay}>
-                <Select onValueChange={(value) => addForm.setField('endDay', Number(value))}>
+              <FormField label="Dia Fin" required error={addForm.errors.EndDay}>
+                <Select onValueChange={(value) => addForm.setField('EndDay', Number(value))}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -511,39 +496,18 @@ export default function ServiceManagement() {
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Duración Estimada" required error={addForm.errors.estimatedDuration}>
+              <FormField label="Duración Estimada" required error={addForm.errors.EstimatedDuration}>
                 <Input
                   id="estimatedDuration"
                   placeholder="Duración Estimada"
-                  value={addForm.data.estimatedDuration}
-                  onChange={(e) => addForm.setField('estimatedDuration', e.target.value)}
+                  value={addForm.data.EstimatedDuration}
+                  onChange={(e) => addForm.setField('EstimatedDuration', e.target.value)}
                 />
-              </FormField>
-              <FormField label="Hora de Partida" required error={addForm.errors.departureHour}>
-                <Input
-                  id="departureHour"
-                  placeholder="Hora de Partida"
-                  value={addForm.data.departureHour}
-                  onChange={(e) => addForm.setField('departureHour', e.target.value)}
-                />
-              </FormField>
-            </div>
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Feriado" required error={addForm.errors.isHoliday}>
-                <Select onValueChange={(value) => addForm.setField('isHoliday', value === 'true')}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Sí</SelectItem>
-                    <SelectItem value="false">No</SelectItem>
-                  </SelectContent>
-                </Select>
               </FormField>
               <FormField label="Vehículo" required error={addForm.errors.vehicleId}>
                 <ApiSelect
-                  value={String(addForm.data.vehicleId)}
-                  onValueChange={(value) => addForm.setField('vehicleId', Number(value))}
+                  value={String(addForm.data.VehicleId)}
+                  onValueChange={(value) => addForm.setField('VehicleId', Number(value))}
                   placeholder="Seleccionar vehículo"
                   options={vehicles}
                   loading={isOptionsLoading}
@@ -553,97 +517,65 @@ export default function ServiceManagement() {
                   emptyMessage="No hay vehículos disponibles"
                 />
               </FormField>
-              <div className="w-full">
-                <div className="flex items-center justify-between mb-4">
-                  <Label className="text-base font-medium">Horarios del Servicio</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addSchedule}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Agregar Horario
-                  </Button>
-                </div>
+            </div>
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Horarios de Salida</Label>
 
-                {schedules.length === 0 ? (
-                  <div className="text-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
-                    <Clock className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-gray-500">No hay horarios configurados</p>
-                    <p className="text-sm text-gray-400">Haz clic en "Agregar Horario" para comenzar</p>
+              {/* Schedule List */}
+              <div className="space-y-3">
+                {addForm.data.Schedules.map((schedule, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm text-muted-foreground">Hora de Salida</Label>
+                        <Input
+                          type="time"
+                          value={schedule.DepartureHour}
+                          onChange={(e) => handleScheduleChange(index, 'DepartureHour', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-muted-foreground">Es Feriado</Label>
+                        <Select
+                          value={schedule.IsHoliday.toString()}
+                          onValueChange={(value) => handleScheduleChange(index, 'IsHoliday', Number.parseInt(value))}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">No</SelectItem>
+                            <SelectItem value="1">Sí</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {addForm.data.Schedules.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSchedule(index)}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {schedules.map((schedule, index) => (
-                      <Card key={schedule.ServiceScheduleId} className="p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium">Horario {index + 1}</h4>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeSchedule(schedule.ServiceScheduleId)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <FormField label="Fecha Inicio">
-                            <Input
-                              type="date"
-                              value={schedule.StartDate}
-                              onChange={(e) => updateSchedule(schedule.ServiceScheduleId, 'StartDate', e.target.value)}
-                            />
-                          </FormField>
-
-                          <FormField label="Fecha Fin">
-                            <Input
-                              type="date"
-                              value={schedule.EndDate}
-                              onChange={(e) => updateSchedule(schedule.ServiceScheduleId, 'EndDate', e.target.value)}
-                            />
-                          </FormField>
-
-                          <FormField label="Hora de Partida">
-                            <Input
-                              type="time"
-                              step="1"
-                              value={schedule.DepartureHour}
-                              onChange={(e) =>
-                                updateSchedule(schedule.ServiceScheduleId, 'DepartureHour', e.target.value)
-                              }
-                              className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                            />
-                          </FormField>
-                        </div>
-
-                        <div className="mt-4">
-                          <FormField label="Es Feriado">
-                            <Select
-                              value={schedule.IsHoliday ? 'true' : 'false'}
-                              onValueChange={(value) =>
-                                updateSchedule(schedule.ServiceScheduleId, 'IsHoliday', value === 'true')
-                              }
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Seleccionar" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="true">Sí</SelectItem>
-                                <SelectItem value="false">No</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormField>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+                ))}
               </div>
+
+              {/* Add Schedule Button */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addSchedule}
+                className="w-full border-dashed border-2 h-12 text-muted-foreground hover:text-foreground hover:border-solid bg-transparent"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Horario
+              </Button>
             </div>
           </div>
         </div>
@@ -665,12 +597,7 @@ export default function ServiceManagement() {
           <div className="grid grid-cols-1 gap-4">
             <div className="w-full">
               <FormField label="Nombre" required error={editForm.errors.name}>
-                <Input
-                  id="edit-name"
-                  placeholder="Nombre"
-                  value={editForm.data.name}
-                  onChange={(e) => editForm.setField('name', e.target.value)}
-                />
+                <Input id="edit-name" placeholder="Nombre" value={editForm.data.name} onChange={(e) => editForm.setField('name', e.target.value)} />
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">

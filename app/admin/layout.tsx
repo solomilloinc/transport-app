@@ -119,7 +119,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       submenu: [
         { name: 'Coches', path: '/admin/vehicles', roles: ['admin'] },
         {
-          name: 'Tipos de vehículo',
+          name: 'Tipos',
           path: '/admin/vehicles/types',
           roles: ['admin'],
         },

@@ -1,4 +1,5 @@
-import { ServiceSchedule } from "./serviceSchedule";
+import { emptyServiceSchedule, ServiceSchedule } from "./serviceSchedule";
+import { Vehicle } from "./vehicle";
 
 // Define the Vehicle interface
 export interface Service {
@@ -9,14 +10,21 @@ export interface Service {
   DestinationId: number;
   DestinationName: string;
   EstimatedDuration: string;
+  StartDay: number,
+  EndDay: number,
   Schedules: ServiceSchedule[];
-  Vehicle: {
-    internalNumber: string;
-    availableQuantity: 0;
-    fullQuantity: 0;
-    vehicleTypeName: string;
-    image: string;
-    VehicleId: number;
-  };
+  Vehicle: Vehicle
   Status: string;
+}
+
+export const emptyService = {
+  Name: "",
+  OriginId: 0,
+  DestinationId: 0,
+  EstimatedDuration: "",
+  VehicleId: 0,
+  StartDay: 0,
+  EndDay: 0,
+  Schedules: [emptyServiceSchedule],
+  Status: 'Activo'
 }
