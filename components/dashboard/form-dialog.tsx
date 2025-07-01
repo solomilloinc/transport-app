@@ -14,6 +14,7 @@ interface FormDialogProps {
   onSubmit: () => void;
   submitText?: string;
   isLoading?: boolean;
+  disabled?: boolean;
 }
 
 export function FormDialog({
@@ -25,6 +26,7 @@ export function FormDialog({
   onSubmit,
   submitText = 'Guardar',
   isLoading = false,
+  disabled = false,
 }: FormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -35,7 +37,7 @@ export function FormDialog({
         </DialogHeader>
         <div className="grid gap-4">{children}</div>
         <DialogFooter>
-          <Button type="submit" onClick={onSubmit} disabled={isLoading}>
+          <Button type="submit" onClick={onSubmit} disabled={isLoading && disabled}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitText}
           </Button>
