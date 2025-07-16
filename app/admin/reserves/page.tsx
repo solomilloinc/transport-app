@@ -29,14 +29,15 @@ import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFl
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
 import { useTableSort } from '@/hooks/use-table-sort';
 
-
-// Define the type for sort column
-const passengerSortFns: { [key in PassengerSortColumn]: (a: PassengerReserveReport, b: PassengerReserveReport) => number } = {
-  name: (a, b) => a.FullName.localeCompare(b.FullName),
-  pickup: (a, b) => a.PickupLocationName.localeCompare(b.PickupLocationName),
-  paid: (a, b) => Number(a.IsPayment) - Number(b.IsPayment),
-  paymentMethod: (a, b) => (a.PaymentMethodName || '').localeCompare(b.PaymentMethodName || ''),
-  price: (a, b) => a.Price - b.Price,
+// Funciones de ordenamiento para la tabla de pasajeros.
+// Al no poner un tipo explícito, TypeScript infiere el tipo más específico,
+// lo que resuelve el error de asignación en el hook `useTableSort`.
+const passengerSortFns = {
+  name: (a: PassengerReserveReport, b: PassengerReserveReport) => a.FullName.localeCompare(b.FullName),
+  pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.PickupAddress.localeCompare(b.PickupAddress),
+  paid: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.IsPayment) - Number(b.IsPayment),
+  paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.PaymentMethodName || '').localeCompare(b.PaymentMethodName || ''),
+  price: (a: PassengerReserveReport, b: PassengerReserveReport) => a.Price - b.Price,
 };
 
 export default function ReservationsPage() {
@@ -85,7 +86,7 @@ export default function ReservationsPage() {
     sortColumn,
     sortDirection,
     handleSort,
-  } = useTableSort(dataPassengerReserves?.Items, 'name', passengerSortFns);
+  } = useTableSort<PassengerReserveReport, PassengerSortColumn>(dataPassengerReserves?.Items, 'name', passengerSortFns);
 
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
@@ -116,7 +117,8 @@ export default function ReservationsPage() {
       setOptionsError(null);
 
       // Llamadas API (pueden ir en paralelo)
-      const directionsResponse = await get<any, Direction>('/direction-report', { // TODO: Replace get with a typed service function
+      const directionsResponse = await get<any, Direction>('/direction-report', {
+        // TODO: Replace get with a typed service function
         pageNumber: 1,
         pageSize: 10,
         sortBy: 'fecha',
@@ -248,8 +250,11 @@ export default function ReservationsPage() {
             <div className="space-y-4">
               <div className="flex items-center text-xl font-semibold text-blue-500">
                 <UserPlusIcon className="mr-2 h-5 w-5" />
-                {selectedDate ? (format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() + format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)) : ''} - {selectedTrip?.OriginName} →{' '}
-                {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
+                {selectedDate
+                  ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
+                    format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
+                  : ''}{' '}
+                - {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
               </div>
 
               <PassengerListTable
@@ -316,7 +321,7 @@ export default function ReservationsPage() {
         isConfirming={isDeleting}
       />
 
-      <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} />
+      {/* <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} /> */}
     </div>
   );
 }

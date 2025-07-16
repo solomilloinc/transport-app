@@ -6,15 +6,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
 
-type SortColumn = 'name' | 'pickup' | 'dropoff' | 'paid' | 'paymentMethod' | 'price';
+export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'price';
 type SortDirection = 'asc' | 'desc';
 
 interface PassengerListTableProps {
   passengers: PassengerReserveReport[] | undefined;
   isLoading: boolean;
-  sortColumn: SortColumn;
+  sortColumn: PassengerSortColumn;
   sortDirection: SortDirection;
-  onSort: (column: SortColumn) => void;
+  onSort: (column: PassengerSortColumn) => void;
   onCheckPassenger: (passenger: PassengerReserveReport, checked: boolean) => void;
   onEdit: (passenger: PassengerReserveReport) => void;
   onDelete: (passenger: PassengerReserveReport) => void;
@@ -36,7 +36,7 @@ export function PassengerListTable({
   onPriceChange,
   getClientBalance,
 }: PassengerListTableProps) {
-  const renderSortIndicator = (column: SortColumn) => {
+  const renderSortIndicator = (column: PassengerSortColumn) => {
     if (sortColumn !== column) {
       return <ArrowUpDown className="ml-1 h-4 w-4 inline" />;
     }
@@ -62,12 +62,18 @@ export function PassengerListTable({
               </button>
             </th>
             <th className="py-3 pr-4 w-[20%]">
-              <button className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto" onClick={() => onSort('pickup')}>
+              <button
+                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                onClick={() => onSort('pickup')}
+              >
                 Subida {renderSortIndicator('pickup')}
               </button>
             </th>
             <th className="py-3 pr-4 text-center">
-              <button className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto" onClick={() => onSort('paid')}>
+              <button
+                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                onClick={() => onSort('paid')}
+              >
                 Pagado {renderSortIndicator('paid')}
               </button>
             </th>
@@ -80,7 +86,10 @@ export function PassengerListTable({
               </button>
             </th>
             <th className="py-3 pr-4 text-center w-[10%]">
-              <button className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto" onClick={() => onSort('price')}>
+              <button
+                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                onClick={() => onSort('price')}
+              >
                 Monto {renderSortIndicator('price')}
               </button>
             </th>
@@ -117,7 +126,7 @@ export function PassengerListTable({
               </td>
               <td className="py-3 pr-4 text-center">
                 {/* Dropdown for pickup location can be added here if needed */}
-                {passenger.PickupLocationName}
+                {passenger.PickupAddress}
               </td>
               <td className="py-3 pr-4 text-center">
                 <Checkbox id={`paid-${passenger.CustomerReserveId}`} checked={passenger.IsPayment} className="mx-auto" disabled />

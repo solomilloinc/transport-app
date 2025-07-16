@@ -42,10 +42,12 @@ interface PaymentSummaryDialogProps {
 
 export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummaryDialogProps) {
   const { toast } = useToast();
-  const { data: summary, loading, error, fetch: fetchSummary } = useApi<PaymentSummaryResponse, number>(
-    (reserveId) => get(`/reserve-payment-summary/${reserveId}`),
-    { autoFetch: false }
-  );
+  const {
+    data: summary,
+    loading,
+    error,
+    fetch: fetchSummary,
+  } = useApi<PaymentSummaryResponse, number>((reserveId) => get(`/reserve-payment-summary/${reserveId}`), { autoFetch: false });
 
   // Estado para el formulario de "Otros Pagos"
   const [name, setName] = useState('');
@@ -92,7 +94,11 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Resumen de Pagos</DialogTitle>
-          {trip && <DialogDescription>Resumen de pagos para {format(new Date(trip.Date), "EEEE, d 'de' MMMM", { locale: es })} - {trip.DepartureHour}</DialogDescription>}
+          {trip && (
+            <DialogDescription>
+              Resumen de pagos para {format(new Date(trip.Date), "EEEE, d 'de' MMMM", { locale: es })} - {trip.DepartureHour}
+            </DialogDescription>
+          )}
         </DialogHeader>
         {loading && <div className="py-10 text-center">Cargando resumen...</div>}
         {error && <div className="py-10 text-center text-red-500">Error al cargar el resumen.</div>}
@@ -100,28 +106,73 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               {summary.byMethod.map((item) => (
-                <div key={item.PaymentMethodName} className="rounded-lg border p-4"><div className="text-sm text-gray-500">{item.PaymentMethodName}</div><div className="text-2xl font-bold text-blue-500">${item.TotalAmount.toLocaleString()}</div></div>
+                <div key={item.PaymentMethodName} className="rounded-lg border p-4">
+                  <div className="text-sm text-gray-500">{item.PaymentMethodName}</div>
+                  <div className="text-2xl font-bold text-blue-500">${item.TotalAmount.toLocaleString()}</div>
+                </div>
               ))}
             </div>
             <div className="rounded-lg border p-4">
-              <div className="flex justify-between items-center mb-2"><div className="text-sm text-gray-500">Otros Pagos</div><div className="text-lg font-bold text-blue-500">${totalOtherPayments.toLocaleString()}</div></div>
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-sm text-gray-500">Otros Pagos</div>
+                <div className="text-lg font-bold text-blue-500">${totalOtherPayments.toLocaleString()}</div>
+              </div>
               <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
-                {summary.otherPayments.map((payment) => (<div key={payment.OtherPaymentId} className="flex items-center text-sm p-1"><span className="w-3/5">{payment.Name}</span><span className="w-1/5 text-center text-gray-500">{payment.PaymentMethod}</span><span className="w-1/5 text-right font-medium">${payment.Amount.toLocaleString()}</span></div>))}
+                {summary.otherPayments.map((payment) => (
+                  <div key={payment.OtherPaymentId} className="flex items-center text-sm p-1">
+                    <span className="w-3/5">{payment.Name}</span>
+                    <span className="w-1/5 text-center text-gray-500">{payment.PaymentMethod}</span>
+                    <span className="w-1/5 text-right font-medium">${payment.Amount.toLocaleString()}</span>
+                  </div>
+                ))}
                 {summary.otherPayments.length === 0 && <p className="text-xs text-center text-gray-400 py-2">No hay otros pagos registrados.</p>}
               </div>
               <div className="flex gap-2 mt-2 items-end">
-                <div className="w-3/5"><Label htmlFor="other-payment-name" className="text-xs">Nombre</Label><Input id="other-payment-name" placeholder="Ej: Peaje" value={name} onChange={(e) => setName(e.target.value)} /></div>
-                <div className="w-1/5"><Label htmlFor="other-payment-method" className="text-xs">Método</Label><Select value={method} onValueChange={setMethod}><SelectTrigger id="other-payment-method"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Efectivo">Efectivo</SelectItem><SelectItem value="Transferencia">Transferencia</SelectItem><SelectItem value="Tarjeta">Tarjeta</SelectItem></SelectContent></Select></div>
+                <div className="w-3/5">
+                  <Label htmlFor="other-payment-name" className="text-xs">
+                    Nombre
+                  </Label>
+                  <Input id="other-payment-name" placeholder="Ej: Peaje" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div className="w-1/5">
+                  <Label htmlFor="other-payment-method" className="text-xs">
+                    Método
+                  </Label>
+                  <Select value={method} onValueChange={setMethod}>
+                    <SelectTrigger id="other-payment-method">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Efectivo">Efectivo</SelectItem>
+                      <SelectItem value="Transferencia">Transferencia</SelectItem>
+                      <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex-1 flex gap-1 items-end">
-                  <div className="w-full"><Label htmlFor="other-payment-amount" className="text-xs">Monto</Label><Input id="other-payment-amount" placeholder="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
-                  <Button size="icon" onClick={handleAddPayment} disabled={isSubmitting || !name.trim() || !amount || Number(amount) <= 0}><PlusCircleIcon className="h-4 w-4" /></Button>
+                  <div className="w-full">
+                    <Label htmlFor="other-payment-amount" className="text-xs">
+                      Monto
+                    </Label>
+                    <Input id="other-payment-amount" placeholder="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                  </div>
+                  <Button size="icon" onClick={handleAddPayment} disabled={isSubmitting || !name.trim() || !amount || Number(amount) <= 0}>
+                    <PlusCircleIcon className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
-            <div className="rounded-lg border bg-blue-50 p-4"><div className="text-sm text-blue-700">Total General</div><div className="text-2xl font-bold text-blue-700">${grandTotal.toLocaleString()}</div></div>
+            <div className="rounded-lg border bg-blue-50 p-4">
+              <div className="text-sm text-blue-700">Total General</div>
+              <div className="text-2xl font-bold text-blue-700">${grandTotal.toLocaleString()}</div>
+            </div>
           </div>
         )}
-        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button></DialogFooter>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cerrar
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

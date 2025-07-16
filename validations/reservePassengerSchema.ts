@@ -21,24 +21,6 @@ export const reserveValidationSchema: FormValidationConfig = {
       },
     ],
   },
-  PickupLocationReturnId: {  
-    required: { message: 'La dirección de subida es obligatoria' },
-    rules: [
-      {
-        validate: (value) => value !== 0,
-        message: 'Dirección de subida para la vuelta es obligatoria',
-      },
-    ],
-  },
-  DropoffLocationReturnId: {
-    required: { message: 'La dirección de bajada es obligatoria' },
-    rules: [
-      {
-        validate: (value) => value !== 0,
-        message: 'Dirección de bajada para la vuelta es obligatoria',
-      },
-    ],
-  },
   
   // PickupLocationReturnId: {
   //   rules: [
