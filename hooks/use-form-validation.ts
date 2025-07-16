@@ -57,22 +57,24 @@ export function useFormValidation<T extends Record<string, any>>(
   )
 
   // Validar todos los campos
-  const validateForm = useCallback((): boolean => {
-    const newErrors: ValidationErrors = {}
-    let isValid = true
+ const validateForm = useCallback((fieldsToValidate?: string[]): boolean => {
+  const newErrors: ValidationErrors = {}
+  let isValid = true
 
-    // Validar cada campo
-    Object.keys(validationConfig).forEach((fieldName) => {
-      const error = validateField(fieldName, data[fieldName])
-      if (error) {
-        newErrors[fieldName] = error
-        isValid = false
-      }
-    })
+  const fields = fieldsToValidate ?? Object.keys(validationConfig)
 
-    setErrors(newErrors)
-    return isValid
-  }, [data, validateField, validationConfig])
+  for (const fieldName of fields) {
+    const error = validateField(fieldName, data[fieldName])
+    if (error) {
+      newErrors[fieldName] = error
+      isValid = false
+    }
+  }
+
+  setErrors((prev) => ({ ...prev, ...newErrors }))
+  return isValid
+}, [data, validateField, validationConfig])
+
 
   // Actualizar un campo
   const setField = useCallback(
@@ -95,28 +97,27 @@ export function useFormValidation<T extends Record<string, any>>(
 
   // Manejar el envío del formulario
   const handleSubmit = useCallback(
-    async (onSubmit: (data: T) => Promise<void> | void) => {
+    async (onSubmit: (data: T) => Promise<void> | void, fieldsToValidate?: string[]) => {
       setIsSubmitting(true)
 
-      // Marcar todos los campos como tocados
-      const allTouched = Object.keys(validationConfig).reduce((acc, field) => ({ ...acc, [field]: true }), {})
-      setTouchedFields(allTouched)
+    const allTouched = Object.keys(validationConfig).reduce((acc, field) => ({ ...acc, [field]: true }), {})
+    setTouchedFields(allTouched)
 
-      // Validar el formulario
-      const isValid = validateForm()
+    const isValid = validateForm(fieldsToValidate)
 
-      if (isValid) {
-        try {
-          await onSubmit(data)
-        } catch (error) {
-          console.error("Error al enviar el formulario:", error)
-        }
+    if (isValid) {
+      try {
+        await onSubmit(data)
+      } catch (error) {
+        console.error("Error al enviar el formulario:", error)
       }
+    }
 
-      setIsSubmitting(false)
-    },
-    [data, validateForm, validationConfig],
-  )
+    setIsSubmitting(false)
+  },
+  [data, validateForm, validationConfig],
+)
+
 
   // Resetear el formulario
   const resetForm = useCallback(() => {
@@ -136,5 +137,6 @@ export function useFormValidation<T extends Record<string, any>>(
     validateForm,
     handleSubmit,
     resetForm,
+    setIsSubmitting,
   }
 }

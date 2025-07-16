@@ -9,6 +9,7 @@ export interface PassengerReserve extends Auditable {
     StatusPaymentId: number
     ReserveTypeId: number
     PaymentMethod: number
+    PaymentMethodName: string
     Price: number
     PickupLocationId: number
     DropoffLocationId: number
@@ -18,7 +19,7 @@ export interface PassengerReserve extends Auditable {
     Payments: Payment[]
 }
 
-export interface PassengerReserveCreate extends Omit<PassengerReserve, 'CustomerReserveId' | 'IsRoundTrip' | 'Payments' | 'Status' | 'CreatedBy' | 'CreatedDate' | 'UpdatedBy' | 'UpdatedDate'> {
+export interface PassengerReserveCreate extends Omit<PassengerReserve, 'CustomerReserveId' | 'IsRoundTrip' |'PaymentMethodName' | 'Payments' | 'Status' | 'CreatedBy' | 'CreatedDate' | 'UpdatedBy' | 'UpdatedDate'> {
     ReserveId: number
     CustomerId: number
     IsPayment: boolean
@@ -49,4 +50,7 @@ export const emptyPassengerCreate: PassengerReserveCreate = {
 export interface PassengerReserveReport extends PassengerReserve {
     FullName: string
     DocumentNumber: string
+    PickupAddress: string
+    DropoffAddress: string
+    CurrentBalance: number
 }
