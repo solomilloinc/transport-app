@@ -174,8 +174,8 @@ export function AddReservationFlow({
         ...data,
         ReserveId: returnTrip.ReserveId,
         CustomerId: selectedPassenger!.CustomerId,
-        PickupLocationId: Number(reserveForm.data.PickupLocationReturnId) || 0,
-        DropoffLocationId: Number(reserveForm.data.DropoffLocationReturnId) || 0,
+        PickupLocationId: Number(reserveForm.data.PickupLocationReturnId),
+        DropoffLocationId: Number(reserveForm.data.DropoffLocationReturnId),
         Price: returnTrip.Prices.find((price) => price.ReserveTypeId === data.ReserveTypeId)?.Price || 0,
       };
 
@@ -401,12 +401,21 @@ export function AddReservationFlow({
             </p>
             {passengerReserves.map((r, i) => {
               const trip = i === 0 ? initialTrip : returnTrip;
+              const pickupAddress = directions.find((d) => d.id === r.PickupLocationId)?.label;
+              const dropoffAddress = directions.find((d) => d.id === r.DropoffLocationId)?.label;
+
               return (
-                <div key={i} className="text-sm">
-                  <p className="font-medium">{i === 0 ? 'Viaje de Ida' : 'Viaje de Vuelta'}</p>
+                <div key={i} className="text-sm pt-2 mt-2 border-t first:border-t-0 first:pt-0 first:mt-0">
+                  <p className="font-medium mb-1">{i === 0 ? 'Viaje de Ida' : 'Viaje de Vuelta'}</p>
                   {/* <p>{format(new Date(trip!.Date), "EEEE, d 'de' MMMM", { locale: es })}</p> */}
                   <p>
-                    {trip?.DepartureHour} - {trip?.OriginName} → {trip?.DestinationName}
+                    <strong>Ruta:</strong> {trip?.DepartureHour} - {trip?.OriginName} → {trip?.DestinationName}
+                  </p>
+                  <p>
+                    <strong>Subida:</strong> {pickupAddress || 'No especificada'}
+                  </p>
+                  <p>
+                    <strong>Bajada:</strong> {dropoffAddress || 'No especificada'}
                   </p>
                 </div>
               );

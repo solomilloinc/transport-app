@@ -22,24 +22,25 @@ export const reserveValidationSchema: FormValidationConfig = {
     ],
   },
   
-  // PickupLocationReturnId: {
-  //   rules: [
-  //     {
-  //       validate: (value, formData) => formData?.ReserveTypeId === 2 && value !== 0,
-  //       message: 'Dirección de subida para la vuelta es obligatoria',
-  //     },
-  //   ],
-  // },
-  // DropoffLocationReturnId: {
-  //   rules: [
-  //     {
-  //       validate: (value, formData) => formData?.ReserveTypeId === 2 && value !== 0,
-  //       message: 'Dirección de bajada para la vuelta es obligatoria',
-  //     },
-  //   ],
-  // },
+  PickupLocationReturnId: {
+    rules: [
+      {
+        validate: (value, formData) => formData?.ReserveTypeId === 2 ? value !== "0" : true,
+        message: 'Dirección de subida para la vuelta es obligatoria',
+      },
+    ],
+  },
+  DropoffLocationReturnId: {
+    rules: [
+      {
+        validate: (value, formData) => formData?.ReserveTypeId === 2 ? value !== "0" : true,
+        message: 'Dirección de bajada para la vuelta es obligatoria',
+      },
+    ],
+  },
 
-  // // Campos de pago (si hay pago activado)
+  // Campos de pago (si hay pago activado)
+
   // PaymentMethod: {
   //   required: false,
   //   rules: [
