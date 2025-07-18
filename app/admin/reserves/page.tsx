@@ -34,7 +34,7 @@ import { useTableSort } from '@/hooks/use-table-sort';
 // lo que resuelve el error de asignación en el hook `useTableSort`.
 const passengerSortFns = {
   name: (a: PassengerReserveReport, b: PassengerReserveReport) => a.FullName.localeCompare(b.FullName),
-  pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.PickupAddress.localeCompare(b.PickupAddress),
+  pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.PickupLocationName.localeCompare(b.PickupLocationName),
   paid: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.IsPayment) - Number(b.IsPayment),
   paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.PaymentMethodName || '').localeCompare(b.PaymentMethodName || ''),
   price: (a: PassengerReserveReport, b: PassengerReserveReport) => a.Price - b.Price,

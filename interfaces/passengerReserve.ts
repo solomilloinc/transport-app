@@ -50,7 +50,7 @@ export const emptyPassengerCreate: PassengerReserveCreate = {
 export interface PassengerReserveReport extends PassengerReserve {
     FullName: string
     DocumentNumber: string
-    PickupAddress: string
-    DropoffAddress: string
+    PickupLocationName: string
+    DropoffLocaationName: string
     CurrentBalance: number
 }

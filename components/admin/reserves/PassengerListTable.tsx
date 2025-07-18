@@ -113,11 +113,11 @@ export function PassengerListTable({
                     </label>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>DNI: {passenger.DocumentNumber}</span>
-                      {passenger.DocumentNumber && getClientBalance(passenger.DocumentNumber) !== null && (
-                        <span className={getClientBalance(passenger.DocumentNumber)! < 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
-                          {getClientBalance(passenger.DocumentNumber)! < 0
-                            ? `Debe $${Math.abs(getClientBalance(passenger.DocumentNumber)!).toLocaleString()}`
-                            : `A favor $${getClientBalance(passenger.DocumentNumber)!.toLocaleString()}`}
+                      {passenger.DocumentNumber && (passenger.CurrentBalance) !== null && (
+                        <span className={(passenger.CurrentBalance)! < 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
+                          {(passenger.CurrentBalance)! < 0
+                            ? `Debe $${Math.abs((passenger.CurrentBalance)!).toLocaleString()}`
+                            : `A favor $${(passenger.CurrentBalance)!.toLocaleString()}`}
                         </span>
                       )}
                     </div>
@@ -126,7 +126,7 @@ export function PassengerListTable({
               </td>
               <td className="py-3 pr-4 text-center">
                 {/* Dropdown for pickup location can be added here if needed */}
-                {passenger.PickupAddress}
+                {passenger.PickupLocationName}
               </td>
               <td className="py-3 pr-4 text-center">
                 <Checkbox id={`paid-${passenger.CustomerReserveId}`} checked={passenger.IsPayment} className="mx-auto" disabled />

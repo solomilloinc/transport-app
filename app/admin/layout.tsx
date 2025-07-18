@@ -162,7 +162,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full">
         <SidebarComponent>
           <SidebarHeader>
             <div className="flex items-center gap-2 px-4 py-2">
