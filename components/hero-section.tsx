@@ -1,5 +1,4 @@
 "use client";
-
 import type React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -22,9 +21,10 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { SelectOption } from "./dashboard/select";
 
-export function HeroSection() {
+export function HeroSection({ cities }: { cities: SelectOption[] }) {
   const router = useRouter();
   const [tripType, setTripType] = useState("one-way");
   const [departureDate, setDepartureDate] = useState<Date>();
@@ -33,8 +33,42 @@ export function HeroSection() {
   const [destination, setDestination] = useState("");
   const [passengers, setPassengers] = useState("1");
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Cuando el origen cambia, si es igual al destino, reseteamos el destino.
+  useEffect(() => {
+    if (destination && destination === origin) {
+      setDestination("");
+    }
+  }, [origin, destination]);
+
+  // Filtramos las ciudades de destino para que no incluyan el origen seleccionado.
+  const destinationOptions = useMemo(() => {
+    return cities.filter((city) => city.value !== origin);
+  }, [cities, origin]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+    if (!origin) {
+      newErrors.origin = "El origen es requerido.";
+    }
+    if (!destination) {
+      newErrors.destination = "El destino es requerido.";
+    }
+    if (!departureDate) {
+      newErrors.departureDate = "La fecha de ida es requerida.";
+    }
+    if (tripType === "round-trip" && !returnDate) {
+      newErrors.returnDate = "La fecha de vuelta es requerida.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
 
     // Build query parameters
     const params = new URLSearchParams();
@@ -42,19 +76,15 @@ export function HeroSection() {
     params.append("destination", destination);
     params.append("tripType", tripType);
     params.append("passengers", passengers);
-
     if (departureDate) {
       params.append("departureDate", format(departureDate, "yyyy-MM-dd"));
     }
-
     if (tripType === "round-trip" && returnDate) {
       params.append("returnDate", format(returnDate, "yyyy-MM-dd"));
     }
-
     // Navigate to results page with query parameters
     router.push(`/results?${params.toString()}`);
   };
-
   return (
     <section className="relative">
       <div className="absolute inset-0 z-0">
@@ -140,18 +170,21 @@ export function HeroSection() {
                         <Select
                           value={origin}
                           onValueChange={setOrigin}
-                          required
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Origen" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Lobos">Lobos</SelectItem>
-                            <SelectItem value="Capital Federal">
-                              Capital Federal
-                            </SelectItem>
+                            {cities.map((city) => (
+                              <SelectItem key={city.id} value={city.value}>
+                                {city.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
+                        {errors.origin && (
+                          <p className="text-xs text-red-500 mt-1">{errors.origin}</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-blue-900">
@@ -160,18 +193,22 @@ export function HeroSection() {
                         <Select
                           value={destination}
                           onValueChange={setDestination}
-                          required
+                          disabled={!origin}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Destino" />
+                            <SelectValue placeholder={!origin ? "Selecciona un origen" : "Destino"} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Lobos">Lobos</SelectItem>
-                            <SelectItem value="Capital Federal">
-                              Capital Federal
-                            </SelectItem>
+                            {destinationOptions.map((city) => (
+                              <SelectItem key={city.id} value={city.value}>
+                                {city.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
+                        {errors.destination && (
+                          <p className="text-xs text-red-500 mt-1">{errors.destination}</p>
+                        )}
                       </div>
                     </div>
 
@@ -206,6 +243,9 @@ export function HeroSection() {
                             />
                           </PopoverContent>
                         </Popover>
+                        {errors.departureDate && (
+                          <p className="text-xs text-red-500 mt-1">{errors.departureDate}</p>
+                        )}
                       </div>
 
                       {tripType === "round-trip" && (
@@ -241,6 +281,9 @@ export function HeroSection() {
                               />
                             </PopoverContent>
                           </Popover>
+                          {errors.returnDate && (
+                            <p className="text-xs text-red-500 mt-1">{errors.returnDate}</p>
+                          )}
                         </div>
                       )}
                     </div>

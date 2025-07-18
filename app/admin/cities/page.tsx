@@ -64,7 +64,7 @@ export default function CitiesManagement() {
       const response = await get<any, City>('/city-report', {
         pageNumber: pageToFetch,
         pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
+        sortBy: '',
         sortDescending: true,
         filters: searchQuery
           ? {

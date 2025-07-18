@@ -1,5 +1,9 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { get } from "@/services/api";
+import { City } from "@/interfaces/city";
+import { SelectOption } from "@/components/dashboard/select";
+
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,8 +21,39 @@ import { AnimatedSection } from "@/components/animated-section";
 import { HeroSection } from "@/components/hero-section";
 import Link from "next/link";
 import Navbar from "@/components/navbar";
+async function loadCities(): Promise<SelectOption[]> {
+  try {
+    // Usamos skipAuth: true asumiendo que esta data es pública.
+    const response = await get<any, City>(
+      "/city-report",
+      {
+        pageNumber: 1,
+        pageSize: 100,
+        sortBy: "Name",
+        sortDescending: false,
+        filters: {},
+      }
+    );
 
-export default function Home() {
+    if (response && response.Items) {
+      const formattedCities: SelectOption[] = response.Items.map((city) => ({
+        id: city.Id,
+        value: city.Name,
+        label: city.Name,
+      }));
+      const uniqueCities = Array.from(
+        new Map(formattedCities.map((item) => [item.label, item])).values()
+      );
+      return uniqueCities;
+    }
+  } catch (error) {
+    console.error("Failed to load cities for landing page:", error);
+    return [];
+  }
+  return [];
+}
+export default async function Home() {
+  const cities = await loadCities();
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar
@@ -53,7 +88,7 @@ export default function Home() {
       />
       <main className="flex-1">
         {/* Hero Section - Replace with the new component */}
-        <HeroSection />
+        <HeroSection cities={cities} />
 
         {/* About Us Section */}
         <AnimatedSection
