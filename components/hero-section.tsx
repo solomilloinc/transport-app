@@ -50,7 +50,7 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
     if (!departureDate) {
       newErrors.departureDate = 'La fecha de ida es requerida.';
     }
-    if (tripType === 'round-trip' && !returnDate) {
+    if (tripType === 'RoundTrip' && !returnDate) {
       newErrors.returnDate = 'La fecha de vuelta es requerida.';
     }
 
@@ -89,7 +89,7 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
   return (
     <section className="relative">
       <div className="absolute inset-0 z-0">
-        <Image src="/images.jfif" alt="Autobús en una ruta pintoresca al atardecer" fill className="object-cover brightness-[0.7]" priority />
+        <Image src="/background.jpg" alt="Autobús en una ruta pintoresca al atardecer" fill className="object-cover brightness-[0.7]" priority />
       </div>
 
       <div className="container relative z-10 py-10 md:py-16 lg:py-20">

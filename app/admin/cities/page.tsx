@@ -177,7 +177,11 @@ export default function CitiesManagement() {
           </Button>
         }
       />
-
+{loading && data?.Items?.length === 0 ? (
+        <div className="flex justify-center items-center h-64">
+          <Skeleton className="h-8 w-48" />
+        </div>
+      ) : (
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
@@ -188,19 +192,19 @@ export default function CitiesManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data.Items}
+                data={data?.Items || []}
                 emptyMessage="No se encontraron ciudades."
                 isLoading={loading}
-                skeletonRows={data.PageSize}
+                skeletonRows={data?.PageSize}
               />
             </div>
 
-            {data.Items.length > 0 && (
+            {data?.Items?.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data.TotalPages}
-                totalItems={data.TotalRecords}
-                itemsPerPage={data.PageSize}
+                totalPages={data?.TotalPages}
+                totalItems={data?.TotalRecords}
+                itemsPerPage={data?.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="ciudades"
               />
@@ -208,6 +212,9 @@ export default function CitiesManagement() {
           </div>
         </CardContent>
       </Card>
+      )}
+
+      {/* Desktop view - Table layout */}
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
@@ -231,8 +238,8 @@ export default function CitiesManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data.Items.length > 0 ? (
-          data.Items.map((city: City) => (
+        ) : data?.Items?.length > 0 ? (
+          data?.Items?.map((city: City) => (
             <MobileCard
               key={city.Id}
               title={city.Name}
