@@ -2,9 +2,9 @@
 import { getServerAxios } from './axios';
 import { PagedRequest, PagedResponse } from './types';
 
-export async function get<TFilter = any, TResponseItem = any>(url: string, request?: PagedRequest<TFilter>, options?: { skipAuth?: boolean }): Promise<PagedResponse<TResponseItem>> {
+export async function get<TFilter = any, TResponseItem = any>(url: string, request?: PagedRequest<TFilter>, options?: { skipAuth?: boolean }): Promise<TResponseItem> {
   const axios = await getServerAxios(options);
-  const response = await axios.post<PagedResponse<TResponseItem>>(url, request);
+  const response = await axios.post<TResponseItem>(url, request);
   return response.data;
 }
 

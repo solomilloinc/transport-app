@@ -1,39 +1,28 @@
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { get } from "@/services/api";
-import { City } from "@/interfaces/city";
-import { SelectOption } from "@/components/dashboard/select";
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { get } from '@/services/api';
+import { City } from '@/interfaces/city';
+import { SelectOption } from '@/components/dashboard/select';
 
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  MapPin,
-  Phone,
-  Mail,
-  Clock,
-  Star,
-  Users,
-  Shield,
-  Bus,
-} from "lucide-react";
-import { ScrollToSection } from "@/components/scroll-to-section";
-import { AnimatedSection } from "@/components/animated-section";
-import { HeroSection } from "@/components/hero-section";
-import Link from "next/link";
-import Navbar from "@/components/navbar";
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { MapPin, Phone, Mail, Clock, Star, Users, Shield, Bus } from 'lucide-react';
+import { ScrollToSection } from '@/components/scroll-to-section';
+import { AnimatedSection } from '@/components/animated-section';
+import { HeroSection } from '@/components/hero-section';
+import Link from 'next/link';
+import Navbar from '@/components/navbar';
+import { PagedResponse } from '@/services/types';
 async function loadCities(): Promise<SelectOption[]> {
   try {
     // Usamos skipAuth: true asumiendo que esta data es pública.
-    const response = await get<any, City>(
-      "/city-report",
-      {
-        pageNumber: 1,
-        pageSize: 100,
-        sortBy: "Name",
-        sortDescending: false,
-        filters: {},
-      }
-    );
+    const response = await get<any, PagedResponse<City>>('/city-report', {
+      pageNumber: 1,
+      pageSize: 100,
+      sortBy: 'Name',
+      sortDescending: false,
+      filters: {},
+    });
 
     if (response && response.Items) {
       const formattedCities: SelectOption[] = response.Items.map((city) => ({
@@ -41,13 +30,11 @@ async function loadCities(): Promise<SelectOption[]> {
         value: city.Name,
         label: city.Name,
       }));
-      const uniqueCities = Array.from(
-        new Map(formattedCities.map((item) => [item.label, item])).values()
-      );
+      const uniqueCities = Array.from(new Map(formattedCities.map((item) => [item.label, item])).values());
       return uniqueCities;
     }
   } catch (error) {
-    console.error("Failed to load cities for landing page:", error);
+    console.error('Failed to load cities for landing page:', error);
     return [];
   }
   return [];
@@ -59,29 +46,17 @@ export default async function Home() {
       <Navbar
         middleContent={
           <>
-            <ScrollToSection
-              href="#about"
-              className="text-sm font-medium text-blue-900 hover:text-blue-700"
-            >
-              About Us
+            <ScrollToSection href="#about" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+              Nosotros
             </ScrollToSection>
-            <ScrollToSection
-              href="#routes"
-              className="text-sm font-medium text-blue-900 hover:text-blue-700"
-            >
-              Routes
+            <ScrollToSection href="#routes" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+              Rutas
             </ScrollToSection>
-            <ScrollToSection
-              href="#testimonials"
-              className="text-sm font-medium text-blue-900 hover:text-blue-700"
-            >
-              Testimonials
+            <ScrollToSection href="#testimonials" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+              Testimonios
             </ScrollToSection>
-            <ScrollToSection
-              href="#contact"
-              className="text-sm font-medium text-blue-900 hover:text-blue-700"
-            >
-              Contact
+            <ScrollToSection href="#contact" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+              Contacto
             </ScrollToSection>
           </>
         }
@@ -91,81 +66,56 @@ export default async function Home() {
         <HeroSection cities={cities} />
 
         {/* About Us Section */}
-        <AnimatedSection
-          id="about"
-          className="py-16 md:py-24 bg-blue-50"
-          animation="fade-up"
-        >
+        <AnimatedSection id="about" className="py-16 md:py-24 bg-blue-50" animation="fade-up">
           <div className="container">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="text-3xl font-bold text-blue-800 mb-6 font-display">
-                  About Our Family Business
-                </h2>
+                <h2 className="text-3xl font-bold text-blue-800 mb-6 font-display">Sobre Nuestra Empresa Familiar</h2>
                 <p className="text-blue-900 mb-4">
-                  Founded in 1998, FamilyTransit has been providing safe,
-                  reliable, and comfortable transportation services to our
-                  community for over 25 years. What started as a small operation
-                  with just two vehicles has grown into a trusted transportation
-                  company serving thousands of passengers annually.
+                  Fundada en 1998, Zeros Tour ha brindado servicios de transporte seguros, confiables y cómodos a nuestra comunidad durante más de 25
+                  años. Lo que comenzó como una pequeña operación con solo dos vehículos se ha convertido en una empresa de transporte de confianza
+                  que atiende a miles de pasajeros anualmente.
                 </p>
                 <p className="text-blue-900 mb-6">
-                  As a family-owned business, we take pride in treating every
-                  passenger like a member of our own family. Our commitment to
-                  safety, punctuality, and customer service has made us the
-                  preferred choice for short-distance travel in the region.
+                  Como empresa familiar, nos enorgullece tratar a cada pasajero como un miembro de nuestra propia familia. Nuestro compromiso con la
+                  seguridad, la puntualidad y el servicio al cliente nos ha convertido en la opción preferida para viajes de corta distancia en la
+                  región.
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-start gap-2">
                     <Shield className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Safety First
-                      </h3>
-                      <p className="text-sm text-blue-700">
-                        Rigorous vehicle maintenance and trained drivers
-                      </p>
+                      <h3 className="font-medium text-blue-800 font-display">Seguridad Primero</h3>
+                      <p className="text-sm text-blue-700">Mantenimiento riguroso y conductores capacitados</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <Clock className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Punctuality
-                      </h3>
-                      <p className="text-sm text-blue-700">
-                        On-time departures and arrivals
-                      </p>
+                      <h3 className="font-medium text-blue-800 font-display">Puntualidad</h3>
+                      <p className="text-sm text-blue-700">Salidas y llegadas a tiempo</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <Users className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Family Values
-                      </h3>
-                      <p className="text-sm text-blue-700">
-                        Personal attention to every passenger
-                      </p>
+                      <h3 className="font-medium text-blue-800 font-display">Valores Familiares</h3>
+                      <p className="text-sm text-blue-700">Atención personalizada a cada pasajero</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <Bus className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Modern Fleet
-                      </h3>
-                      <p className="text-sm text-blue-700">
-                        Comfortable and well-maintained vehicles
-                      </p>
+                      <h3 className="font-medium text-blue-800 font-display">Flota Moderna</h3>
+                      <p className="text-sm text-blue-700">Vehículos cómodos y bien mantenidos</p>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="relative h-[400px] rounded-lg overflow-hidden">
                 <Image
-                  src="/placeholder.svg?height=400&width=600"
-                  alt="Family business"
+                  src="/placeholder.svg?height=400&width=600" // Reemplazar con una imagen real
+                  alt="Empresa familiar de transporte"
                   fill
                   className="object-cover"
                 />
@@ -175,63 +125,44 @@ export default async function Home() {
         </AnimatedSection>
 
         {/* Routes Map Section */}
-        <AnimatedSection
-          id="routes"
-          className="py-16 md:py-24"
-          animation="fade-in"
-        >
+        <AnimatedSection id="routes" className="py-16 md:py-24" animation="fade-in">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-blue-800 mb-4 font-display">
-                Our Popular Routes
-              </h2>
+              <h2 className="text-3xl font-bold text-blue-800 mb-4 font-display">Nuestras Rutas Populares</h2>
               <p className="text-blue-700 max-w-2xl mx-auto">
-                We connect communities with frequent and reliable service on
-                these popular routes. Check our schedule for more destinations
-                and times.
+                Conectamos comunidades con un servicio frecuente y confiable en estas rutas populares. Consultá nuestros horarios para ver más
+                destinos y horarios.
               </p>
             </div>
             <div className="relative h-[400px] md:h-[500px] rounded-lg overflow-hidden border border-blue-100 shadow-md">
               <Image
-                src="/placeholder.svg?height=500&width=1200"
-                alt="Route map"
+                src="/placeholder.svg?height=500&width=1200" // Reemplazar con un mapa de rutas real
+                alt="Mapa de rutas"
                 fill
                 className="object-cover"
               />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="bg-white/90 backdrop-blur-sm p-6 rounded-lg max-w-md">
-                  <h3 className="text-xl font-bold text-blue-800 mb-4 font-display">
-                    Frequently Traveled Routes
-                  </h3>
+                  <h3 className="text-xl font-bold text-blue-800 mb-4 font-display">Rutas Frecuentes</h3>
                   <ul className="space-y-2">
                     <li className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-900">
-                        Downtown ↔ Northside (30 min)
-                      </span>
+                      <span className="text-blue-900">Lobos ↔ Buenos Aires (90 min)</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-900">
-                        Eastside ↔ Westside (45 min)
-                      </span>
+                      <span className="text-blue-900">La Plata ↔ Luján (120 min)</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-900">
-                        Downtown ↔ Southside (25 min)
-                      </span>
+                      <span className="text-blue-900">Cañuelas ↔ Navarro (45 min)</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-900">
-                        Northside ↔ Eastside (40 min)
-                      </span>
+                      <span className="text-blue-900">Mercedes ↔ Roque Pérez (60 min)</span>
                     </li>
                   </ul>
-                  <Button className="mt-4 w-full bg-blue-600 hover:bg-blue-700">
-                    View Full Schedule
-                  </Button>
+                  <Button className="mt-4 w-full bg-blue-600 hover:bg-blue-700">Ver Horarios Completos</Button>
                 </div>
               </div>
             </div>
@@ -239,67 +170,47 @@ export default async function Home() {
         </AnimatedSection>
 
         {/* Testimonials Section */}
-        <AnimatedSection
-          id="testimonials"
-          className="py-16 md:py-24 bg-blue-50"
-          animation="fade-up"
-        >
+        <AnimatedSection id="testimonials" className="py-16 md:py-24 bg-blue-50" animation="fade-up">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-blue-800 mb-4 font-display">
-                What Our Passengers Say
-              </h2>
+              <h2 className="text-3xl font-bold text-blue-800 mb-4 font-display">Lo que Dicen Nuestros Pasajeros</h2>
               <p className="text-blue-700 max-w-2xl mx-auto">
-                Don't just take our word for it. Here's what our regular
-                passengers have to say about their experience with
-                FamilyTransit.
+                No te fíes solo de nuestra palabra. Esto es lo que nuestros pasajeros habituales tienen que decir sobre su experiencia con Zeros Tour.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 {
-                  name: "Sarah Johnson",
+                  name: 'Sara Johnson',
                   comment:
-                    "I've been using FamilyTransit for my daily commute for over 3 years. Always on time and the drivers are so friendly. It really does feel like family!",
+                    'Uso FamilyTransit para mi viaje diario desde hace más de 3 años. Siempre puntuales y los conductores son muy amables. ¡Realmente se siente como en familia!',
                   rating: 5,
                 },
                 {
-                  name: "Michael Rodriguez",
+                  name: 'Miguel Rodríguez',
                   comment:
-                    "As a senior citizen, I appreciate the extra care and attention I receive from the drivers. They always help me with my bags and make sure I'm comfortable.",
+                    'Como persona mayor, valoro mucho el cuidado y la atención extra que recibo de los conductores. Siempre me ayudan con las valijas y se aseguran de que esté cómodo.',
                   rating: 5,
                 },
                 {
-                  name: "Emily Chen",
+                  name: 'Emilia Chen',
                   comment:
-                    "The online booking system is so convenient, and the buses are always clean and comfortable. FamilyTransit is my go-to for getting around the city.",
+                    'El sistema de reservas online es súper práctico y los colectivos siempre están limpios y cómodos. FamilyTransit es mi opción para moverme por la zona.',
                   rating: 4,
                 },
               ].map((testimonial, index) => (
-                <AnimatedSection
-                  key={index}
-                  as="div"
-                  animation="fade-up"
-                  delay={index * 200}
-                >
+                <AnimatedSection key={index} as="div" animation="fade-up" delay={index * 200}>
                   <Card className="border-blue-100">
                     <CardContent className="p-6">
                       <div className="flex mb-4">
                         {Array(testimonial.rating)
                           .fill(0)
                           .map((_, i) => (
-                            <Star
-                              key={i}
-                              className="h-5 w-5 text-yellow-400 fill-yellow-400"
-                            />
+                            <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />
                           ))}
                       </div>
-                      <p className="text-blue-900 mb-4">
-                        "{testimonial.comment}"
-                      </p>
-                      <p className="font-medium text-blue-800">
-                        {testimonial.name}
-                      </p>
+                      <p className="text-blue-900 mb-4">"{testimonial.comment}"</p>
+                      <p className="font-medium text-blue-800">{testimonial.name}</p>
                     </CardContent>
                   </Card>
                 </AnimatedSection>
@@ -309,96 +220,62 @@ export default async function Home() {
         </AnimatedSection>
 
         {/* CTA Section */}
-        <AnimatedSection
-          className="py-16 md:py-24 bg-blue-800 text-white"
-          animation="fade-in"
-        >
+        <AnimatedSection className="py-16 md:py-24 bg-blue-800 text-white" animation="fade-in">
           <div className="container text-center">
-            <h2 className="text-3xl font-bold mb-6 font-display">
-              Ready to Experience the FamilyTransit Difference?
-            </h2>
+            <h2 className="text-3xl font-bold mb-6 font-display">¿Listo para Vivir la Experiencia FamilyTransit?</h2>
             <p className="max-w-2xl mx-auto mb-8 text-blue-100">
-              Book your next trip with us and discover why our passengers keep
-              coming back. Safe, reliable, and comfortable transportation with a
-              personal touch.
+              Reservá tu próximo viaje con nosotros y descubrí por qué nuestros pasajeros nos siguen eligiendo. Transporte seguro, confiable y cómodo
+              con un toque personal.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Button
-                size="lg"
-                className="bg-white text-blue-800 hover:bg-blue-50"
-              >
-                Book Your Trip Now
+              <Button size="lg" className="bg-white text-blue-800 hover:bg-blue-50">
+                Reservá tu Viaje Ahora
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-white border-white hover:bg-blue-700"
-              >
-                View Schedule
+              <Button size="lg" variant="outline" className="text-white border-white hover:bg-blue-700">
+                Ver Horarios
               </Button>
             </div>
           </div>
         </AnimatedSection>
 
         {/* Contact Section */}
-        <AnimatedSection
-          id="contact"
-          className="py-16 md:py-24"
-          animation="slide-in-right"
-        >
+        <AnimatedSection id="contact" className="py-16 md:py-24" animation="slide-in-right">
           <div className="container">
             <div className="grid md:grid-cols-2 gap-12">
               <div>
-                <h2 className="text-3xl font-bold text-blue-800 mb-6 font-display">
-                  Contact Us
-                </h2>
+                <h2 className="text-3xl font-bold text-blue-800 mb-6 font-display">Contáctanos</h2>
                 <p className="text-blue-900 mb-8">
-                  Have questions or need assistance? Our friendly team is here
-                  to help. Reach out to us through any of the following
-                  channels.
+                  ¿Tenés preguntas o necesitás ayuda? Nuestro amable equipo está aquí para ayudarte. Comunicate con nosotros a través de cualquiera de
+                  los siguientes canales.
                 </p>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Main Office
-                      </h3>
-                      <p className="text-blue-700">
-                        123 Transit Way, Downtown, City, 12345
-                      </p>
+                      <h3 className="font-medium text-blue-800 font-display">Oficina Principal</h3>
+                      <p className="text-blue-700">Av. Alem 123, Lobos, Buenos Aires</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Phone className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Phone
-                      </h3>
+                      <h3 className="font-medium text-blue-800 font-display">Teléfono</h3>
                       <p className="text-blue-700">(555) 123-4567</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Mail className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Email
-                      </h3>
+                      <h3 className="font-medium text-blue-800 font-display">Correo Electrónico</h3>
                       <p className="text-blue-700">info@familytransit.com</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Clock className="h-5 w-5 text-blue-600 mt-1" />
                     <div>
-                      <h3 className="font-medium text-blue-800 font-display">
-                        Operating Hours
-                      </h3>
-                      <p className="text-blue-700">
-                        Monday - Friday: 5:00 AM - 10:00 PM
-                      </p>
-                      <p className="text-blue-700">
-                        Saturday - Sunday: 6:00 AM - 9:00 PM
-                      </p>
+                      <h3 className="font-medium text-blue-800 font-display">Horarios de Atención</h3>
+                      <p className="text-blue-700">Lunes a Viernes: 5:00 AM - 10:00 PM</p>
+                      <p className="text-blue-700">Sábados y Domingos: 6:00 AM - 9:00 PM</p>
                     </div>
                   </div>
                 </div>
@@ -406,48 +283,34 @@ export default async function Home() {
               <AnimatedSection as="div" animation="slide-in-left" delay={200}>
                 <Card className="border-blue-100">
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-blue-800 mb-4 font-display">
-                      Send Us a Message
-                    </h3>
+                    <h3 className="text-xl font-bold text-blue-800 mb-4 font-display">Envíanos un Mensaje</h3>
                     <form className="space-y-4">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-blue-900">
-                            First Name
-                          </label>
-                          <Input placeholder="Enter your first name" />
+                          <label className="text-sm font-medium text-blue-900">Nombre</label>
+                          <Input placeholder="Ingresá tu nombre" />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-blue-900">
-                            Last Name
-                          </label>
-                          <Input placeholder="Enter your last name" />
+                          <label className="text-sm font-medium text-blue-900">Apellido</label>
+                          <Input placeholder="Ingresá tu apellido" />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">
-                          Email
-                        </label>
-                        <Input type="email" placeholder="Enter your email" />
+                        <label className="text-sm font-medium text-blue-900">Email</label>
+                        <Input type="email" placeholder="Ingresá tu email" />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">
-                          Phone
-                        </label>
-                        <Input placeholder="Enter your phone number" />
+                        <label className="text-sm font-medium text-blue-900">Teléfono</label>
+                        <Input placeholder="Ingresá tu número de teléfono" />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">
-                          Message
-                        </label>
+                        <label className="text-sm font-medium text-blue-900">Mensaje</label>
                         <textarea
                           className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          placeholder="How can we help you?"
+                          placeholder="¿Cómo podemos ayudarte?"
                         />
                       </div>
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                        Send Message
-                      </Button>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700">Enviar Mensaje</Button>
                     </form>
                   </CardContent>
                 </Card>

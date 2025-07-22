@@ -8,3 +8,9 @@ export interface Vehicle {
     AvailableQuantity: number;
     Status: string;
   }
+
+export const emptyVehicle = {
+  vehicleTypeId: 0,
+  internalNumber: '',
+  availableQuantity: 0
+}

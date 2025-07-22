@@ -4,3 +4,8 @@ export interface Direction {
     CityId: number;
     Name: string;
   }
+
+  export const emptyDirection = {
+    cityId: 0,
+    name: '',
+  };

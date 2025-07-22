@@ -4,3 +4,8 @@ export interface City {
     Name: string;
     Status: string;
 }
+
+export const emptyCity = {
+    code: '',
+    name: '',
+};

@@ -23,140 +23,101 @@ import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
+import { PagedResponse, PaginationParams } from '@/services/types';
 import { City } from '@/interfaces/city';
-import { Driver } from '@/interfaces/driver';
-
-const initialDriverForm = {
-  firstName: '',
-  lastName: '',
-  documentNumber: '',
-};
+import { Driver, emptyDriver } from '@/interfaces/driver';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { validationConfigDriver } from '@/validations/driverSchema';
+import { useApi } from '@/hooks/use-api';
+import { getDrivers } from '@/services/driver';
+import { usePaginationParams } from '@/utils/pagination';
 
 export default function DriversManagement() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentDriverId, setCurrentDriverId] = useState<number | null>(null);
-  const addForm = useFormReducer(initialDriverForm);
+  const addForm = useFormValidation(emptyDriver, validationConfigDriver);
 
   // Form state for editing a vehicle
-  const editForm = useFormReducer(initialDriverForm);
+  const editForm = useFormValidation(emptyDriver, validationConfigDriver);
 
-  // State for the paged response
-  const [driversData, setDriversData] = useState<PagedResponse<Driver>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
+  const params = usePaginationParams({
+    pageNumber: currentPage,
+    filters: { search: searchQuery },
   });
-  // Function to fetch vehicles data
-  const fetchDrivers = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, Driver>('/driver-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery
-          ? {
-              search: searchQuery,
-            }
-          : {},
-      });
-      console.log(response);
-      setDriversData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
 
-  // Fetch vehicles when search changes or on initial load
-  useEffect(() => {
-    fetchDrivers(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
+  const { data, loading, error, fetch } = useApi<Driver, PaginationParams>(getDrivers, {
+    autoFetch: true,
+    params: params,
+  });
 
   const submitAddDriver = async () => {
-    addForm.setLoading(true);
-    try {
-      const response = await post('/driver-create', addForm.state.data);
-      if (response) {
-        toast({
-          title: 'Chofer creado',
-          description: 'El chofer ha sido creado exitosamente',
-          variant: 'success',
-        });
-        setIsAddModalOpen(false);
-        fetchDrivers(); // Refresh the vehicle list
-      } else {
-        addForm.setError('Error al crear el chofer');
+    addForm.handleSubmit(async (data) => {
+      try {
+        const response = await post('/driver-create', data);
+        if (response) {
+          toast({
+            title: 'Chofer creado',
+            description: 'El chofer ha sido creado exitosamente',
+            variant: 'success',
+          });
+          setIsAddModalOpen(false);
+          fetch({ pageNumber: currentPage });
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al crear el chofer',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
         toast({
           title: 'Error',
-          description: 'Error al crear el chofer',
+          description: 'Ocurrió un error al crear el chofer',
           variant: 'destructive',
         });
       }
-    } catch (error) {
-      addForm.setError('Ocurrió un error al crear el chofer');
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error al crear el chofer',
-        variant: 'destructive',
-      });
-    } finally {
-      addForm.setLoading(false);
-    }
+    });
   };
 
   const submitEditDriver = async () => {
-    editForm.setLoading(true);
-    try {
-      const response = await put(`/driver-update/${currentDriverId}`, editForm.state.data);
-      if (response) {
-        toast({
-          title: 'Chofer editada',
-          description: 'El chofer ha sido editado exitosamente',
-          variant: 'success',
-        });
-        setIsEditModalOpen(false);
-        fetchDrivers();
-      } else {
-        addForm.setError('Error al editar el chofer');
+    editForm.handleSubmit(async (data) => {
+      try {
+        const response = await put(`/driver-update/${currentDriverId}`, data);
+        if (response) {
+          toast({
+            title: 'Chofer actualizado',
+            description: 'El chofer ha sido actualizado exitosamente',
+            variant: 'success',
+          });
+          setIsEditModalOpen(false);
+          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al actualizar el chofer',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
         toast({
           title: 'Error',
-          description: 'Error al editar el chofer',
+          description: 'Ocurrió un error al actualizar el chofer',
           variant: 'destructive',
         });
       }
-    } catch (error) {
-      addForm.setError('Ocurrió un error al editar el chofer');
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error al editar el chofer',
-        variant: 'destructive',
-      });
-    } finally {
-      addForm.setLoading(false);
-    }
+    });
   };
 
   const handleEditDriver = (driver: Driver) => {
     setCurrentDriverId(driver.DriverId);
-    editForm.setForm({
-      firstName: driver.FirstName,
-      lastName: driver.LastName,
-      documentNumber: driver.DocumentNumber,
-    });
+    editForm.setField('firstName', driver.FirstName);
+    editForm.setField('lastName', driver.LastName);
+    editForm.setField('documentNumber', driver.DocumentNumber);
     setIsEditModalOpen(true);
   };
 
@@ -170,7 +131,7 @@ export default function DriversManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentDriverId(null);
-    fetchDrivers();
+    fetch(params);
   };
 
   const resetFilters = () => {
@@ -196,12 +157,7 @@ export default function DriversManagement() {
       width: '20%',
       cell: (driver: Driver) => (
         <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
-            onClick={() => handleEditDriver(driver)}
-          >
+          <Button size="sm" variant="outline" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEditDriver(driver)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button
@@ -240,19 +196,19 @@ export default function DriversManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={driversData.Items}
+                data={data.Items}
                 emptyMessage="No se encontraron choferes."
-                isLoading={isLoading}
-                skeletonRows={driversData.PageSize}
+                isLoading={loading}
+                skeletonRows={data.PageSize}
               />
             </div>
 
-            {driversData.Items.length > 0 && (
+            {data.Items.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={driversData.TotalPages}
-                totalItems={driversData.TotalRecords}
-                itemsPerPage={driversData.PageSize}
+                totalPages={data.TotalPages}
+                totalItems={data.TotalRecords}
+                itemsPerPage={data.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="choferes"
               />
@@ -263,7 +219,7 @@ export default function DriversManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {loading ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -283,8 +239,8 @@ export default function DriversManagement() {
               </CardContent>
             </Card>
           ))
-        ) : driversData.Items.length > 0 ? (
-          driversData.Items.map((driver) => (
+        ) : data.Items.length > 0 ? (
+          data.Items.map((driver) => (
             <MobileCard
               key={driver.DriverId}
               title={driver.FirstName}
@@ -313,27 +269,17 @@ export default function DriversManagement() {
         onSubmit={() => submitAddDriver()}
         submitText="Crear Chofer"
       >
-        <FormField label="Nombre">
-          <Input
-            id="firstName"
-            placeholder="Nombre"
-            value={addForm.state.data.firstName}
-            onChange={(e) => addForm.setField('firstName', e.target.value)}
-          />
+        <FormField label="Nombre" required error={addForm.errors.firstName}>
+          <Input id="firstName" placeholder="Nombre" value={addForm.data.firstName} onChange={(e) => addForm.setField('firstName', e.target.value)} />
         </FormField>
-        <FormField label="Apellido">
-          <Input
-            id="lastName"
-            placeholder="Apellido"
-            value={addForm.state.data.lastName}
-            onChange={(e) => addForm.setField('lastName', e.target.value)}
-          />
+        <FormField label="Apellido" required error={addForm.errors.lastName}>
+          <Input id="lastName" placeholder="Apellido" value={addForm.data.lastName} onChange={(e) => addForm.setField('lastName', e.target.value)} />
         </FormField>
-        <FormField label="Numero de documento">
+        <FormField label="Numero de documento" required error={addForm.errors.documentNumber}>
           <Input
             id="documentNumber"
             placeholder="Numero de documento"
-            value={addForm.state.data.documentNumber}
+            value={addForm.data.documentNumber}
             onChange={(e) => addForm.setField('documentNumber', e.target.value)}
           />
         </FormField>
@@ -348,24 +294,16 @@ export default function DriversManagement() {
         onSubmit={() => submitEditDriver()}
         submitText="Guardar Cambios"
       >
-        <FormField label="Nombre">
-          <Input
-            id="edit-name"
-            value={editForm.state.data.firstName}
-            onChange={(e) => editForm.setField('firstName', e.target.value)}
-          />
+        <FormField label="Nombre" required error={editForm.errors.firstName}>
+          <Input id="edit-name" value={editForm.data.firstName} onChange={(e) => editForm.setField('firstName', e.target.value)} />
         </FormField>
-        <FormField label="Apellido">
-          <Input
-            id="edit-lastName"
-            value={editForm.state.data.lastName}
-            onChange={(e) => editForm.setField('lastName', e.target.value)}
-          />
+        <FormField label="Apellido" required error={editForm.errors.lastName}>
+          <Input id="edit-lastName" value={editForm.data.lastName} onChange={(e) => editForm.setField('lastName', e.target.value)} />
         </FormField>
-        <FormField label="Numero de documento">
+        <FormField label="Numero de documento" required error={editForm.errors.documentNumber}>
           <Input
             id="edit-documentNumber"
-            value={editForm.state.data.documentNumber}
+            value={editForm.data.documentNumber}
             onChange={(e) => editForm.setField('documentNumber', e.target.value)}
           />
         </FormField>

@@ -1,44 +1,34 @@
-"use client";
-import type React from "react";
+'use client';
+import type React from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { SelectOption } from "./dashboard/select";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { SelectOption } from './dashboard/select';
 
 export function HeroSection({ cities }: { cities: SelectOption[] }) {
   const router = useRouter();
-  const [tripType, setTripType] = useState("one-way");
+  const [tripType, setTripType] = useState('OneWay');
   const [departureDate, setDepartureDate] = useState<Date>();
   const [returnDate, setReturnDate] = useState<Date>();
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
-  const [passengers, setPassengers] = useState("1");
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
+  const [passengers, setPassengers] = useState('1');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Cuando el origen cambia, si es igual al destino, reseteamos el destino.
   useEffect(() => {
     if (destination && destination === origin) {
-      setDestination("");
+      setDestination('');
     }
   }, [origin, destination]);
 
@@ -52,16 +42,16 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
 
     const newErrors: Record<string, string> = {};
     if (!origin) {
-      newErrors.origin = "El origen es requerido.";
+      newErrors.origin = 'El origen es requerido.';
     }
     if (!destination) {
-      newErrors.destination = "El destino es requerido.";
+      newErrors.destination = 'El destino es requerido.';
     }
     if (!departureDate) {
-      newErrors.departureDate = "La fecha de ida es requerida.";
+      newErrors.departureDate = 'La fecha de ida es requerida.';
     }
-    if (tripType === "round-trip" && !returnDate) {
-      newErrors.returnDate = "La fecha de vuelta es requerida.";
+    if (tripType === 'round-trip' && !returnDate) {
+      newErrors.returnDate = 'La fecha de vuelta es requerida.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -70,17 +60,28 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
     }
     setErrors({});
 
+    const originCity = cities.find((city) => city.value === origin);
+    const destinationCity = cities.find((city) => city.value === destination);
+
+    if (!originCity || !destinationCity) {
+      console.error('No se pudieron encontrar los detalles de la ciudad para la búsqueda.');
+      // Opcionalmente, mostrar un error al usuario
+      return;
+    }
+
     // Build query parameters
     const params = new URLSearchParams();
-    params.append("origin", origin);
-    params.append("destination", destination);
-    params.append("tripType", tripType);
-    params.append("passengers", passengers);
+    params.append('originId', originCity.id.toString());
+    params.append('originName', originCity.label);
+    params.append('destinationId', destinationCity.id.toString());
+    params.append('destinationName', destinationCity.label);
+    params.append('tripType', tripType);
+    params.append('passengers', passengers);
     if (departureDate) {
-      params.append("departureDate", format(departureDate, "yyyy-MM-dd"));
+      params.append('departureDate', format(departureDate, 'yyyy-MM-dd'));
     }
-    if (tripType === "round-trip" && returnDate) {
-      params.append("returnDate", format(returnDate, "yyyy-MM-dd"));
+    if (tripType === 'RoundTrip' && returnDate) {
+      params.append('returnDate', format(returnDate, 'yyyy-MM-dd'));
     }
     // Navigate to results page with query parameters
     router.push(`/results?${params.toString()}`);
@@ -88,36 +89,23 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
   return (
     <section className="relative">
       <div className="absolute inset-0 z-0">
-        <Image
-          src="/placeholder.svg?height=800&width=1920"
-          alt="Transportation"
-          fill
-          className="object-cover brightness-[0.7]"
-          priority
-        />
+        <Image src="/images.jfif" alt="Autobús en una ruta pintoresca al atardecer" fill className="object-cover brightness-[0.7]" priority />
       </div>
 
       <div className="container relative z-10 py-10 md:py-16 lg:py-20">
         <div className="grid md:grid-cols-2 gap-8 items-center">
           {/* Left side - Hero text */}
           <div className="text-white">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl font-display">
-              Safe Journeys with a Family Touch
-            </h1>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl font-display">Viajes Seguros con un Toque Familiar</h1>
             <p className="mt-4 text-lg md:text-xl">
-              Providing reliable and comfortable short-distance transportation
-              for over 25 years. Where every passenger is treated like family.
+              Brindando transporte de corta distancia confiable y cómodo por más de 25 años. Donde cada pasajero es tratado como familia.
             </p>
             <div className="mt-6 flex flex-wrap gap-4">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                Book Your Trip
+                Reservá tu Viaje
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm"
-              >
-                Learn More
+              <Button size="lg" variant="outline" className="bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm">
+                Conocé Más
               </Button>
             </div>
           </div>
@@ -126,34 +114,25 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
           <div>
             <Card className="border-blue-100 shadow-lg bg-white/95 backdrop-blur-sm">
               <CardContent className="p-4">
-                <h2 className="text-xl font-bold text-blue-800 mb-4 font-display">
-                  Busca tu pasaje
-                </h2>
+                <h2 className="text-xl font-bold text-blue-800 mb-4 font-display">Busca tu pasaje</h2>
                 <form onSubmit={handleSearch} className="space-y-3">
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-blue-900">
-                        Tipo
-                      </label>
-                      <RadioGroup
-                        defaultValue="one-way"
-                        className="flex gap-4"
-                        value={tripType}
-                        onValueChange={setTripType}
-                      >
+                      <label className="text-sm font-medium text-blue-900">Tipo</label>
+                      <RadioGroup defaultValue="OneWay" className="flex gap-4" value={tripType} onValueChange={setTripType}>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="one-way" id="one-way" />
+                          <RadioGroupItem value="OneWay" id="OneWay" />
                           <label
-                            htmlFor="one-way"
+                            htmlFor="OneWay"
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             Ida
                           </label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="round-trip" id="round-trip" />
+                          <RadioGroupItem value="RoundTrip" id="RoundTrip" />
                           <label
-                            htmlFor="round-trip"
+                            htmlFor="RoundTrip"
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             Ida y vuelta
@@ -164,13 +143,8 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
 
                     <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">
-                          Desde
-                        </label>
-                        <Select
-                          value={origin}
-                          onValueChange={setOrigin}
-                        >
+                        <label className="text-sm font-medium text-blue-900">Desde</label>
+                        <Select value={origin} onValueChange={setOrigin}>
                           <SelectTrigger>
                             <SelectValue placeholder="Origen" />
                           </SelectTrigger>
@@ -182,21 +156,13 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                             ))}
                           </SelectContent>
                         </Select>
-                        {errors.origin && (
-                          <p className="text-xs text-red-500 mt-1">{errors.origin}</p>
-                        )}
+                        {errors.origin && <p className="text-xs text-red-500 mt-1">{errors.origin}</p>}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">
-                          Hasta
-                        </label>
-                        <Select
-                          value={destination}
-                          onValueChange={setDestination}
-                          disabled={!origin}
-                        >
+                        <label className="text-sm font-medium text-blue-900">Hasta</label>
+                        <Select value={destination} onValueChange={setDestination} disabled={!origin}>
                           <SelectTrigger>
-                            <SelectValue placeholder={!origin ? "Selecciona un origen" : "Destino"} />
+                            <SelectValue placeholder={'Destino'} />
                           </SelectTrigger>
                           <SelectContent>
                             {destinationOptions.map((city) => (
@@ -206,29 +172,18 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                             ))}
                           </SelectContent>
                         </Select>
-                        {errors.destination && (
-                          <p className="text-xs text-red-500 mt-1">{errors.destination}</p>
-                        )}
+                        {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">
-                          Fecha Ida
-                        </label>
+                        <label className="text-sm font-medium text-blue-900">Fecha Ida</label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal border-input"
-                            >
+                            <Button variant="outline" className="w-full justify-start text-left font-normal border-input">
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {departureDate ? (
-                                format(departureDate, "PPP")
-                              ) : (
-                                <span>Select date</span>
-                              )}
+                              {departureDate ? format(departureDate, 'PPP') : <span>Seleccionar fecha</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
@@ -237,34 +192,21 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                               selected={departureDate}
                               onSelect={setDepartureDate}
                               initialFocus
-                              disabled={(date) =>
-                                date < new Date(new Date().setHours(0, 0, 0, 0))
-                              }
+                              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                             />
                           </PopoverContent>
                         </Popover>
-                        {errors.departureDate && (
-                          <p className="text-xs text-red-500 mt-1">{errors.departureDate}</p>
-                        )}
+                        {errors.departureDate && <p className="text-xs text-red-500 mt-1">{errors.departureDate}</p>}
                       </div>
 
-                      {tripType === "round-trip" && (
+                      {tripType === 'RoundTrip' && (
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-blue-900">
-                            Feha Vuelta
-                          </label>
+                          <label className="text-sm font-medium text-blue-900">Fecha Vuelta</label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-start text-left font-normal border-input"
-                              >
+                              <Button variant="outline" className="w-full justify-start text-left font-normal border-input">
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {returnDate ? (
-                                  format(returnDate, "PPP")
-                                ) : (
-                                  <span>Seleccionar fecha</span>
-                                )}
+                                {returnDate ? format(returnDate, 'PPP') : <span>Seleccionar fecha</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -274,27 +216,21 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                                 onSelect={setReturnDate}
                                 initialFocus
                                 disabled={(date) =>
-                                  date <
-                                    new Date(new Date().setHours(0, 0, 0, 0)) ||
-                                  (departureDate ? date < departureDate : false)
+                                  date < new Date(new Date().setHours(0, 0, 0, 0)) || (departureDate ? date < departureDate : false)
                                 }
                               />
                             </PopoverContent>
                           </Popover>
-                          {errors.returnDate && (
-                            <p className="text-xs text-red-500 mt-1">{errors.returnDate}</p>
-                          )}
+                          {errors.returnDate && <p className="text-xs text-red-500 mt-1">{errors.returnDate}</p>}
                         </div>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-blue-900">
-                        Pasajeros
-                      </label>
+                      <label className="text-sm font-medium text-blue-900">Pasajeros</label>
                       <Select value={passengers} onValueChange={setPassengers}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Number of passengers" />
+                          <SelectValue placeholder="Cantidad de pasajeros" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">1 Pasajero</SelectItem>
@@ -305,10 +241,7 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                       </Select>
                     </div>
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
                     Buscar
                   </Button>
                 </form>

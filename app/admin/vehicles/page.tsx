@@ -26,32 +26,12 @@ import { toast } from '@/hooks/use-toast';
 import { PagedResponse, PaginationParams } from '@/services/types';
 import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
 import { VehicleType } from '@/interfaces/vehicleType';
-import { Vehicle } from '@/interfaces/vehicle';
+import { emptyVehicle, Vehicle } from '@/interfaces/vehicle';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useApi } from '@/hooks/use-api';
 import { getVehicles } from '@/services/vehicle';
 import { usePaginationParams, withDefaultPagination } from '@/utils/pagination';
-
-const initialVehicleForm = {
-  vehicleTypeId: 0,
-  internalNumber: '',
-  availableQuantity: 0,
-};
-
-const validationConfig = {
-  vehicleTypeId: {
-    required: true,
-    message: 'El tipo de vehículo es requerido',
-  },
-  internalNumber: {
-    required: true,
-    message: 'El número interno es requerido',
-  },
-  availableQuantity: {
-    required: true,
-    message: 'La cantidad disponible es requerida',
-  },
-};
+import { validationConfigVehicle } from '@/validations/vehicleSchema';
 
 export default function VehicleManagement() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,42 +40,11 @@ export default function VehicleManagement() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentVehicleId, setCurrentVehicleId] = useState<number | null>(null);
-  const addForm = useFormValidation(initialVehicleForm, validationConfig);
-  const editForm = useFormValidation(initialVehicleForm, validationConfig);
+  const addForm = useFormValidation(emptyVehicle, validationConfigVehicle);
+  const editForm = useFormValidation(emptyVehicle, validationConfigVehicle);
   const [vehicleTypes, setVehicleTypes] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
-
-  // State for the paged response
-  // const [vehiclesData, setVehiclesData] = useState<PagedResponse<Vehicle>>({
-  //   Items: [],
-  //   PageNumber: 1,
-  //   PageSize: 8,
-  //   TotalRecords: 0,
-  //   TotalPages: 0,
-  // });
-  // // Function to fetch vehicles data
-  // const fetchVehicles = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-  //   setIsLoading(true);
-  //   try {
-  //     const response = await get<any, Vehicle>('/vehicle-report', {
-  //       pageNumber: pageToFetch,
-  //       pageSize: pageSizeToFetch,
-  //       sortBy: 'fecha',
-  //       sortDescending: true,
-  //       filters: searchQuery ? { search: searchQuery } : {},
-  //     });
-  //     setVehiclesData(response);
-  //     setIsLoading(false);
-  //   } catch (error) {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  // // Fetch vehicles when search changes or on initial load
-  // useEffect(() => {
-  //   fetchVehicles(currentPage, pageSize);
-  // }, [searchQuery, pageSize, currentPage]);
 
   const params = usePaginationParams({
     pageNumber: currentPage,
@@ -111,7 +60,7 @@ export default function VehicleManagement() {
     try {
       setIsOptionsLoading(true);
       setOptionsError(null);
-      const response = await get<any, VehicleType>('/vehicle-type-report', withDefaultPagination());
+      const response = await get<any, PagedResponse<VehicleType>>('/vehicle-type-report', withDefaultPagination());
       if (response) {
         const formattedTypes: SelectOption[] = response.Items.map((type: VehicleType) => ({
           id: type.VehicleTypeId.toString(),
@@ -375,9 +324,7 @@ export default function VehicleManagement() {
         <FormField label="Tipo" required error={addForm.errors.vehicleTypeId}>
           <ApiSelect
             value={String(addForm.data.vehicleTypeId)}
-            onValueChange={(value) =>
-              handleSetVehicleType(value, vehicleTypes.find((type) => type.id === value)?.defaultQuantity)
-            }
+            onValueChange={(value) => handleSetVehicleType(value, vehicleTypes.find((type) => type.id === value)?.defaultQuantity)}
             placeholder="Seleccionar tipo"
             options={vehicleTypes}
             loading={isOptionsLoading}

@@ -28,6 +28,7 @@ import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPass
 import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFlow';
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
 import { useTableSort } from '@/hooks/use-table-sort';
+import { PagedResponse } from '@/services/types';
 
 // Funciones de ordenamiento para la tabla de pasajeros.
 // Al no poner un tipo explícito, TypeScript infiere el tipo más específico,
@@ -117,7 +118,7 @@ export default function ReservationsPage() {
       setOptionsError(null);
 
       // Llamadas API (pueden ir en paralelo)
-      const directionsResponse = await get<any, Direction>('/direction-report', {
+      const directionsResponse = await get<any, PagedResponse<Direction>>('/direction-report', {
         // TODO: Replace get with a typed service function
         pageNumber: 1,
         pageSize: 10,

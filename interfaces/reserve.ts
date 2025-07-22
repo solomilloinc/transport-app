@@ -21,6 +21,8 @@ export interface ReserveReport {
     DepartureHour: string;
     VehicleId: number;
     DriverId: number;
+    VehicleName: string;
+    DriverName: string;
     AvailableQuantity: number;
     ReservedQuantity: number;
     Prices: ReservePrice[];
@@ -30,4 +32,12 @@ export const emptyEditReserve ={
     VehicleId: 0,
     DriverId: 0,
     DepartureHour: ''
+}
+
+export interface ReserveSummaryItem {
+    ReserveId: number;
+    OriginName: string;
+    DestinationName: string;
+    DepartureHour: string;
+    Price: number;
 }

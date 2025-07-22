@@ -5,3 +5,9 @@ export interface Driver{
     DocumentNumber: string;
     Status: string;
 }
+
+export const emptyDriver = {
+  firstName: '',
+  lastName: '',
+  documentNumber: ''
+};

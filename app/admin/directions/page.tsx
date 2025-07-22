@@ -23,83 +23,50 @@ import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
+import { PagedResponse, PaginationParams } from '@/services/types';
 import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
-import { Direction } from '@/interfaces/direction';
+import { Direction, emptyDirection } from '@/interfaces/direction';
 import { City } from '@/interfaces/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
-
-const initialDirectionForm = {
-  cityId: 0,
-  name: '',
-};
-
-const validationConfig = {
-  cityId: {
-    required: { message: 'La ciudad es requerida' },
-  },
-  name: {
-    required: { message: 'La direccion es requerida' },
-  },
-};
+import { usePaginationParams } from '@/utils/pagination';
+import { useApi } from '@/hooks/use-api';
+import { getDirections } from '@/services/direction';
+import { validationConfigDirection } from '@/validations/directionSchema';
 
 export default function DirectionManagement() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
   // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentDirectionId, setCurrentDirectionId] = useState<number | null>(null);
 
-  const addForm = useFormValidation(initialDirectionForm, validationConfig);
+  const addForm = useFormValidation(emptyDirection, validationConfigDirection);
 
   // Form state for editing a direction
-  const editForm = useFormValidation(initialDirectionForm, validationConfig);
+  const editForm = useFormValidation(emptyDirection, validationConfigDirection);
   const [cities, setCities] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
-  // State for the paged response
-  const [directionsData, setDirectionsData] = useState<PagedResponse<Direction>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
+  const params = usePaginationParams({
+    pageNumber: currentPage,
+    filters: { search: searchQuery },
   });
-  // Function to fetch directions data
-  const fetchDirections = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, Direction>('/direction-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'nombre',
-        sortDescending: true,
-        filters: searchQuery ? { search: searchQuery } : {},
-      });
-      setDirectionsData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
 
-  // Fetch directions when search changes or on initial load
-  useEffect(() => {
-    fetchDirections(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
+  const { data, loading, error, fetch } = useApi<Direction, PaginationParams>(getDirections, {
+    autoFetch: true,
+    params: params,
+  });
 
   const loadAllOptions = async () => {
     try {
       setIsOptionsLoading(true);
       setOptionsError(null);
-      const response = await get<any, City>('/city-report', {
+      const response = await get<any, PagedResponse<City>>('/city-report', {
         pageNumber: 1,
         pageSize: 10,
         sortBy: 'nombre',
@@ -132,7 +99,7 @@ export default function DirectionManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetchDirections(); // Refresh the directions list
+          fetch(params); // Refresh the directions list
         } else {
           toast({
             title: 'Error',
@@ -161,7 +128,7 @@ export default function DirectionManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetchDirections(); // Refresh the directions list
+          fetch(params); // Refresh the directions list
         } else {
           toast({
             title: 'Error',
@@ -208,7 +175,7 @@ export default function DirectionManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentDirectionId(null);
-    fetchDirections();
+    fetch(params);
   };
 
   const resetFilters = () => {
@@ -270,19 +237,19 @@ export default function DirectionManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={directionsData.Items}
+                data={data.Items}
                 emptyMessage="No se encontraron direcciones."
-                isLoading={isLoading}
-                skeletonRows={directionsData.PageSize}
+                isLoading={loading}
+                skeletonRows={data.PageSize}
               />
             </div>
 
-            {directionsData.Items.length > 0 && (
+            {data.Items.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={directionsData.TotalPages}
-                totalItems={directionsData.TotalRecords}
-                itemsPerPage={directionsData.PageSize}
+                totalPages={data.TotalPages}
+                totalItems={data.TotalRecords}
+                itemsPerPage={data.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="direcciones"
               />
@@ -293,7 +260,7 @@ export default function DirectionManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {loading ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -313,8 +280,8 @@ export default function DirectionManagement() {
               </CardContent>
             </Card>
           ))
-        ) : directionsData.Items.length > 0 ? (
-          directionsData.Items.map((direction) => (
+        ) : data.Items.length > 0 ? (
+          data.Items.map((direction) => (
             <MobileCard
               key={direction.DirectionId}
               title={direction.Name}
@@ -388,11 +355,7 @@ export default function DirectionManagement() {
           />
         </FormField>
         <FormField label="Nombre" required error={editForm.errors.name}>
-          <Input
-            id="edit-name"
-            value={editForm.data.name}
-            onChange={(e) => editForm.setField('name', e.target.value)}
-          />
+          <Input id="edit-name" value={editForm.data.name} onChange={(e) => editForm.setField('name', e.target.value)} />
         </FormField>
       </FormDialog>
 

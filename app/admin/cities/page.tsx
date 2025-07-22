@@ -21,139 +21,101 @@ import { FormField } from '@/components/dashboard/form-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
-import { VehicleType } from '@/interfaces/vehicleType';
-import { City } from '@/interfaces/city';
-
-const initialCitiesForm = {
-  code: '',
-  name: '',
-};
+import { PagedResponse, PaginationParams } from '@/services/types';
+import { City, emptyCity } from '@/interfaces/city';
+import { useApi } from '@/hooks/use-api';
+import { usePaginationParams } from '@/utils/pagination';
+import { getCities } from '@/services/city';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { validationConfigCity } from '@/validations/citySchema';
 
 export default function CitiesManagement() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
   // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentCityId, setCurrentCityId] = useState<number | null>(null);
-  const addForm = useFormReducer(initialCitiesForm);
+  const addForm = useFormValidation(emptyCity, validationConfigCity);
 
   // Form state for editing a vehicle
-  const editForm = useFormReducer(initialCitiesForm);
+  const editForm = useFormValidation(emptyCity, validationConfigCity);
 
-  // State for the paged response
-  const [citiesData, setCitiesData] = useState<PagedResponse<City>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
+  const params = usePaginationParams({
+    pageNumber: currentPage,
+    filters: { search: searchQuery },
   });
-  // Function to fetch vehicles data
-  const fetchCities = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, City>('/city-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: '',
-        sortDescending: true,
-        filters: searchQuery
-          ? {
-              search: searchQuery,
-            }
-          : {},
-      });
-      setCitiesData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
 
-  // Fetch vehicles when search changes or on initial load
-  useEffect(() => {
-    fetchCities(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
+  const { data, loading, error, fetch } = useApi<City, PaginationParams>(getCities, {
+    autoFetch: true,
+    params: params,
+  });
 
   const submitAddCity = async () => {
-    addForm.setLoading(true);
-    try {
-      const response = await post('/city-create', addForm.state.data);
-      if (response) {
-        toast({
-          title: 'Ciudad creada',
-          description: 'La ciudad ha sido creado exitosamente',
-          variant: 'success',
-        });
-        setIsAddModalOpen(false);
-        fetchCities(); // Refresh the vehicle list
-      } else {
-        addForm.setError('Error al crear la ciudad');
+    addForm.handleSubmit(async (data) => {
+      try {
+        const response = await post('/city-create', data);
+        if (response) {
+          toast({
+            title: 'Ciudad creada',
+            description: 'La ciudad ha sido creada exitosamente',
+            variant: 'success',
+          });
+          setIsAddModalOpen(false);
+          fetch(params);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al crear la ciudad',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
         toast({
           title: 'Error',
-          description: 'Error al crear la ciudad',
+          description: 'Ocurrió un error al crear la ciudad',
           variant: 'destructive',
         });
       }
-    } catch (error) {
-      addForm.setError('Ocurrió un error al crear la ciudad');
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error al crear la ciudad',
-        variant: 'destructive',
-      });
-    } finally {
-      addForm.setLoading(false);
-    }
+    });
   };
 
   const submitEditCity = async () => {
-    editForm.setLoading(true);
-    try {
-      const response = await put(`/city-update/${currentCityId}`, editForm.state.data);
-      if (response) {
-        toast({
-          title: 'Ciudad editada',
-          description: 'La ciudad ha sido editada exitosamente',
-          variant: 'success',
-        });
-        setIsEditModalOpen(false);
-        fetchCities(); // Refresh the vehicle list
-      } else {
-        addForm.setError('Error al editar la ciudad');
+    editForm.handleSubmit(async (data) => {
+      try {
+        const response = await put(`/city-update/${currentCityId}`, data);
+        if (response) {
+          toast({
+            title: 'Ciudad actualizada',
+            description: 'La ciudad ha sido actualizada exitosamente',
+            variant: 'success',
+          });
+          setIsEditModalOpen(false);
+          fetch(params); // Refresh the city list
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al actualizar la ciudad',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
         toast({
           title: 'Error',
-          description: 'Error al editar la ciudad',
+          description: 'Ocurrió un error al actualizar la ciudad',
           variant: 'destructive',
         });
       }
-    } catch (error) {
-      addForm.setError('Ocurrió un error al editar la ciudad');
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error al editar la ciudad',
-        variant: 'destructive',
-      });
-    } finally {
-      addForm.setLoading(false);
-    }
+    });
   };
 
   const handleEditCity = (city: City) => {
     setCurrentCityId(city.Id);
-    editForm.setForm({
-      code: city.Code,
-      name: city.Name,
-    });
+    editForm.setField('name', city.Name);
+    editForm.setField('code', city.Code.toString());
     setIsEditModalOpen(true);
   };
 
@@ -167,7 +129,7 @@ export default function CitiesManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentCityId(null);
-    fetchCities();
+    fetch(params);
   };
 
   const resetFilters = () => {
@@ -192,20 +154,10 @@ export default function CitiesManagement() {
       width: '25%',
       cell: (city: City) => (
         <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
-            onClick={() => handleEditCity(city)}
-          >
+          <Button size="sm" variant="outline" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEditCity(city)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
-            onClick={() => handleDeleteCity(city.Id)}
-          >
+          <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleDeleteCity(city.Id)}>
             <Trash className="h-4 w-4" />
           </Button>
         </div>
@@ -236,19 +188,19 @@ export default function CitiesManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={citiesData.Items}
+                data={data.Items}
                 emptyMessage="No se encontraron ciudades."
-                isLoading={isLoading}
-                skeletonRows={citiesData.PageSize}
+                isLoading={loading}
+                skeletonRows={data.PageSize}
               />
             </div>
 
-            {citiesData.Items.length > 0 && (
+            {data.Items.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={citiesData.TotalPages}
-                totalItems={citiesData.TotalRecords}
-                itemsPerPage={citiesData.PageSize}
+                totalPages={data.TotalPages}
+                totalItems={data.TotalRecords}
+                itemsPerPage={data.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="ciudades"
               />
@@ -259,7 +211,7 @@ export default function CitiesManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {loading ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -279,8 +231,8 @@ export default function CitiesManagement() {
               </CardContent>
             </Card>
           ))
-        ) : citiesData.Items.length > 0 ? (
-          citiesData.Items.map((city: City) => (
+        ) : data.Items.length > 0 ? (
+          data.Items.map((city: City) => (
             <MobileCard
               key={city.Id}
               title={city.Name}
@@ -305,21 +257,11 @@ export default function CitiesManagement() {
         onSubmit={() => submitAddCity()}
         submitText="Crear Ciudad"
       >
-        <FormField label="Código">
-          <Input
-            id="code"
-            placeholder="Código"
-            value={addForm.state.data.code}
-            onChange={(e) => addForm.setField('code', e.target.value)}
-          />
+        <FormField label="Código" required error={addForm.errors.code}>
+          <Input id="code" placeholder="Código" value={addForm.data.code} onChange={(e) => addForm.setField('code', e.target.value)} />
         </FormField>
-        <FormField label="Nombre">
-          <Input
-            id="name"
-            placeholder="Nombre"
-            value={addForm.state.data.name}
-            onChange={(e) => addForm.setField('name', e.target.value)}
-          />
+        <FormField label="Nombre" required error={addForm.errors.name}>
+          <Input id="name" placeholder="Nombre" value={addForm.data.name} onChange={(e) => addForm.setField('name', e.target.value)} />
         </FormField>
       </FormDialog>
 
@@ -332,19 +274,11 @@ export default function CitiesManagement() {
         onSubmit={() => submitEditCity()}
         submitText="Guardar Cambios"
       >
-        <FormField label="Código">
-          <Input
-            id="edit-code"
-            value={editForm.state.data.code}
-            onChange={(e) => editForm.setField('code', e.target.value)}
-          />
+        <FormField label="Código" required error={editForm.errors.code}>
+          <Input id="edit-code" value={editForm.data.code} onChange={(e) => editForm.setField('code', e.target.value)} />
         </FormField>
-        <FormField label="Nombre">
-          <Input
-            id="edit-name"
-            value={editForm.state.data.name}
-            onChange={(e) => editForm.setField('name', e.target.value)}
-          />
+        <FormField label="Nombre" required error={editForm.errors.name}>
+          <Input id="edit-name" value={editForm.data.name} onChange={(e) => editForm.setField('name', e.target.value)} />
         </FormField>
       </FormDialog>
 
