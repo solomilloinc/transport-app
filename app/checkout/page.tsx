@@ -20,6 +20,7 @@ import { PassengerForm } from "@/components/passenger-form";
 import { PaymentForm } from "@/components/payment-form";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import { formatWithTimezone } from "@/utils/dates";
 
 export default function CheckoutPage() {
   // Get trip details from URL parameters first
@@ -55,7 +56,7 @@ export default function CheckoutPage() {
 
   // Format dates for display
   const formattedDepartureDate = departureDate
-    ? format(parseISO(departureDate), "EEEE, MMMM d, yyyy")
+    ? formatWithTimezone(departureDate)
     : "";
 
   // Calculate total price
@@ -115,19 +116,19 @@ export default function CheckoutPage() {
   // Navigate between steps
   const goToNextStep = () => {
     if (currentStep === "passengers") {
-      setCurrentStep("payment");
-    } else if (currentStep === "payment") {
       setCurrentStep("review");
     } else if (currentStep === "review") {
+      setCurrentStep("payment");
+    } else if (currentStep === "payment") {
       handleSubmit();
     }
   };
 
   const goToPreviousStep = () => {
-    if (currentStep === "payment") {
+    if (currentStep === "review") {
       setCurrentStep("passengers");
-    } else if (currentStep === "review") {
-      setCurrentStep("payment");
+    } else if (currentStep === "payment") {
+      setCurrentStep("review");
     }
   };
 
@@ -162,7 +163,7 @@ export default function CheckoutPage() {
             className="inline-flex items-center text-blue-600 hover:text-blue-800"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Results
+            Volver
           </Link>
         </div>
 
@@ -171,7 +172,7 @@ export default function CheckoutPage() {
           <div className="md:col-span-2 space-y-6">
             <div className="bg-white rounded-lg border shadow-sm p-6">
               <h1 className="text-2xl font-bold text-blue-800 font-display mb-4">
-                Complete Your Booking
+                Complete su reserva
               </h1>
 
               {/* Progress steps */}
@@ -196,7 +197,7 @@ export default function CheckoutPage() {
                     >
                       <Users className="h-4 w-4" />
                     </div>
-                    <span className="text-xs">Passengers</span>
+                    <span className="text-xs">Pasajeros</span>
                   </div>
                   <div className="flex-1 h-1 mx-2 bg-gray-200">
                     <div
@@ -204,33 +205,6 @@ export default function CheckoutPage() {
                         currentStep === "payment" || currentStep === "review"
                           ? "w-full"
                           : "w-0"
-                      }`}
-                    ></div>
-                  </div>
-                  <div
-                    className={`flex flex-col items-center ${
-                      currentStep === "payment"
-                        ? "text-blue-600"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                        currentStep === "payment"
-                          ? "bg-blue-600 text-white"
-                          : currentStep === "review"
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-200 text-gray-500"
-                      }`}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                    </div>
-                    <span className="text-xs">Payment</span>
-                  </div>
-                  <div className="flex-1 h-1 mx-2 bg-gray-200">
-                    <div
-                      className={`h-full bg-blue-600 ${
-                        currentStep === "review" ? "w-full" : "w-0"
                       }`}
                     ></div>
                   </div>
@@ -245,12 +219,39 @@ export default function CheckoutPage() {
                       className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
                         currentStep === "review"
                           ? "bg-blue-600 text-white"
+                          : currentStep === "payment"
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-200 text-gray-500"
+                      }`}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs">Revisar</span>
+                  </div>
+                  <div className="flex-1 h-1 mx-2 bg-gray-200">
+                    <div
+                      className={`h-full bg-blue-600 ${
+                        currentStep === "payment" ? "w-full" : "w-0"
+                      }`}
+                    ></div>
+                  </div>
+                  <div
+                    className={`flex flex-col items-center ${
+                      currentStep === "payment"
+                        ? "text-blue-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+                        currentStep === "payment"
+                          ? "bg-blue-600 text-white"
                           : "bg-gray-200 text-gray-500"
                       }`}
                     >
                       <Shield className="h-4 w-4" />
                     </div>
-                    <span className="text-xs">Review</span>
+                    <span className="text-xs">Pago</span>
                   </div>
                 </div>
               </div>
@@ -260,11 +261,10 @@ export default function CheckoutPage() {
                 {currentStep === "passengers" && (
                   <div>
                     <h2 className="text-xl font-medium text-blue-800 mb-4">
-                      Passenger Information
+                      Informacion de los Pasajeros
                     </h2>
                     <p className="text-gray-600 mb-6">
-                      Please provide details for all {passengers} passenger
-                      {passengers > 1 ? "s" : ""}.
+                      Por favor ingrese los detalles de cada pasajero.
                     </p>
                     <PassengerForm
                       passengerCount={passengers}
@@ -277,11 +277,11 @@ export default function CheckoutPage() {
                 {currentStep === "payment" && (
                   <div>
                     <h2 className="text-xl font-medium text-blue-800 mb-4">
-                      Payment Details
+                      Detalles del Pago
                     </h2>
                     <p className="text-gray-600 mb-6">
-                      Your payment information is secure and encrypted. We
-                      accept all major credit cards.
+                      Su información de pago es segura y está encriptada.
+                      Aceptamos las principales tarjetas de crédito.
                     </p>
                     <PaymentForm
                       onDataChange={handlePaymentDataChange}
@@ -293,33 +293,33 @@ export default function CheckoutPage() {
                 {currentStep === "review" && (
                   <div>
                     <h2 className="text-xl font-medium text-blue-800 mb-4">
-                      Review Your Booking
+                      Revise su Reserva
                     </h2>
                     <p className="text-gray-600 mb-6">
-                      Please review your booking details before confirming your
-                      purchase.
+                      Por favor, revise los detalles de su reserva antes de
+                      confirmar la compra.
                     </p>
 
                     <div className="space-y-6">
                       {/* Trip details summary */}
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <h3 className="font-medium text-blue-800 mb-2">
-                          Trip Details
+                          Detalle del Viaje
                         </h3>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="text-gray-600">Route:</div>
-                          <div className="font-medium">
-                            {origin} to {destination}
+                          <div className="text-gray-600">Ruta:</div>
+                          <div className="font-medium flex items-center">
+                            {origin} <ArrowRight className="h-3 w-3 mx-1 text-gray-400" /> {destination}
                           </div>
-                          <div className="text-gray-600">Date:</div>
+                          <div className="text-gray-600">Fecha:</div>
                           <div className="font-medium">
                             {formattedDepartureDate}
                           </div>
-                          <div className="text-gray-600">Departure Time:</div>
+                          <div className="text-gray-600">Hora de Salida:</div>
                           <div className="font-medium">{departureTime}</div>
-                          <div className="text-gray-600">Arrival Time:</div>
+                          <div className="text-gray-600">Hora de Llegada:</div>
                           <div className="font-medium">{arrivalTime}</div>
-                          <div className="text-gray-600">Bus Type:</div>
+                          <div className="text-gray-600">Tipo de Bus:</div>
                           <div className="font-medium">{busType}</div>
                         </div>
                       </div>
@@ -327,7 +327,7 @@ export default function CheckoutPage() {
                       {/* Passenger summary */}
                       <div>
                         <h3 className="font-medium text-blue-800 mb-2">
-                          Passenger Information
+                          Información de Pasajeros
                         </h3>
                         <div className="space-y-3">
                           {passengerData.map((passenger, index) => (
@@ -336,7 +336,7 @@ export default function CheckoutPage() {
                               className="bg-gray-50 p-3 rounded-lg text-sm"
                             >
                               <div className="font-medium">
-                                Passenger {index + 1}: {passenger.firstName}{" "}
+                                Pasajero {index + 1}: {passenger.firstName}{" "}
                                 {passenger.lastName}
                               </div>
                               <div className="text-gray-600">
@@ -345,7 +345,7 @@ export default function CheckoutPage() {
                               {passenger.specialRequests && (
                                 <div className="text-gray-600 mt-1">
                                   <span className="font-medium">
-                                    Special Requests:
+                                    Solicitudes Especiales:
                                   </span>{" "}
                                   {passenger.specialRequests}
                                 </div>
@@ -355,36 +355,21 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
-                      {/* Payment summary */}
-                      <div>
-                        <h3 className="font-medium text-blue-800 mb-2">
-                          Payment Information
-                        </h3>
-                        <div className="bg-gray-50 p-3 rounded-lg text-sm">
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="h-4 w-4 text-blue-600" />
-                            <span>
-                              Card ending in {paymentData.cardNumber?.slice(-4)}{" "}
-                              • {paymentData.cardholderName}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Terms and conditions */}
                       <div className="bg-yellow-50 p-4 rounded-lg text-sm">
                         <h3 className="font-medium text-yellow-800 mb-2">
-                          Terms and Conditions
+                          Términos y Condiciones
                         </h3>
                         <p className="text-yellow-700 mb-2">
-                          By completing this booking, you agree to
-                          FamilyTransit's terms and conditions, including our
-                          cancellation policy.
+                          Al completar esta reserva, usted acepta los términos y
+                          condiciones de Zeros Tour, incluida nuestra
+                          política de cancelación.
                         </p>
                         <p className="text-yellow-700">
-                          Free cancellation up to 24 hours before departure. A
-                          50% fee applies for cancellations made less than 24
-                          hours before departure.
+                          Cancelación gratuita hasta 24 horas antes de la
+                          salida. Se aplica una tarifa del 50% para
+                          cancelaciones realizadas con menos de 24 horas de
+                          antelación.
                         </p>
                       </div>
                     </div>
@@ -400,7 +385,7 @@ export default function CheckoutPage() {
                     onClick={goToPreviousStep}
                     disabled={isSubmitting}
                   >
-                    Back
+                    Volver
                   </Button>
                 ) : (
                   <div></div>
@@ -432,12 +417,12 @@ export default function CheckoutPage() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      Processing...
+                      Procesando...
                     </div>
                   ) : currentStep === "review" ? (
-                    "Confirm and Pay"
+                    "Confirmar y Pagar"
                   ) : (
-                    "Continue"
+                    "Continuar"
                   )}
                 </Button>
               </div>
@@ -449,13 +434,13 @@ export default function CheckoutPage() {
             <div className="bg-white rounded-lg border shadow-sm sticky top-24">
               <div className="p-4 border-b bg-blue-50">
                 <h2 className="font-bold text-blue-800 font-display">
-                  Trip Summary
+                  Resumen de la Reserva
                 </h2>
               </div>
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-lg font-medium">
-                    {origin} to {destination}
+                  <div className="text-lg font-medium flex items-center">
+                    {origin}  <ArrowRight className="h-3 w-3 mx-1 text-gray-400" /> {destination}
                   </div>
                 </div>
 
@@ -489,7 +474,7 @@ export default function CheckoutPage() {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">
                     <span className="text-gray-600">
-                      Ticket price ({passengers} x ${pricePerPerson})
+                      Precio ({passengers} x ${pricePerPerson})
                     </span>
                     <span>${totalPrice.toFixed(2)}</span>
                   </div>

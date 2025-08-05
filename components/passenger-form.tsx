@@ -73,7 +73,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                   </div>
                   <div>
                     <h3 className="font-medium">
-                      Passenger {index + 1}
+                      Pasajero {index + 1}
                       {passengers[index]?.firstName && passengers[index]?.lastName
                         ? `: ${passengers[index].firstName} ${passengers[index].lastName}`
                         : ""}
@@ -94,7 +94,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                 <div className="p-4 pt-0 border-t">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`firstName-${index}`}>First Name *</Label>
+                      <Label htmlFor={`firstName-${index}`}>Nombre *</Label>
                       <Input
                         id={`firstName-${index}`}
                         value={passengers[index]?.firstName || ""}
@@ -104,7 +104,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`lastName-${index}`}>Last Name *</Label>
+                      <Label htmlFor={`lastName-${index}`}>Apellido *</Label>
                       <Input
                         id={`lastName-${index}`}
                         value={passengers[index]?.lastName || ""}
@@ -114,7 +114,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`email-${index}`}>Email Address *</Label>
+                      <Label htmlFor={`email-${index}`}>Email *</Label>
                       <Input
                         id={`email-${index}`}
                         type="email"
@@ -125,7 +125,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`phone-${index}`}>Phone Number</Label>
+                      <Label htmlFor={`phone-${index}`}>Teléfono</Label>
                       <Input
                         id={`phone-${index}`}
                         type="tel"
@@ -135,7 +135,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`dateOfBirth-${index}`}>Date of Birth</Label>
+                      <Label htmlFor={`dateOfBirth-${index}`}>Fecha de Nacimiento</Label>
                       <Input
                         id={`dateOfBirth-${index}`}
                         type="date"
@@ -144,7 +144,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`passengerType-${index}`}>Passenger Type</Label>
+                      <Label htmlFor={`passengerType-${index}`}>Tipo de pasajero</Label>
                       <Select
                         value={passengers[index]?.passengerType || "adult"}
                         onValueChange={(value) => handleInputChange(index, "passengerType", value)}
@@ -163,12 +163,12 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    <Label htmlFor={`specialRequests-${index}`}>Special Requests or Accommodations</Label>
+                    <Label htmlFor={`specialRequests-${index}`}>Solicitudes especiales o adaptaciones</Label>
                     <Textarea
                       id={`specialRequests-${index}`}
                       value={passengers[index]?.specialRequests || ""}
                       onChange={(e) => handleInputChange(index, "specialRequests", e.target.value)}
-                      placeholder="Enter any special requests or accommodations needed"
+                      placeholder="Ingrese cualquier solicitud especial o adaptaciones necesarias"
                       className="resize-none"
                     />
                   </div>
@@ -177,7 +177,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
             </CardContent>
           </Card>
         ))}
-      <p className="text-sm text-gray-500">* Required fields</p>
+      <p className="text-sm text-gray-500">* Campos requeridos</p>
     </div>
   )
 }

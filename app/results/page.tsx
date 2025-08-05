@@ -6,7 +6,6 @@ import ResultsClient from '@/components/results/ResultsClient'; // Este será nu
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import { format } from 'date-fns';
-import { se } from 'date-fns/locale';
 
 // 1. Definimos la forma de los searchParams que la página recibe como props.
 interface ResultsPageProps {

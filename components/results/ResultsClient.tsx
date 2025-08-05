@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { ArrowRight, Bus, ChevronLeft, Calendar, Info, RefreshCw, Users, MapPin, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatWithTimezone } from '@/utils/dates';
 import { ReserveSummaryItem } from '@/interfaces/reserve';
 import { PagedReserveResponse } from '@/services/types';
@@ -33,10 +33,17 @@ interface ResultsClientProps {
 export default function ResultsClient({ initialReserves, searchParams }: ResultsClientProps) {
   const router = useRouter();
   const searchParamsHook = useSearchParams(); // Hook para obtener la cadena de query actual
-
   // 2. Inicializar el estado con los datos recibidos como props.
-  const [reserves] = useState<PagedReserveResponse<ReserveSummaryItem>>(initialReserves);
+  const [reserves, setReserves] = useState<PagedReserveResponse<ReserveSummaryItem>>(initialReserves);
   const [loading, setLoading] = useState(false); // Inicia en false porque los datos iniciales ya están cargados.
+
+  // Este efecto se encarga de sincronizar el estado del componente con las props
+  // que llegan del servidor. Cuando initialReserves cambia, actualizamos el estado
+  // local y desactivamos el indicador de carga.
+  useEffect(() => {
+    setReserves(initialReserves);
+    setLoading(false);
+  }, [initialReserves]);
 
   // Leer los parámetros de búsqueda desde las props (para la UI inicial)
   const {
@@ -87,6 +94,11 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     const params = new URLSearchParams();
     params.append('passengers', passengers);
     params.append('outboundTripId', outboundTrip.ReserveId.toString());
+    params.append('origin', originName);
+    params.append('destination', destinationName);
+    params.append('departureDate', departureDate);
+    params.append('departureTime', outboundTrip.DepartureHour);
+    params.append('price', outboundTrip.Price.toString());
     if (returnTrip) {
       params.append('returnTripId', returnTrip.ReserveId.toString());
     }
@@ -191,7 +203,44 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
           {/* Pestaña de Vuelta */}
           {tripType === 'RoundTrip' && returnDate && (
             <TabsContent value="return" className="mt-0">
-              {/* ... (Lógica y JSX para el viaje de vuelta, como lo tenías antes) ... */}
+              {!selectedOutboundTrip ? (
+                <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px] bg-white rounded-lg border shadow-sm">
+                  <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Selecciona un viaje de ida</h3>
+                  <p className="text-gray-600">Primero debes seleccionar un viaje de ida para poder elegir tu vuelta.</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                  <div className="p-4 bg-blue-50 border-b">
+                    <h2 className="font-display font-bold text-lg text-blue-800">
+                      Reservas Disponibles: {formatLocation(destinationName)} → {formatLocation(originName)}
+                    </h2>
+                    <p className="text-sm text-blue-700">{formattedReturnDate}</p>
+                  </div>
+                  {reserves.Return.Items.length === 0 ? (
+                    <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
+                      <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No hay viajes de vuelta disponibles</h3>
+                      <p className="text-gray-600">No encontramos viajes para la fecha de vuelta seleccionada.</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[600px]">
+                      <div className="divide-y">
+                        {reserves.Return.Items.map((trip) => (
+                          <div key={trip.ReserveId} className="p-4 hover:bg-gray-50 transition-colors">
+                            <div className="grid md:grid-cols-4 gap-4 items-center">
+                              <div className="text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
+                              <div className="flex items-center gap-2"><Bus className="h-5 w-5 text-blue-600" /><span>Servicio Estándar</span></div>
+                              <div className="text-center"><div className="text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</div><div className="text-sm text-gray-500">por persona</div></div>
+                              <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectReturn(trip)}>Seleccionar Vuelta</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </div>
+              )}
             </TabsContent>
           )}
         </Tabs>
