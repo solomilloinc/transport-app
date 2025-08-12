@@ -1,33 +1,36 @@
 "use client"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CreditCard, Check } from "lucide-react"
 import { useEffect, useState } from "react"
+import { initMercadoPago, Payment } from "@mercadopago/sdk-react"
+
+// TODO: Replace with your Mercado Pago public key
+initMercadoPago("APP_USR-eeaadcbb-5c00-4f9e-a647-3ae4648aa705")
 
 interface PaymentFormProps {
   onDataChange: (data: Record<string, any>) => void
   initialData?: Record<string, any>
+  // TODO: Pass the amount from the parent component
+  amount: number
 }
 
-export function PaymentForm({ onDataChange, initialData = {} }: PaymentFormProps) {
+export function PaymentForm({
+  onDataChange,
+  initialData = {},
+  amount,
+}: PaymentFormProps) {
   const [paymentData, setPaymentData] = useState<Record<string, any>>({
-    cardNumber: "",
-    cardholderName: "",
-    expiryDate: "",
-    cvv: "",
     billingAddress: "",
     savePaymentInfo: false,
     ...initialData,
   })
 
-  // Update parent component when payment data changes
   useEffect(() => {
-    // Only update parent when there are actual changes to payment data
     if (Object.keys(paymentData).length > 0) {
       onDataChange(paymentData)
     }
-  }, [paymentData]) // Remove onDataChange from dependencies
+  }, [paymentData])
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setPaymentData({
@@ -36,33 +39,11 @@ export function PaymentForm({ onDataChange, initialData = {} }: PaymentFormProps
     })
   }
 
-  // Format card number with spaces
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "")
-    const matches = v.match(/\d{4,16}/g)
-    const match = (matches && matches[0]) || ""
-    const parts = []
-
-    for (let i = 0; i < match.length; i += 4) {
-      parts.push(match.substring(i, i + 4))
-    }
-
-    if (parts.length) {
-      return parts.join(" ")
-    } else {
-      return value
-    }
-  }
-
-  // Format expiry date (MM/YY)
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "")
-
-    if (v.length >= 2) {
-      return `${v.substring(0, 2)}/${v.substring(2, 4)}`
-    }
-
-    return value
+  const handlePayment = async (formData: any) => {
+    // This function is called when the payment is submitted.
+    // You can send the payment data to your server here.
+    console.log(formData)
+    onDataChange({ ...paymentData, ...formData })
   }
 
   return (
@@ -73,56 +54,16 @@ export function PaymentForm({ onDataChange, initialData = {} }: PaymentFormProps
           <h3 className="font-medium text-blue-800">Card Information</h3>
         </div>
 
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="cardNumber">Card Number *</Label>
-            <Input
-              id="cardNumber"
-              value={paymentData.cardNumber}
-              onChange={(e) => handleInputChange("cardNumber", formatCardNumber(e.target.value))}
-              placeholder="1234 5678 9012 3456"
-              maxLength={19}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cardholderName">Cardholder Name *</Label>
-            <Input
-              id="cardholderName"
-              value={paymentData.cardholderName}
-              onChange={(e) => handleInputChange("cardholderName", e.target.value)}
-              placeholder="Enter name as it appears on card"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="expiryDate">Expiry Date (MM/YY) *</Label>
-              <Input
-                id="expiryDate"
-                value={paymentData.expiryDate}
-                onChange={(e) => handleInputChange("expiryDate", formatExpiryDate(e.target.value))}
-                placeholder="MM/YY"
-                maxLength={5}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cvv">CVV *</Label>
-              <Input
-                id="cvv"
-                type="password"
-                value={paymentData.cvv}
-                onChange={(e) => handleInputChange("cvv", e.target.value.replace(/\D/g, ""))}
-                placeholder="123"
-                maxLength={4}
-                required
-              />
-            </div>
-          </div>
-        </div>
+        <Payment
+          initialization={{ amount: amount }}
+          customization={{
+            paymentMethods: {
+              creditCard: "all",
+              debitCard: "all",
+            },
+          }}
+          onSubmit={handlePayment}
+        />
       </div>
 
       <div>
@@ -166,3 +107,4 @@ export function PaymentForm({ onDataChange, initialData = {} }: PaymentFormProps
     </div>
   )
 }
+

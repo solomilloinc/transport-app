@@ -21,6 +21,7 @@ import { PaymentForm } from "@/components/payment-form";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { formatWithTimezone } from "@/utils/dates";
+import { post } from "@/services/api";
 
 export default function CheckoutPage() {
   // Get trip details from URL parameters first
@@ -87,7 +88,7 @@ export default function CheckoutPage() {
 
     try {
       // In a real app, you would send this data to your backend
-      console.log("Booking data:", {
+      const bookingData = {
         tripDetails: {
           tripId,
           origin,
@@ -100,10 +101,12 @@ export default function CheckoutPage() {
         passengers: passengerData,
         payment: paymentData,
         totalAmount: finalTotal,
-      });
+      };
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.log("Booking data:", bookingData);
+
+      // TODO: Replace with your actual API endpoint for creating a reserve
+      await post("/api/reserves", bookingData);
 
       // Redirect to confirmation page
       router.push("/booking-confirmation?success=true");
@@ -141,13 +144,9 @@ export default function CheckoutPage() {
       );
     }
     if (currentStep === "payment") {
-      return (
-        paymentData.cardNumber &&
-        paymentData.cardholderName &&
-        paymentData.expiryDate &&
-        paymentData.cvv &&
-        paymentData.billingAddress
-      );
+      // The validation for Mercado Pago is handled by the Brick itself.
+      // We assume that if we have paymentData, it is valid.
+      return Object.keys(paymentData).length > 0;
     }
     return true;
   };
@@ -286,6 +285,7 @@ export default function CheckoutPage() {
                     <PaymentForm
                       onDataChange={handlePaymentDataChange}
                       initialData={paymentData}
+                      amount={finalTotal}
                     />
                   </div>
                 )}
@@ -419,7 +419,7 @@ export default function CheckoutPage() {
                       </svg>
                       Procesando...
                     </div>
-                  ) : currentStep === "review" ? (
+                  ) : currentStep === "payment" ? (
                     "Confirmar y Pagar"
                   ) : (
                     "Continuar"
