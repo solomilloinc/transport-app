@@ -14,6 +14,7 @@ import { ReserveSummaryItem } from '@/interfaces/reserve';
 import { PagedReserveResponse } from '@/services/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter } from '../ui/card';
+import { useCheckout } from '@/contexts/CheckoutContext';
 
 // 1. Definimos las props que el componente de cliente recibirá del Server Component.
 interface ResultsClientProps {
@@ -90,19 +91,14 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     handleCheckout(selectedOutboundTrip, returnTrip);
   };
 
+  const { setCheckout } = useCheckout();
   const handleCheckout = (outboundTrip: ReserveSummaryItem, returnTrip?: ReserveSummaryItem) => {
-    const params = new URLSearchParams();
-    params.append('passengers', passengers);
-    params.append('outboundTripId', outboundTrip.ReserveId.toString());
-    params.append('origin', originName);
-    params.append('destination', destinationName);
-    params.append('departureDate', departureDate);
-    params.append('departureTime', outboundTrip.DepartureHour);
-    params.append('price', outboundTrip.Price.toString());
-    if (returnTrip) {
-      params.append('returnTripId', returnTrip.ReserveId.toString());
-    }
-    router.push(`/checkout?${params.toString()}`);
+        setCheckout({
+    outboundTrip,
+    returnTrip: returnTrip || null,
+    passengers: Number(passengers),
+  });
+    router.push(`/checkout`);
   };
 
   function formatLocation(location: string): string {
@@ -110,7 +106,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     return location.charAt(0).toUpperCase() + location.slice(1);
   }
 
-  // 4. JSX que fue eliminado de page.tsx.
   return (
     <>
       {/* Resumen de búsqueda y botón de volver */}

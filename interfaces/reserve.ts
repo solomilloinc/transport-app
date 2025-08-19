@@ -39,5 +39,6 @@ export interface ReserveSummaryItem {
     OriginName: string;
     DestinationName: string;
     DepartureHour: string;
+    DepartureDate: string;
     Price: number;
 }

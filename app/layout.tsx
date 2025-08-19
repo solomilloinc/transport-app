@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
-import AuthProvider from '@/components/auth-provider';
 import { Geist } from 'next/font/google';
 import { Toaster } from '@/components/ui/toaster';
+import dynamic from 'next/dynamic';
+import AuthProvider from '@/components/auth-provider';
+import CheckoutProviderWrapper from '@/contexts/CheckoutProviderWrapper';
 
 export const metadata: Metadata = {
   title: 'Zeros Tour',
@@ -17,15 +17,17 @@ const geist = Geist({
   weight: ['200', '400', '600', '700'], // elegí los pesos que vayas a usar
 });
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={geist.className}>
-        <AuthProvider>{children}</AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        {/* Aquí envolvemos solo los children con los providers de cliente */}
+        <CheckoutProviderWrapper>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </CheckoutProviderWrapper>
         <Toaster />
       </body>
     </html>

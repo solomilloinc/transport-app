@@ -22,21 +22,12 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { formatWithTimezone } from "@/utils/dates";
 import { post } from "@/services/api";
+import { useCheckout } from "@/contexts/CheckoutContext";
 
 export default function CheckoutPage() {
   // Get trip details from URL parameters first
-  const searchParams = useSearchParams();
+  const { checkout } = useCheckout();
   const router = useRouter();
-  const tripId = searchParams.get("tripId") || "";
-  const origin = searchParams.get("origin") || "";
-  const destination = searchParams.get("destination") || "";
-  const departureDate = searchParams.get("departureDate") || "";
-  const departureTime = searchParams.get("departureTime") || "";
-  const arrivalTime = searchParams.get("arrivalTime") || "";
-  const duration = searchParams.get("duration") || "";
-  const price = searchParams.get("price") || "0";
-  const passengers = Number.parseInt(searchParams.get("passengers") || "1", 10);
-  const busType = searchParams.get("busType") || "Standard";
 
   // Then initialize state variables
   const [currentStep, setCurrentStep] = useState<
@@ -45,7 +36,7 @@ export default function CheckoutPage() {
   const [passengerData, setPassengerData] = useState<Record<string, any>[]>(
     () => {
       // Initialize with empty array of passenger objects based on passenger count
-      return Array(passengers)
+      return Array(checkout.passengers || 1)
         .fill(0)
         .map(() => ({}));
     }
@@ -56,14 +47,19 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Format dates for display
-  const formattedDepartureDate = departureDate
-    ? formatWithTimezone(departureDate)
+  const formattedDepartureDate = checkout.outboundTrip?.DepartureDate
+    ? formatWithTimezone(checkout.outboundTrip?.DepartureDate)
+    : "";
+
+  const formattedReturnDate = checkout.returnTrip?.DepartureDate
+    ? formatWithTimezone(checkout.returnTrip?.DepartureDate)
     : "";
 
   // Calculate total price
-  const pricePerPerson = Number.parseFloat(price);
-  const totalPrice = pricePerPerson * passengers;
-  const serviceFee = 2.5 * passengers;
+  const outboundPrice = checkout.outboundTrip?.Price || 0;
+  const returnPrice = checkout.returnTrip?.Price || 0;
+  const totalPrice = (outboundPrice + returnPrice) * checkout.passengers;
+  const serviceFee = 2.5 * checkout.passengers;
   const finalTotal = totalPrice + serviceFee;
 
   // Handle passenger data updates
@@ -90,13 +86,8 @@ export default function CheckoutPage() {
       // In a real app, you would send this data to your backend
       const bookingData = {
         tripDetails: {
-          tripId,
-          origin,
-          destination,
-          departureDate,
-          departureTime,
-          arrivalTime,
-          busType,
+          outbound: checkout.outboundTrip,
+          return: checkout.returnTrip,
         },
         passengers: passengerData,
         payment: paymentData,
@@ -139,7 +130,7 @@ export default function CheckoutPage() {
   const isCurrentStepComplete = () => {
     if (currentStep === "passengers") {
       return (
-        passengerData.length === passengers &&
+        passengerData.length === checkout.passengers &&
         passengerData.every((p) => p.firstName && p.lastName && p.email)
       );
     }
@@ -157,13 +148,14 @@ export default function CheckoutPage() {
       <main className="container py-8">
         {/* Back button */}
         <div className="mb-6">
-          <Link
-            href="/results"
-            className="inline-flex items-center text-blue-600 hover:text-blue-800"
+          <Button
+            variant="link"
+            onClick={() => router.back()}
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 p-0 h-auto"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Volver
-          </Link>
+          </Button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
@@ -266,7 +258,7 @@ export default function CheckoutPage() {
                       Por favor ingrese los detalles de cada pasajero.
                     </p>
                     <PassengerForm
-                      passengerCount={passengers}
+                      passengerCount={checkout.passengers}
                       onDataChange={handlePassengerDataChange}
                       initialData={passengerData}
                     />
@@ -304,25 +296,69 @@ export default function CheckoutPage() {
                       {/* Trip details summary */}
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <h3 className="font-medium text-blue-800 mb-2">
-                          Detalle del Viaje
+                          Detalle del Viaje de Ida
                         </h3>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div className="text-gray-600">Ruta:</div>
                           <div className="font-medium flex items-center">
-                            {origin} <ArrowRight className="h-3 w-3 mx-1 text-gray-400" /> {destination}
+                            {checkout.outboundTrip?.OriginName}{" "}
+                            <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />{" "}
+                            {checkout.outboundTrip?.DestinationName}
                           </div>
                           <div className="text-gray-600">Fecha:</div>
                           <div className="font-medium">
                             {formattedDepartureDate}
                           </div>
                           <div className="text-gray-600">Hora de Salida:</div>
-                          <div className="font-medium">{departureTime}</div>
+                          <div className="font-medium">
+                            {checkout.outboundTrip?.DepartureHour}
+                          </div>
                           <div className="text-gray-600">Hora de Llegada:</div>
-                          <div className="font-medium">{arrivalTime}</div>
+                          {/* <div className="font-medium">
+                            {checkout.outboundTrip?.ArrivalHour}
+                          </div> */}
                           <div className="text-gray-600">Tipo de Bus:</div>
-                          <div className="font-medium">{busType}</div>
+                          {/* <div className="font-medium">
+                            {checkout.outboundTrip?.VehicleType}
+                          </div> */}
                         </div>
                       </div>
+
+                      {checkout.returnTrip && (
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <h3 className="font-medium text-blue-800 mb-2">
+                            Detalle del Viaje de Vuelta
+                          </h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="text-gray-600">Ruta:</div>
+                            <div className="font-medium flex items-center">
+                              {checkout.returnTrip?.OriginName}{" "}
+                              <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />{" "}
+                              {checkout.returnTrip?.DestinationName}
+                            </div>
+                            <div className="text-gray-600">Fecha:</div>
+                            <div className="font-medium">
+                              {formattedReturnDate}
+                            </div>
+                            <div className="text-gray-600">
+                              Hora de Salida:
+                            </div>
+                            <div className="font-medium">
+                              {checkout.returnTrip?.DepartureHour}
+                            </div>
+                            <div className="text-gray-600">
+                              Hora de Llegada:
+                            </div>
+                            {/* <div className="font-medium">
+                              {checkout.returnTrip?.ArrivalHour}
+                            </div> */}
+                            <div className="text-gray-600">Tipo de Bus:</div>
+                            {/* <div className="font-medium">
+                              {checkout.returnTrip?.VehicleType}
+                            </div> */}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Passenger summary */}
                       <div>
@@ -440,7 +476,9 @@ export default function CheckoutPage() {
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-lg font-medium flex items-center">
-                    {origin}  <ArrowRight className="h-3 w-3 mx-1 text-gray-400" /> {destination}
+                    {checkout.outboundTrip?.OriginName}{" "}
+                    <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />{" "}
+                    {checkout.outboundTrip?.DestinationName}
                   </div>
                 </div>
 
@@ -452,34 +490,76 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-blue-600" />
                     <div className="flex items-center">
-                      <span>{departureTime}</span>
+                      <span>{checkout.outboundTrip?.DepartureHour}</span>
                       <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
-                      <span>{arrivalTime}</span>
+                      {/* <span>{checkout.outboundTrip?.ArrivalHour}</span> */}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Bus className="h-4 w-4 text-blue-600" />
-                    <span>{busType} Bus</span>
+                    {/* <span>{checkout.outboundTrip?.VehicleType} Bus</span> */}
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-blue-600" />
                     <span>
-                      {passengers} Passenger{passengers > 1 ? "s" : ""}
+                      {checkout.passengers} Pasajero
+                      {checkout.passengers > 1 ? "s" : ""}
                     </span>
                   </div>
                 </div>
+
+                {checkout.returnTrip && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-lg font-medium flex items-center">
+                        {checkout.returnTrip?.OriginName}{" "}
+                        <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />{" "}
+                        {checkout.returnTrip?.DestinationName}
+                      </div>
+                    </div>
+                    <div className="space-y-3 text-sm mb-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <span>{formattedReturnDate}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <div className="flex items-center">
+                          <span>{checkout.returnTrip?.DepartureHour}</span>
+                          <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
+                          {/* <span>{checkout.returnTrip?.ArrivalHour}</span> */}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Bus className="h-4 w-4 text-blue-600" />
+                        {/* <span>{checkout.returnTrip?.VehicleType} Bus</span> */}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <Separator className="my-4" />
 
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">
                     <span className="text-gray-600">
-                      Precio ({passengers} x ${pricePerPerson})
+                      Precio (ida)
                     </span>
-                    <span>${totalPrice.toFixed(2)}</span>
+                    <span>${(outboundPrice * checkout.passengers).toFixed(2)}</span>
                   </div>
+                  {checkout.returnTrip && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Precio (vuelta)
+                      </span>
+                      <span>
+                        ${(returnPrice * checkout.passengers).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Service fee</span>
+                    <span className="text-gray-600">Tasa de servicio</span>
                     <span>${serviceFee.toFixed(2)}</span>
                   </div>
                 </div>
