@@ -91,7 +91,12 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     handleCheckout(selectedOutboundTrip, returnTrip);
   };
 
-  const { setCheckout } = useCheckout();
+  const { setCheckout, clearCheckout } = useCheckout();
+
+  // useEffect(() => {
+  //   clearCheckout();
+  // }, [clearCheckout]);
+
   const handleCheckout = (outboundTrip: ReserveSummaryItem, returnTrip?: ReserveSummaryItem) => {
         setCheckout({
     outboundTrip,

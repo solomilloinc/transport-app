@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import {
   ArrowRight,
   Bus,
@@ -14,130 +14,108 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { PassengerForm } from "@/components/passenger-form";
-import { PaymentForm } from "@/components/payment-form";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { formatWithTimezone } from "@/utils/dates";
 import { post } from "@/services/api";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
+
+// Extend the Window interface to declare our controller property
+declare global {
+  interface Window {
+    paymentBrickController: any;
+  }
+}
 
 export default function CheckoutPage() {
-  // Get trip details from URL parameters first
   const { checkout } = useCheckout();
   const router = useRouter();
 
-  // Then initialize state variables
   const [currentStep, setCurrentStep] = useState<
     "passengers" | "payment" | "review"
   >("passengers");
   const [passengerData, setPassengerData] = useState<Record<string, any>[]>(
-    () => {
-      // Initialize with empty array of passenger objects based on passenger count
-      return Array(checkout.passengers || 1)
-        .fill(0)
-        .map(() => ({}));
-    }
-  );
-  const [paymentData, setPaymentData] = useState<Record<string, any>>(
-    () => ({})
+    () => Array(checkout.passengers || 1).fill(0).map(() => ({}))
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBrickReady, setIsBrickReady] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
 
-  // Format dates for display
+  useEffect(() => {
+    initMercadoPago("APP_USR-eeaadcbb-5c00-4f9e-a647-3ae4648aa705");
+  }, []);
+
   const formattedDepartureDate = checkout.outboundTrip?.DepartureDate
-    ? formatWithTimezone(checkout.outboundTrip?.DepartureDate)
+    ? formatWithTimezone(checkout.outboundTrip.DepartureDate)
     : "";
-
   const formattedReturnDate = checkout.returnTrip?.DepartureDate
-    ? formatWithTimezone(checkout.returnTrip?.DepartureDate)
+    ? formatWithTimezone(checkout.returnTrip.DepartureDate)
     : "";
 
-  // Calculate total price
   const outboundPrice = checkout.outboundTrip?.Price || 0;
   const returnPrice = checkout.returnTrip?.Price || 0;
   const totalPrice = (outboundPrice + returnPrice) * checkout.passengers;
   const serviceFee = 2.5 * checkout.passengers;
   const finalTotal = totalPrice + serviceFee;
 
-  // Handle passenger data updates
   const handlePassengerDataChange = (data: Record<string, any>[]) => {
-    // Only update if data is different
     if (JSON.stringify(data) !== JSON.stringify(passengerData)) {
       setPassengerData(data);
     }
   };
 
-  // Handle payment data updates
-  const handlePaymentDataChange = (data: Record<string, any>) => {
-    // Only update if data is different
-    if (JSON.stringify(data) !== JSON.stringify(paymentData)) {
-      setPaymentData(data);
+  const handleConfirmAndPay = async () => {
+    if (!isBrickReady || !window.paymentBrickController) {
+      console.error("Payment Brick not ready, form invalid, or controller not found.");
+      return;
     }
-  };
 
-  // Handle form submission
-  const handleSubmit = async () => {
     setIsSubmitting(true);
-
     try {
-      // In a real app, you would send this data to your backend
+      const { formData } = await window.paymentBrickController.getFormData();
+      
       const bookingData = {
         tripDetails: {
           outbound: checkout.outboundTrip,
           return: checkout.returnTrip,
         },
         passengers: passengerData,
-        payment: paymentData,
+        payment: formData,
         totalAmount: finalTotal,
       };
 
-      console.log("Booking data:", bookingData);
+      console.log("Submitting final booking data:", bookingData);
+      // This is where you would send the data to your server
+      // await post("/api/reserves", bookingData);
+      // router.push("/booking-confirmation?success=true");
 
-      // TODO: Replace with your actual API endpoint for creating a reserve
-      await post("/api/reserves", bookingData);
-
-      // Redirect to confirmation page
-      router.push("/booking-confirmation?success=true");
     } catch (error) {
-      console.error("Error processing booking:", error);
+      console.error("Error getting form data:", error);
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Navigate between steps
   const goToNextStep = () => {
-    if (currentStep === "passengers") {
-      setCurrentStep("review");
-    } else if (currentStep === "review") {
-      setCurrentStep("payment");
-    } else if (currentStep === "payment") {
-      handleSubmit();
-    }
+    if (currentStep === "passengers") setCurrentStep("review");
+    else if (currentStep === "review") setCurrentStep("payment");
   };
 
   const goToPreviousStep = () => {
-    if (currentStep === "review") {
-      setCurrentStep("passengers");
-    } else if (currentStep === "payment") {
-      setCurrentStep("review");
-    }
+    if (currentStep === "review") setCurrentStep("passengers");
+    else if (currentStep === "payment") setCurrentStep("review");
   };
 
-  // Check if current step is complete
   const isCurrentStepComplete = () => {
     if (currentStep === "passengers") {
       return (
         passengerData.length === checkout.passengers &&
         passengerData.every((p) => p.firstName && p.lastName && p.email)
       );
-    }
-    if (currentStep === "payment") {
-      // The validation for Mercado Pago is handled by the Brick itself.
-      // We assume that if we have paymentData, it is valid.
-      return Object.keys(paymentData).length > 0;
     }
     return true;
   };
@@ -146,7 +124,6 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <main className="container py-8">
-        {/* Back button */}
         <div className="mb-6">
           <Button
             variant="link"
@@ -159,7 +136,6 @@ export default function CheckoutPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Main content - 2/3 width */}
           <div className="md:col-span-2 space-y-6">
             <div className="bg-white rounded-lg border shadow-sm p-6">
               <h1 className="text-2xl font-bold text-blue-800 font-display mb-4">
@@ -272,12 +248,27 @@ export default function CheckoutPage() {
                     </h2>
                     <p className="text-gray-600 mb-6">
                       Su información de pago es segura y está encriptada.
-                      Aceptamos las principales tarjetas de crédito.
                     </p>
-                    <PaymentForm
-                      onDataChange={handlePaymentDataChange}
-                      initialData={paymentData}
-                      amount={finalTotal}
+                    <Payment
+                      initialization={{ amount: finalTotal }}
+                      customization={{
+                        paymentMethods: {
+                          creditCard: "all",
+                          debitCard: "all",
+                          maxInstallments: 1
+                        },
+                        visual: {
+                          hidePaymentButton: true,
+                        },
+                      }}
+                      onReady={() => {
+                        setIsBrickReady(true);
+                      }}
+                      onSubmit={async (formData) => {
+          // Podés manejarlo acá también si usás el botón default
+          return Promise.resolve();
+        }}
+                      onError={(error) => console.error(error)}
                     />
                   </div>
                 )}
@@ -417,6 +408,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between mt-8">
                 {currentStep !== "passengers" ? (
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={goToPreviousStep}
                     disabled={isSubmitting}
@@ -426,41 +418,30 @@ export default function CheckoutPage() {
                 ) : (
                   <div></div>
                 )}
-                <Button
-                  onClick={goToNextStep}
-                  disabled={!isCurrentStepComplete() || isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center">
-                      <svg
-                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Procesando...
-                    </div>
-                  ) : currentStep === "payment" ? (
-                    "Confirmar y Pagar"
-                  ) : (
-                    "Continuar"
-                  )}
-                </Button>
+
+                {currentStep === "payment" ? (
+                  <Button
+                    type="button"
+                    onClick={handleConfirmAndPay}
+                    disabled={!isBrickReady || isSubmitting}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isSubmitting
+                      ? "Procesando..."
+                      : !isBrickReady
+                      ? "Cargando..."
+                      : "Confirmar y Pagar"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={goToNextStep}
+                    disabled={!isCurrentStepComplete() || isSubmitting}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Continuar
+                  </Button>
+                )}
               </div>
             </div>
           </div>

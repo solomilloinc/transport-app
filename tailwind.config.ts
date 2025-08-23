@@ -19,7 +19,7 @@ const config = {
     },
     extend: {
       fontFamily: {
-        sans: ["Raleway", "sans-serif"],
+        sans: ["var(--font-sans)", "sans-serif"],
         display: ["Montserrat", "sans-serif"],
       },
       colors: {
