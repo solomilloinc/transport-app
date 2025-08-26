@@ -2,9 +2,9 @@ export {};
 
 declare global {
   interface Window {
-    paymentBrickController: {
-      getFormData: () => Promise<{ formData: any }>;
+    cardPaymentBrickController?: {
       submit: () => Promise<void>;
-    };
+      unmount?: () => void;
+    } | null;
   }
 }

@@ -16,6 +16,8 @@ export const parseToLocalDate = (isoString: string): Date => {
 /**
  * Formatea una fecha ISO con el timezone local configurado
  */
+
+/*
 export const formatWithTimezone = (
   isoString: string,
   dateFormat: string = "EEEE, d 'de' MMMM 'de' yyyy"
@@ -23,3 +25,14 @@ export const formatWithTimezone = (
   const localDate = parseToLocalDate(isoString);
   return format(localDate, dateFormat, { locale: es });
 };
+*/
+
+export function formatWithTimezone(dateIso?: string, tz = 'America/Argentina/Buenos_Aires') {
+  if (!dateIso) return '';
+  const d = new Date(dateIso);
+  return new Intl.DateTimeFormat('es-AR', {
+    dateStyle: 'medium',
+    timeStyle: undefined,
+    timeZone: tz,
+  }).format(d);
+}

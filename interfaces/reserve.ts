@@ -42,3 +42,8 @@ export interface ReserveSummaryItem {
     DepartureDate: string;
     Price: number;
 }
+
+export interface CreateReserveExternalResult{
+    Status: string | null;
+    PreferenceId: string | null;
+}
