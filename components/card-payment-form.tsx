@@ -46,8 +46,7 @@ export default function CardPaymentForm({
 
   useEffect(() => {
     const key =
-      process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ||
-      process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;
+      process.env.NEXT_PUBLIC_MP_PUBLIC_KEY
 
     if (!key) {
       if (process.env.NODE_ENV !== 'production') {
