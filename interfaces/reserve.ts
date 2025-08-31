@@ -44,6 +44,6 @@ export interface ReserveSummaryItem {
 }
 
 export interface CreateReserveExternalResult{
-    status: string | null;
-    preferenceId: string | null;
+    Status: string;
+    PreferenceId: string | null;
 }

@@ -9,11 +9,12 @@ import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatWithTimezone } from '@/utils/dates';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { PassengerForm } from '@/components/passenger-form';
 import CardPaymentForm from '@/components/card-payment-form';
+import WalletPaymentForm from '@/components/wallet-payment-form';
 import { post } from '@/services/api';
 import { CreateReserveExternalResult } from '@/interfaces/reserve';
 
@@ -27,6 +28,7 @@ export default function CheckoutPage() {
     Array(checkout.passengers || 1).fill(0).map(() => ({})),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'wallet'>('card');
 
   const [formattedDepartureDate, setFormattedDepartureDate] = useState('');
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
@@ -48,6 +50,49 @@ export default function CheckoutPage() {
     }
   };
 
+  const createWalletPayload = useMemo(() => {
+    const items = passengerData.map((p) => ({
+      reserveId: checkout.outboundTrip?.ReserveId ?? 0,
+      reserveTypeId: 1,
+      customerId: null,
+      isPayment: true,
+      pickupLocationId: null,
+      dropoffLocationId: null,
+      hasTraveled: false,
+      price: Number(finalTotal.toFixed(2)),
+      firstName: p.firstName,
+      lastName: p.lastName,
+      email: p.email || '',
+      phone1: p.phone,
+      documentNumber: p.documentNumber,
+    }));
+
+    if (checkout.returnTrip) {
+      items.push(
+        ...passengerData.map((p) => ({
+          reserveId: checkout.returnTrip?.ReserveId ?? 0,
+          reserveTypeId: 2,
+          customerId: null,
+          isPayment: true,
+          pickupLocationId: null,
+          dropoffLocationId: null,
+          hasTraveled: false,
+          price: Number(finalTotal.toFixed(2)),
+          firstName: p.firstName,
+          lastName: p.lastName,
+          email: p.email || '',
+          phone1: p.phone,
+          documentNumber: p.documentNumber,
+        })),
+      );
+    }
+
+    return {
+      Payment: null,
+      Items: items,
+    };
+  }, [passengerData, checkout.outboundTrip, checkout.returnTrip, finalTotal]);
+
   const goToNextStep = () => {
     if (currentStep === 'passengers') setCurrentStep('review');
     else if (currentStep === 'review') setCurrentStep('payment');
@@ -68,7 +113,30 @@ export default function CheckoutPage() {
     return true;
   };
 
-  // Procesar el pago (el Brick llama esto y espera una Promise)
+  // Procesar el pago con Wallet - devuelve preference_id para MP
+  const handleWalletSubmit = useCallback(async (data: {
+    payload: {
+      Payment: null;
+      Items: Array<any>;
+    };
+  }): Promise<string> => {
+    if (!finalTotal || finalTotal <= 0) {
+      throw new Error('El total debe ser mayor a 0.');
+    }
+    
+    const response = await post('/passenger-reserves-create-external', createWalletPayload);
+    const responseData = typeof response === 'string' ? JSON.parse(response) : response;
+
+    // La API debe devolver PreferenceId cuando Payment es null
+    if (!responseData.PreferenceId) {
+      throw new Error('No se recibió PreferenceId del servidor');
+    }
+
+    // Devolver el PreferenceId para que MP abra el wallet
+    return responseData.PreferenceId;
+  }, [finalTotal, createWalletPayload]);
+
+  // Procesar el pago con tarjeta (el Brick llama esto y espera una Promise)
   const handleCardSubmit = async (data: {
     amount: number;
     email: string;
@@ -139,10 +207,10 @@ firstName: p.firstName,
       const responseData: CreateReserveExternalResult =
         typeof response === 'string' ? JSON.parse(response) : response;
 
-      if (responseData.status === 'approved') {
+      if (responseData.Status === 'approved') {
         router.push('/booking-confirmation?success=true');
       } else {
-        router.push(`/booking-confirmation?status=${encodeURIComponent(responseData.status || 'unknown')}`);
+        router.push(`/booking-confirmation?status=${encodeURIComponent(responseData.Status || 'unknown')}`);
       }
     } finally {
       setIsSubmitting(false);
@@ -320,15 +388,70 @@ firstName: p.firstName,
                     <h2 className="text-xl font-medium text-blue-800 mb-4">Detalles del Pago</h2>
                     <p className="text-gray-600 mb-6">Su información de pago es segura y está encriptada.</p>
 
-                    <CardPaymentForm
-                      amount={finalTotal}
-                      maxInstallments={1}
-                      onSubmit={handleCardSubmit}
-                      onError={() => {}}
-                      onPayingChange={(p) => setIsSubmitting(p)}
-                      defaultEmail={passengerData?.[0]?.email}
-                      isSubmitting={isSubmitting}
-                    />
+                    {/* Payment Method Selector */}
+                    <div className="mb-6">
+                      <h3 className="font-medium text-gray-900 mb-3">Seleccione su método de pago</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('card')}
+                          className={`p-4 border rounded-lg text-left transition-colors ${
+                            paymentMethod === 'card'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          disabled={isSubmitting}
+                        >
+                          <div className="flex items-center">
+                            <CreditCard className="h-5 w-5 mr-2" />
+                            <span className="font-medium">Tarjeta de Crédito/Débito</span>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1">Pago seguro con tarjeta</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('wallet')}
+                          className={`p-4 border rounded-lg text-left transition-colors ${
+                            paymentMethod === 'wallet'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          disabled={isSubmitting}
+                        >
+                          <div className="flex items-center">
+                            <Shield className="h-5 w-5 mr-2" />
+                            <span className="font-medium">MercadoPago Wallet</span>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1">Pago con cuenta de MP</p>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Payment Form */}
+                    <div className="mt-6">
+                      {paymentMethod === 'card' ? (
+                        <CardPaymentForm
+                          amount={finalTotal}
+                          maxInstallments={1}
+                          onSubmit={handleCardSubmit}
+                          onError={() => {}}
+                          onPayingChange={(p) => setIsSubmitting(p)}
+                          defaultEmail={passengerData?.[0]?.email}
+                          isSubmitting={isSubmitting}
+                        />
+                      ) : (
+                        <WalletPaymentForm
+                          key="wallet-payment-form"
+                          amount={finalTotal}
+                          onSubmit={handleWalletSubmit}
+                          onError={(error) => {
+                            console.error('Wallet error:', error);
+                          }}
+                          disabled={isSubmitting}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
