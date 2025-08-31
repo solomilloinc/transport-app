@@ -43,10 +43,12 @@ export function EditPassengerReserveDialog({
   const handleSubmit = () => {
     form.handleSubmit(async (data) => {
       try {
-        const response = await post('/customer-reserve-update', {
-          ...data,
-          CustomerReserveId: passengerReserve?.CustomerReserveId,
-        });
+        const response = await post(
+          `/passenger-reserve-update/${passengerReserve?.PassengerId}`,
+          {
+            ...data,
+          }
+        );
 
         if (response) {
           toast({

@@ -150,6 +150,7 @@ export function AddReservationFlow({
         Price: initialTrip!.Prices.find((price) => price.ReserveTypeId === data.ReserveTypeId)?.Price || 0,
       };
 
+      console.log(initialTrip)
       setPassengerReserves([reserveData]);
 
       if (data.ReserveTypeId === 2) {
@@ -170,6 +171,9 @@ export function AddReservationFlow({
         return;
       }
 
+      console.log(returnTrip)
+
+      console.log(data)
       const returnReserveData: PassengerReserveCreate = {
         ...data,
         ReserveId: returnTrip.ReserveId,
@@ -186,7 +190,13 @@ export function AddReservationFlow({
 
   const handleAddPayment = () => {
     if (Number(paymentAmount) > 0) {
-      setReservationPayments((prev) => [...prev, { PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: Number(paymentAmount) }]);
+      const newPayment = { PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: Number(paymentAmount) };
+      console.log('➕ Agregando pago:', newPayment);
+      setReservationPayments((prev) => {
+        const updated = [...prev, newPayment];
+        console.log('💰 Lista de pagos actualizada:', updated);
+        return updated;
+      });
       setSelectedPaymentMethod('1');
       setPaymentAmount('');
     }
@@ -200,10 +210,36 @@ export function AddReservationFlow({
     return reservationPayments.reduce((total, payment) => total + payment.TransactionAmount, 0);
   };
 
+  const getTotalReserveAmount = () => {
+    return passengerReserves.reduce((total, reserve) => total + reserve.Price, 0);
+  };
+
   const finalizeReservation = async () => {
     reserveForm.setIsSubmitting(true);
+    
+    console.log('🏁 Finalizando reserva...');
+    console.log('📦 Reservas de pasajeros:', passengerReserves);
+    console.log('💰 Pagos existentes:', reservationPayments);
+    console.log('✅ Tiene pago habilitado:', reserveForm.data.IsPayment);
+    
+    let paymentsToSend: Payment[] = [];
+    
+    if (reserveForm.data.IsPayment) {
+      // Si está marcado "Registrar pago", crear automáticamente el pago con el total
+      if (reservationPayments.length === 0) {
+        // Auto-crear pago con el total si no hay pagos agregados
+        const totalAmount = getTotalReserveAmount();
+        paymentsToSend = [{ PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: totalAmount }];
+        console.log('🤖 Auto-creando pago con total:', paymentsToSend[0]);
+      } else {
+        // Usar los pagos que ya se agregaron manualmente
+        paymentsToSend = reservationPayments;
+        console.log('👤 Usando pagos manuales:', paymentsToSend);
+      }
+    }
+    
     try {
-      const response = await post('/passenger-reserves-create', { items: passengerReserves, payments: reservationPayments });
+      const response = await post('/passenger-reserves-create', { items: passengerReserves, payments: paymentsToSend });
       if (response) {
         toast({ title: 'Reserva creada', description: 'La reserva ha sido creada exitosamente.', variant: 'success' });
         onSuccess();
@@ -440,7 +476,12 @@ export function AddReservationFlow({
                     />
                   </FormField>
                   <FormField label="Monto" className="flex-1">
-                    <Input type="number" placeholder="Monto" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
+                    <Input 
+                      type="number" 
+                      placeholder={`Total: $${getTotalReserveAmount().toLocaleString()}`}
+                      value={paymentAmount || (reservationPayments.length === 0 ? getTotalReserveAmount().toString() : '')} 
+                      onChange={(e) => setPaymentAmount(e.target.value)} 
+                    />
                   </FormField>
                   <Button size="icon" onClick={handleAddPayment} disabled={!paymentAmount || Number(paymentAmount) <= 0}>
                     <PlusCircleIcon className="h-4 w-4" />

@@ -98,7 +98,7 @@ export function PassengerListTable({
         </thead>
         <tbody>
           {passengers.map((passenger) => (
-            <tr key={passenger.CustomerReserveId} className="border-b">
+            <tr key={passenger.PassengerId} className="border-b">
               <td className="py-3 pr-4">
                 <div className="flex items-center">
                   <Checkbox
@@ -108,7 +108,7 @@ export function PassengerListTable({
                     className="mr-2"
                   />
                   <div>
-                    <label htmlFor={`passenger-${passenger.CustomerReserveId}`} className="font-medium">
+                    <label htmlFor={`passenger-${passenger.PassengerId}`} className="font-medium">
                       {passenger.FullName}
                     </label>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -129,14 +129,14 @@ export function PassengerListTable({
                 {passenger.PickupLocationName}
               </td>
               <td className="py-3 pr-4 text-center">
-                <Checkbox id={`paid-${passenger.CustomerReserveId}`} checked={passenger.IsPayment} className="mx-auto" disabled />
+                <Checkbox id={`paid-${passenger.PassengerId}`} checked={passenger.IsPayment} className="mx-auto" disabled />
               </td>
               <td className="py-3 pr-4 text-center">{passenger.PaymentMethodName}</td>
               <td className="py-3 pr-4 text-center">
                 <Input
                   type="text"
                   value={passenger.Price}
-                  onChange={(e) => onPriceChange(passenger.CustomerReserveId, e.target.value)}
+                  onChange={(e) => onPriceChange(passenger.PassengerId, e.target.value)}
                   className={`w-24 text-right font-mono mx-auto ${!passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!passenger.IsPayment}
                 />

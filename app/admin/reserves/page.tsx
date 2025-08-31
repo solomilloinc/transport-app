@@ -99,6 +99,7 @@ export default function ReservationsPage() {
     if (!selectedTrip) return;
     fetchPassengerReserves(selectedTrip.ReserveId);
     loadAllOptions();
+    loadPaymentMethod();
   }, [selectedTrip]);
 
   const loadPaymentMethod = async () => {
@@ -161,7 +162,7 @@ export default function ReservationsPage() {
       setIsDeleting(true);
       try {
         // You can use the 'action' variable here to call different backend endpoints if needed
-        await deleteLogic(`/customer-reserve-delete/${selectedPassengerReserve.CustomerReserveId}`);
+        await deleteLogic(`/customer-reserve-delete/${selectedPassengerReserve.PassengerId}`);
         toast({ title: 'Pasajero eliminado', description: 'El pasajero ha sido eliminado de la reserva.', variant: 'success' });
         setIsDeleteModalOpen(false);
         setSelectedPassengerReserve(null);

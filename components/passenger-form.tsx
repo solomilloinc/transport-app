@@ -31,6 +31,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
           lastName: "",
           email: "",
           phone: "",
+          documentNumber: "",
           dateOfBirth: "",
           specialRequests: "",
         }))
@@ -132,6 +133,16 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                         value={passengers[index]?.phone || ""}
                         onChange={(e) => handleInputChange(index, "phone", e.target.value)}
                         placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`documentNumber-${index}`}>Número de Documento *</Label>
+                      <Input
+                        id={`documentNumber-${index}`}
+                        value={passengers[index]?.documentNumber || ""}
+                        onChange={(e) => handleInputChange(index, "documentNumber", e.target.value)}
+                        placeholder="DNI, Cédula, Pasaporte"
+                        required
                       />
                     </div>
                     <div className="space-y-2">

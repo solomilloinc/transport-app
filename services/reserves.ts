@@ -9,13 +9,13 @@ import { PassengerReserveReport } from "@/interfaces/passengerReserve";
 export const getReserves = (date: string): UseApiCall<ReserveReport> => {
   const finalParams = withDefaultPagination();
   return {
-    call: get<any, PagedResponse<ReserveReport>>( ` /reserve-report/${date}`, finalParams),
+    call: get<any, PagedResponse<ReserveReport>>( `/reserve-report/${date}`, finalParams),
   };
 };
 
 export const getPassengerReserves = (id: number): UseApiCall<PassengerReserveReport> => {
   const finalParams = withDefaultPagination();
   return {
-    call: get<any, PagedResponse<PassengerReserveReport>>( ` /customer-reserve-report/${id}`, finalParams),
+    call: get<any, PagedResponse<PassengerReserveReport>>( `/passenger-reserve-report/${id}`, finalParams),
   };
 };

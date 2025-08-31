@@ -2,7 +2,7 @@ import { Auditable } from "./auditable"
 import { Payment } from "./payment"
 
 export interface PassengerReserve extends Auditable {
-    CustomerReserveId: number
+    PassengerId: number
     ReserveId: number
     CustomerId: number
     IsPayment: boolean
@@ -35,7 +35,8 @@ export interface PassengerReserveCreate extends Omit<PassengerReserve, 'Customer
 }
 
 export const emptyPassengerCreate: PassengerReserveCreate = {
-    ReserveId: 0,
+  PassengerId: 0,
+  ReserveId: 0,
   CustomerId: 0,
   PickupLocationId: 0,
   DropoffLocationId: 0,

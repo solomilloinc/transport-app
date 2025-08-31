@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       roles: ['admin', 'user'],
     },
     {
-      name: 'Pasajeros',
+      name: 'Clientes',
       icon: Users,
       path: '/admin/passengers',
       key: 'passengers',

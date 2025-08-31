@@ -90,16 +90,15 @@ export default function CheckoutPage() {
         reserveTypeId: 1,
         customerId: null,
         isPayment: true,
-        pickupLocationId: 0,
-        dropoffLocationId: 0,
+        pickupLocationId: null,
+        dropoffLocationId: null,
         hasTraveled: false,
         price: Number(finalTotal.toFixed(2)),
-        customerCreate: {
-          firstName: p.firstName,
-          lastName: p.lastName,
-          email: p.email,
-          documentNumber: p.documentNumber || data?.identification?.number,
-        },
+        firstName: p.firstName,
+        lastName: p.lastName,
+        email: p.email,
+        phone1: p.phone,
+        documentNumber: p.documentNumber,
       }));
 
       if (checkout.returnTrip) {
@@ -109,16 +108,15 @@ export default function CheckoutPage() {
             reserveTypeId: 2,
             customerId: null,
             isPayment: true,
-            pickupLocationId: 0,
-            dropoffLocationId: 0,
+            pickupLocationId: null,
+            dropoffLocationId: null,
             hasTraveled: false,
             price: Number(finalTotal.toFixed(2)),
-            customerCreate: {
-              firstName: p.firstName,
-              lastName: p.lastName,
-              email: p.email,
-              documentNumber: p.documentNumber || data?.identification?.number,
-            },
+firstName: p.firstName,
+        lastName: p.lastName,
+        email: p.email,
+        phone1: p.phone,
+        documentNumber: p.documentNumber,
           })),
         );
       }

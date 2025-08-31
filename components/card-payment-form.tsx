@@ -122,7 +122,9 @@ export default function CardPaymentForm({
           <CardPayment
             initialization={{
               amount: effectiveAmount,
-              ...(defaultEmail ? { payer: { email: defaultEmail } } : {}),
+              payer: {
+                email:  '',
+              },
             }}
             customization={{
               paymentMethods: { 
@@ -131,6 +133,7 @@ export default function CardPaymentForm({
               },
               visual: { 
                 hidePaymentButton: false,
+                hideFormTitle: true,
                 style: {
                   theme: 'bootstrap',
                   customVariables: {
