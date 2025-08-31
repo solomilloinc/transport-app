@@ -6,7 +6,7 @@ export const validationConfigPassenger = {
     required: { message: 'El apellido es requerido' },
   },
   Email: {
-    required: { message: 'El email es requerido' },
+    // Email is optional
   },
   DocumentNumber: {
     required: { message: 'El número de documento es requerido' },

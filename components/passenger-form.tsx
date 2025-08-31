@@ -32,7 +32,6 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
           email: "",
           phone: "",
           documentNumber: "",
-          dateOfBirth: "",
           specialRequests: "",
         }))
       setPassengers(initialPassengers)
@@ -115,14 +114,13 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`email-${index}`}>Email *</Label>
+                      <Label htmlFor={`email-${index}`}>Email</Label>
                       <Input
                         id={`email-${index}`}
                         type="email"
                         value={passengers[index]?.email || ""}
                         onChange={(e) => handleInputChange(index, "email", e.target.value)}
                         placeholder="Enter email address"
-                        required
                       />
                     </div>
                     <div className="space-y-2">
@@ -143,15 +141,6 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                         onChange={(e) => handleInputChange(index, "documentNumber", e.target.value)}
                         placeholder="DNI, Cédula, Pasaporte"
                         required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`dateOfBirth-${index}`}>Fecha de Nacimiento</Label>
-                      <Input
-                        id={`dateOfBirth-${index}`}
-                        type="date"
-                        value={passengers[index]?.dateOfBirth || ""}
-                        onChange={(e) => handleInputChange(index, "dateOfBirth", e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">

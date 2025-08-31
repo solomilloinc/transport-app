@@ -62,7 +62,7 @@ export default function CheckoutPage() {
     if (currentStep === 'passengers') {
       return (
         passengerData.length === checkout.passengers &&
-        passengerData.every((p) => p.firstName && p.lastName && p.email)
+        passengerData.every((p) => p.firstName && p.lastName && p.documentNumber)
       );
     }
     return true;
@@ -288,7 +288,7 @@ firstName: p.firstName,
                               <div className="font-medium">
                                 Pasajero {idx + 1}: {p.firstName} {p.lastName}
                               </div>
-                              <div className="text-gray-600">{p.email}</div>
+                              {p.email && <div className="text-gray-600">{p.email}</div>}
                               {p.specialRequests && (
                                 <div className="text-gray-600 mt-1">
                                   <span className="font-medium">Solicitudes Especiales:</span> {p.specialRequests}
