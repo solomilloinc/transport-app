@@ -85,6 +85,24 @@ export const nextAuthOptions: NextAuthOptions = {
       (session as any).accessToken = token.accessToken;
       return session;
     },
+
+    async redirect({ url, baseUrl }) {
+      // If signing in and user is admin, redirect to admin/reserves
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return baseUrl;
+      }
+      
+      // If user is going to /admin, they'll be handled by the page component
+      if (url.startsWith(`${baseUrl}/admin`) || url.startsWith('/admin')) {
+        return url;
+      }
+
+      // Default behavior
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      
+      return baseUrl;
+    },
   },
 
   secret: process.env.NEXTAUTH_SECRET

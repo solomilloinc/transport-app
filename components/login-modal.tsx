@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Lock, AlertCircle } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 interface LoginModalProps {
@@ -49,9 +49,16 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         return;
       }
 
-      // Success - close modal and refresh
+      // Success - get user session to check role
+      const session = await getSession();
       onClose();
-      router.refresh();
+      
+      // Redirect based on user role
+      if (session?.user?.role === 'admin') {
+        router.push('/admin/reserves');
+      } else {
+        router.refresh(); // Regular user stays on current page
+      }
     } catch (error) {
       setError("An error occurred. Please try again.");
       setIsLoading(false);
@@ -63,7 +70,23 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError(null);
 
     try {
-      await signIn("google");
+      const result = await signIn("google", { redirect: false });
+      if (result?.error) {
+        setError("Error con login de Google");
+        setIsLoading(false);
+        return;
+      }
+
+      // Success - get user session to check role
+      const session = await getSession();
+      onClose();
+      
+      // Redirect based on user role
+      if (session?.user?.role === 'admin') {
+        router.push('/admin/reserves');
+      } else {
+        router.refresh(); // Regular user stays on current page
+      }
     } catch (error) {
       setError("An error occurred with Google login. Please try again.");
       setIsLoading(false);

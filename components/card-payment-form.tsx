@@ -50,7 +50,7 @@ export default function CardPaymentForm({
 
     if (!key) {
       if (process.env.NODE_ENV !== 'production') {
-        console.warn('[MP] Falta NEXT_PUBLIC_MP_PUBLIC_KEY (o NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY) en .env.local');
+        console.warn('[MP] Falta NEXT_PUBLIC_MP_PUBLIC_KEY en .env.local');
       }
       return;
     }
