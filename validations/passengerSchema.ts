@@ -1,3 +1,5 @@
+import { emailRule } from "@/utils/validation-rules";
+
 export const validationConfigPassenger = {
   FirstName: {
     required: { message: 'El nombre es requerido' },
@@ -6,7 +8,8 @@ export const validationConfigPassenger = {
     required: { message: 'El apellido es requerido' },
   },
   Email: {
-    // Email is optional
+    required: { message: 'El correo electrónico es requerido' },
+    rules: [emailRule],
   },
   DocumentNumber: {
     required: { message: 'El número de documento es requerido' },

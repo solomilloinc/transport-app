@@ -245,41 +245,39 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
           )}
         </Tabs>
       </div>
-       {/* Booking information */}
+       {/* Información de la reserva */}
         <Card className="mb-8">
           <CardContent className="p-6">
             <h2 className="text-xl font-bold text-blue-800 font-display mb-4">
-              Booking Information
+              Información de la Reserva
             </h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-medium text-blue-800 mb-2">
-                  Payment Methods
+                  Métodos de Pago
                 </h3>
                 <div className="flex items-center gap-2 text-gray-600 mb-1">
                   <CreditCard className="h-4 w-4" />
-                  <span>Credit/Debit Cards</span>
+                  <span>Tarjetas de Crédito/Débito</span>
                 </div>
                 <p className="text-sm text-gray-500">
-                  We accept Visa, Mastercard, American Express, and Discover.
+                  Aceptamos Visa, Mastercard, American Express y Discover.
                 </p>
               </div>
               <div>
                 <h3 className="font-medium text-blue-800 mb-2">
-                  Cancellation Policy
+                  Política de Cancelación
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Free cancellation up to 24 hours before departure. A 50% fee
-                  applies for cancellations made less than 24 hours before
-                  departure.
+                  Cancelación gratuita hasta 24 horas antes de la salida. Se aplica una tarifa del 50% para cancelaciones realizadas con menos de 24 horas de antelación.
                 </p>
               </div>
             </div>
           </CardContent>
           <CardFooter className="bg-gray-50 px-6 py-4 border-t">
             <div className="text-sm text-gray-600">
-              Need assistance? Call us at{" "}
-              <span className="font-medium">(555) 123-4567</span> or email{" "}
+              ¿Necesitas ayuda? Llámanos al{" "}
+              <span className="font-medium">(555) 123-4567</span> o envíanos un correo electrónico a{" "}
               <span className="font-medium">bookings@familytransit.com</span>
             </div>
           </CardFooter>

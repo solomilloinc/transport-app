@@ -22,36 +22,13 @@ import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
-import { Passenger } from '@/interfaces/passengers';
+import { PagedResponse, PaginationParams } from '@/services/types';
+import { emptyPassenger, Passenger } from '@/interfaces/passengers';
 import { useFormValidation } from '@/hooks/use-form-validation';
-
-const initialPassengersForm = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  documentNumber: '',
-  phone1: '',
-  phone2: '',
-};
-
-const validationConfig = {
-  firstName: {
-    required: { message: 'El nombre es requerido' },
-  },
-  lastName: {
-    required: { message: 'El apellido es requerido' },
-  },
-  email: {
-    required: { message: 'El email es requerido' },
-  },
-  documentNumber: {
-    required: { message: 'El número de documento es requerido' },
-  },
-  phone1: {
-    required: { message: 'El teléfono 1 es requerido' },
-  },
-};
+import { useApi } from '@/hooks/use-api';
+import { usePaginationParams } from '@/utils/pagination';
+import { getPassengers } from '@/services/passenger';
+import { validationConfigPassenger } from '@/validations/passengerSchema';
 
 export default function PassengersManagement() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,45 +43,20 @@ export default function PassengersManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentPassengersId, setCurrentPassengersId] = useState<number | null>(null);
 
-  const addForm = useFormValidation(initialPassengersForm, validationConfig);
+  const addForm = useFormValidation(emptyPassenger, validationConfigPassenger);
 
   // Form state for editing a vehicle
-  const editForm = useFormValidation(initialPassengersForm, validationConfig);
+  const editForm = useFormValidation(emptyPassenger, validationConfigPassenger);
 
-  // State for the paged response
-  const [passengersData, setPassengersData] = useState<PagedResponse<Passenger>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
+  const params = usePaginationParams({
+      pageNumber: currentPage,
+      filters: { search: searchQuery },
   });
-  // Function to fetch vehicles data
-  const fetchPassengers = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, Passenger>('/customer-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery
-          ? {
-              search: searchQuery,
-            }
-          : {},
-      });
-      setPassengersData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch vehicles when search changes or on initial load
-  useEffect(() => {
-    fetchPassengers(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
+  
+  const { data, loading, error, fetch } = useApi<Passenger, PaginationParams>(getPassengers, {
+      autoFetch: true,
+      params: params,
+  });
 
   const submitAddPassenger = async () => {
     addForm.handleSubmit(async (data) => {
@@ -117,7 +69,7 @@ export default function PassengersManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetchPassengers(); // Refresh the vehicle list
+          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -146,7 +98,7 @@ export default function PassengersManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetchPassengers(); // Refresh the vehicle list
+         fetch({ pageNumber: currentPage }); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -198,7 +150,7 @@ export default function PassengersManagement() {
     const id = await deleteLogic(`/customer-delete/${currentPassengersId}`);
     setIsDeleteModalOpen(false);
     setCurrentPassengersId(null);
-    fetchPassengers();
+    fetch({ pageNumber: currentPage });
   };
 
   const resetFilters = () => {
@@ -269,19 +221,19 @@ export default function PassengersManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={passengersData.Items}
+                data={data.Items}
                 emptyMessage="No se encontraron pasajeros."
                 isLoading={isLoading}
-                skeletonRows={passengersData.PageSize}
+                skeletonRows={data.PageSize}
               />
             </div>
 
-            {passengersData.Items.length > 0 && (
+            {data.Items.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={passengersData.TotalPages}
-                totalItems={passengersData.TotalRecords}
-                itemsPerPage={passengersData.PageSize}
+                totalPages={data.TotalPages}
+                totalItems={data.TotalRecords}
+                itemsPerPage={data.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="pasajeros"
               />
@@ -312,8 +264,8 @@ export default function PassengersManagement() {
               </CardContent>
             </Card>
           ))
-        ) : passengersData.Items.length > 0 ? (
-          passengersData.Items.map((passenger: Passenger) => (
+        ) : data.Items.length > 0 ? (
+          data.Items.map((passenger: Passenger) => (
             <MobileCard
               key={passenger.CustomerId}
               title={`${passenger.FirstName} ${passenger.LastName}`}
@@ -343,41 +295,41 @@ export default function PassengersManagement() {
         submitText="Crear pasajero"
         isLoading={addForm.isSubmitting}
       >
-        <FormField label="Nombre" required error={addForm.errors.firstName}>
+        <FormField label="Nombre" required error={addForm.errors.FirstName}>
           <Input
             id="first-name"
-            value={addForm.data.firstName}
+            value={addForm.data.FirstName}
             type="text"
             placeholder="Nombre"
-            onChange={(e) => addForm.setField('firstName', e.target.value)}
+            onChange={(e) => addForm.setField('FirstName', e.target.value)}
           />
         </FormField>
-        <FormField label="Apellido" required error={addForm.errors.lastName}>
+        <FormField label="Apellido" required error={addForm.errors.LastName}>
           <Input
             id="last-name"
-            value={addForm.data.lastName}
+            value={addForm.data.LastName}
             placeholder="Apellido"
             type="text"
-            onChange={(e) => addForm.setField('lastName', e.target.value)}
+            onChange={(e) => addForm.setField('LastName', e.target.value)}
           />
         </FormField>
-        <FormField label="Email" required error={addForm.errors.email}>
-          <Input id="email" value={addForm.data.email} onChange={(e) => addForm.setField('email', e.target.value)} />
+        <FormField label="Email" required error={addForm.errors.Email}>
+          <Input id="email" value={addForm.data.Email} onChange={(e) => addForm.setField('Email', e.target.value)} />
         </FormField>
         <FormField label="Número de documento" required error={addForm.errors.documentNumber}>
           <Input
             id="documentNumber"
-            value={addForm.data.documentNumber}
+            value={addForm.data.DocumentNumber}
             placeholder="Número de documento"
             type="number"
-            onChange={(e) => addForm.setField('documentNumber', e.target.value)}
+            onChange={(e) => addForm.setField('DocumentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono 1" required error={addForm.errors.phone1}>
-          <Input id="phone1" value={addForm.data.phone1} onChange={(e) => addForm.setField('phone1', e.target.value)} />
+        <FormField label="Teléfono 1" required error={addForm.errors.Phone1}>
+          <Input id="phone1" value={addForm.data.Phone1} onChange={(e) => addForm.setField('Phone1', e.target.value)} />
         </FormField>
         <FormField label="Teléfono 2">
-          <Input id="phone2" value={addForm.data.phone2} onChange={(e) => addForm.setField('phone2', e.target.value)} />
+          <Input id="phone2" value={addForm.data.Phone2} onChange={(e) => addForm.setField('Phone2', e.target.value)} />
         </FormField>
       </FormDialog>
 
@@ -391,50 +343,50 @@ export default function PassengersManagement() {
         submitText="Guardar Cambios"
         isLoading={editForm.isSubmitting}
       >
-        <FormField label="Nombre" required error={editForm.errors.firstName}>
+        <FormField label="Nombre" required error={editForm.errors.FirstName}>
           <Input
             id="first-name"
             type="text"
             placeholder="Nombre"
-            value={editForm.data.firstName}
-            onChange={(e) => editForm.setField('firstName', e.target.value)}
+            value={editForm.data.FirstName}
+            onChange={(e) => editForm.setField('FirstName', e.target.value)}
           />
         </FormField>
-        <FormField label="Apellido" required error={editForm.errors.lastName}>
+        <FormField label="Apellido" required error={editForm.errors.LastName}>
           <Input
             id="last-name"
-            value={editForm.data.lastName}
+            value={editForm.data.LastName}
             type="text"
             placeholder="Apellido"
-            onChange={(e) => editForm.setField('lastName', e.target.value)}
+            onChange={(e) => editForm.setField('LastName', e.target.value)}
           />
         </FormField>
-        <FormField label="Email" required error={editForm.errors.email}>
-          <Input id="email" value={editForm.data.email} onChange={(e) => editForm.setField('email', e.target.value)} />
+        <FormField label="Email" required error={editForm.errors.Email}>
+          <Input id="email" value={editForm.data.Email} onChange={(e) => editForm.setField('Email', e.target.value)} />
         </FormField>
-        <FormField label="Número de documento" required error={editForm.errors.documentNumber}>
+        <FormField label="Número de documento" required error={editForm.errors.DocumentNumber}>
           <Input
             id="document-number"
             type="number"
             placeholder="Número de documento"
-            value={editForm.data.documentNumber}
-            onChange={(e) => editForm.setField('documentNumber', e.target.value)}
+            value={editForm.data.DocumentNumber}
+            onChange={(e) => editForm.setField('DocumentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono 1" required error={editForm.errors.phone1}>
+        <FormField label="Teléfono 1" required error={editForm.errors.Phone1}>
           <Input
             id="phone1"
             type="text"
             placeholder="Teléfono 1"
-            value={editForm.data.phone1}
-            onChange={(e) => editForm.setField('phone1', e.target.value)}
+            value={editForm.data.Phone1}
+            onChange={(e) => editForm.setField('Phone1', e.target.value)}
           />
         </FormField>
         <FormField label="Teléfono 2">
           <Input
             id="phone2"
-            value={editForm.data.phone2}
-            onChange={(e) => editForm.setField('phone2', e.target.value)}
+            value={editForm.data.Phone2}
+            onChange={(e) => editForm.setField('Phone2', e.target.value)}
           />
         </FormField>
       </FormDialog>

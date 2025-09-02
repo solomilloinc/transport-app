@@ -22,9 +22,12 @@ import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
+import { PagedResponse, PaginationParams } from '@/services/types';
 import { Holiday } from '@/interfaces/holiday';
 import { useFormValidation } from '@/hooks/use-form-validation';
+import { usePaginationParams } from '@/utils/pagination';
+import { useApi } from '@/hooks/use-api';
+import { getHolidays } from '@/services/holiday';
 
 const initialHolidaysForm = {
   holidayName: '',
@@ -46,7 +49,6 @@ export default function HolidaysManagement() {
 
   // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -58,40 +60,15 @@ export default function HolidaysManagement() {
   // Form state for editing a vehicle
   const editForm = useFormValidation(initialHolidaysForm, validationConfig);
 
-  // State for the paged response
-  const [holidaysData, setHolidaysData] = useState<PagedResponse<Holiday>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
+  const params = usePaginationParams({
+      pageNumber: currentPage,
+      filters: { search: searchQuery },
   });
-  // Function to fetch data
-  const fetchHolidays = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, Holiday>('/holiday-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery
-          ? {
-              search: searchQuery,
-            }
-          : {},
-      });
-      setHolidaysData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch when search changes or on initial load
-  useEffect(() => {
-    fetchHolidays(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
+  
+  const { data, loading, error, fetch } = useApi<Holiday, PaginationParams>(getHolidays, {
+      autoFetch: true,
+      params: params,
+  });
 
   const submitAddHoliday = async () => {
     addForm.handleSubmit(async (data) => {
@@ -104,7 +81,7 @@ export default function HolidaysManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetchHolidays(); // Refresh the list
+          fetch({ pageNumber: currentPage }); // Refresh the list
         } else {
           toast({
             title: 'Error',
@@ -133,7 +110,7 @@ export default function HolidaysManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetchHolidays(); // Refresh the list
+          fetch({ pageNumber: currentPage });
         } else {
           toast({
             title: 'Error',
@@ -181,7 +158,7 @@ export default function HolidaysManagement() {
     const id = await deleteLogic(`/holiday-delete/${currentHolidaysId}`);
     setIsDeleteModalOpen(false);
     setCurrentHolidaysId(null);
-    fetchHolidays();
+    fetch({ pageNumber: currentPage });
   };
 
   const resetFilters = () => {
@@ -243,19 +220,19 @@ export default function HolidaysManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={holidaysData.Items}
+                data={data.Items}
                 emptyMessage="No se encontraron feriados."
                 isLoading={isLoading}
-                skeletonRows={holidaysData.PageSize}
+                skeletonRows={data.PageSize}
               />
             </div>
 
-            {holidaysData.Items.length > 0 && (
+            {data.Items.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={holidaysData.TotalPages}
-                totalItems={holidaysData.TotalRecords}
-                itemsPerPage={holidaysData.PageSize}
+                totalPages={data.TotalPages}
+                totalItems={data.TotalRecords}
+                itemsPerPage={data.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="pasajeros"
               />
@@ -286,8 +263,8 @@ export default function HolidaysManagement() {
               </CardContent>
             </Card>
           ))
-        ) : holidaysData.Items.length > 0 ? (
-          holidaysData.Items.map((holiday: Holiday) => (
+        ) : data.Items.length > 0 ? (
+          data.Items.map((holiday: Holiday) => (
             <MobileCard
               key={holiday.HolidayId}
               title={`${holiday.HolidayName}`}
