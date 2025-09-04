@@ -20,7 +20,14 @@ import { CreateReserveExternalResult } from '@/interfaces/reserve';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { checkout } = useCheckout();
+  const { checkout, clearCheckout } = useCheckout();
+
+  // If there's no outbound trip, there's nothing to check out. Redirect to home.
+  useEffect(() => {
+    if (!checkout.outboundTrip) {
+      router.replace('/');
+    }
+  }, [checkout.outboundTrip, router]);
 
   const [currentStep, setCurrentStep] =
     useState<'passengers' | 'payment' | 'review'>('passengers');
@@ -34,14 +41,18 @@ export default function CheckoutPage() {
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
   
   useEffect(() => {
-    setFormattedDepartureDate(formatWithTimezone(checkout.outboundTrip?.DepartureDate ?? ''));
-    setFormattedReturnDate(formatWithTimezone(checkout.returnTrip?.DepartureDate ?? ''));
-  }, [checkout.outboundTrip?.DepartureDate, checkout.returnTrip?.DepartureDate]);
+    if (checkout.outboundTrip) {
+      setFormattedDepartureDate(formatWithTimezone(checkout.outboundTrip.DepartureDate ?? ''));
+    }
+    if (checkout.returnTrip) {
+      setFormattedReturnDate(formatWithTimezone(checkout.returnTrip.DepartureDate ?? ''));
+    }
+  }, [checkout.outboundTrip, checkout.returnTrip]);
 
   const outboundPrice = checkout.outboundTrip?.Price || 0;
   const returnPrice  = checkout.returnTrip?.Price  || 0;
   const totalPrice   = (outboundPrice + returnPrice) * checkout.passengers;
-  const serviceFee   = 2.5 * checkout.passengers;
+  const serviceFee   = 0;
   const finalTotal   = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
 
   const handlePassengerDataChange = (data: Record<string, any>[]) => {
@@ -208,7 +219,9 @@ firstName: p.firstName,
         typeof response === 'string' ? JSON.parse(response) : response;
 
       if (responseData.Status === 'approved') {
-        router.push('/booking-confirmation?success=true');
+        const reserveId = checkout.outboundTrip?.ReserveId;
+        router.push(`/booking-confirmation?success=true&reserveId=${reserveId}`);
+        clearCheckout();
       } else {
         router.push(`/booking-confirmation?status=${encodeURIComponent(responseData.Status || 'unknown')}`);
       }
@@ -216,6 +229,11 @@ firstName: p.firstName,
       setIsSubmitting(false);
     }
   };
+
+  // If there's no trip, don't render the checkout form to prevent errors while redirecting
+  if (!checkout.outboundTrip) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -568,10 +586,10 @@ firstName: p.firstName,
                       <span>${(returnPrice * checkout.passengers).toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
+                  {/* <div className="flex justify-between">
                     <span className="text-gray-600">Tasa de servicio</span>
                     <span>${serviceFee.toFixed(2)}</span>
-                  </div>
+                  </div> */}
                 </div>
 
                 <Separator className="my-4" />

@@ -1,4 +1,5 @@
-import { emailRule } from "@/utils/validation-rules";
+import { emailRule, maxLengthRule, minLengthRule, numbersOnlyRule } from "@/utils/validation-rules";
+import { ru } from "date-fns/locale";
 
 export const validationConfigPassenger = {
   FirstName: {
@@ -13,6 +14,7 @@ export const validationConfigPassenger = {
   },
   DocumentNumber: {
     required: { message: 'El número de documento es requerido' },
+    rules: [minLengthRule(7), maxLengthRule(8), numbersOnlyRule],
   },
   Phone1: {
     required: { message: 'El teléfono 1 es requerido' },
