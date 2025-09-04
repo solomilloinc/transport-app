@@ -1,4 +1,4 @@
-export const revalidate = 86400;
+export const revalidate = 86400; // Revalidate every 24 hours
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { get } from '@/services/api';
@@ -17,13 +17,17 @@ import { PagedResponse } from '@/services/types';
 async function loadCities(): Promise<SelectOption[]> {
   try {
     // Usamos skipAuth: true asumiendo que esta data es pública.
-    const response = await get<any, PagedResponse<City>>('/city-report', {
-      pageNumber: 1,
-      pageSize: 100,
-      sortBy: 'Name',
-      sortDescending: false,
-      filters: {},
-    });
+    const response = await get<any, PagedResponse<City>>(
+      '/city-report',
+      {
+        pageNumber: 1,
+        pageSize: 100,
+        sortBy: 'Name',
+        sortDescending: false,
+        filters: {},
+      },
+      { skipAuth: true }, // Mark this request as public
+    );
 
     if (response && response.Items) {
       const formattedCities: SelectOption[] = response.Items.map((city) => ({
