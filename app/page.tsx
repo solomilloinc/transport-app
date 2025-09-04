@@ -1,3 +1,4 @@
+export const revalidate = 86400;
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { get } from '@/services/api';

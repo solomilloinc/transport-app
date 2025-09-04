@@ -237,19 +237,19 @@ export default function DirectionManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data.Items}
+                data={data?.Items ?? []}
                 emptyMessage="No se encontraron direcciones."
                 isLoading={loading}
-                skeletonRows={data.PageSize}
+                skeletonRows={data?.PageSize}
               />
             </div>
 
-            {data.Items.length > 0 && (
+            {data?.Items?.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data.TotalPages}
-                totalItems={data.TotalRecords}
-                itemsPerPage={data.PageSize}
+                totalPages={data?.TotalPages}
+                totalItems={data?.TotalRecords}
+                itemsPerPage={data?.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="direcciones"
               />
@@ -260,7 +260,7 @@ export default function DirectionManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {loading ? (
+        {loading && data?.Items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -280,8 +280,8 @@ export default function DirectionManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data.Items.length > 0 ? (
-          data.Items.map((direction) => (
+        ) : data?.Items?.length > 0 ? (
+          data?.Items?.map((direction) => (
             <MobileCard
               key={direction.DirectionId}
               title={direction.Name}

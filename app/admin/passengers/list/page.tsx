@@ -221,19 +221,19 @@ export default function PassengersManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data.Items}
+                data={data?.Items ?? []}
                 emptyMessage="No se encontraron pasajeros."
                 isLoading={isLoading}
-                skeletonRows={data.PageSize}
+                skeletonRows={data?.PageSize}
               />
             </div>
 
-            {data.Items.length > 0 && (
+            {data?.Items?.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data.TotalPages}
-                totalItems={data.TotalRecords}
-                itemsPerPage={data.PageSize}
+                totalPages={data?.TotalPages}
+                totalItems={data?.TotalRecords}
+                itemsPerPage={data?.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="pasajeros"
               />
@@ -244,7 +244,7 @@ export default function PassengersManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {isLoading && data?.Items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -264,8 +264,8 @@ export default function PassengersManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data.Items.length > 0 ? (
-          data.Items.map((passenger: Passenger) => (
+        ) : data?.Items?.length > 0 ? (
+          data?.Items?.map((passenger: Passenger) => (
             <MobileCard
               key={passenger.CustomerId}
               title={`${passenger.FirstName} ${passenger.LastName}`}
