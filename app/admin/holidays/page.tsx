@@ -220,19 +220,19 @@ export default function HolidaysManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data.Items}
+                data={data?.Items ?? []}
                 emptyMessage="No se encontraron feriados."
                 isLoading={isLoading}
-                skeletonRows={data.PageSize}
+                skeletonRows={data?.PageSize}
               />
             </div>
 
-            {data.Items.length > 0 && (
+            {data?.Items?.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data.TotalPages}
-                totalItems={data.TotalRecords}
-                itemsPerPage={data.PageSize}
+                totalPages={data?.TotalPages}
+                totalItems={data?.TotalRecords}
+                itemsPerPage={data?.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="pasajeros"
               />
@@ -243,7 +243,7 @@ export default function HolidaysManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {isLoading && data?.Items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -263,8 +263,8 @@ export default function HolidaysManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data.Items.length > 0 ? (
-          data.Items.map((holiday: Holiday) => (
+        ) : data?.Items?.length > 0 ? (
+          data?.Items?.map((holiday: Holiday) => (
             <MobileCard
               key={holiday.HolidayId}
               title={`${holiday.HolidayName}`}
