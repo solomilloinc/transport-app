@@ -14,44 +14,34 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
-    permissions:
-       id-token: write
-       contents: read
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
           lfs: false
-
-      - name: Install OIDC Client from Core Package
-        run: npm install @actions/core@1.6.0 @actions/http-client
-
-      - name: Get Id Token
-        uses: actions/github-script@v6
-        id: idtoken
-        with:
-           script: |
-               const coredemo = require('@actions/core')
-               return await coredemo.getIDToken()
-           result-encoding: string
 
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
+          # Token de tu SWA (GitHub Secret)
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_HAPPY_PEBBLE_0CFF67010 }}
-          action: "upload"
-          # Más info de config: https://aka.ms/swaworkflowconfig
-          app_location: "/"   # ruta de tu app Next.js
-          api_location: ""    # vacío si no hay Functions dentro del repo
-          output_location: "" # SSR/híbrido (si fueras SSG con export, usar "out")
-          github_id_token: ${{ steps.idtoken.outputs.result }}
+
+          action: upload
+          # Rutas de tu proyecto
+          app_location: "/"     # ajusta si tu app está en /web, etc.
+          api_location: ""      # vacío si no hay Functions en el repo
+          output_location: ""   # SSR/híbrido. Para SSG con export: "out"
         env:
-          # === Secrets para build (y también visibles en runtime en algunos casos) ===
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}                     # p.ej. https://<tuapp>.azurestaticapps.net
+          # === Variables para el build ===
+          # (En SSR conviene que también las cargues en Azure Portal -> SWA -> Environment variables para tiempo de ejecución)
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}                 # p.ej. https://<tuapp>.azurestaticapps.net
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          # Si NO linkeaste el backend y vas directo a tu Function App:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}                       # p.ej. https://fa-dev-transport-api.azurewebsites.net/api
+
+          # Solo si llamás directo a la Function App (sin "linked backend"):
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}                   # p.ej. https://fa-dev-transport-api.azurewebsites.net/api
+
           # Público (queda embebido en el bundle del cliente):
           NEXT_PUBLIC_MP_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MP_PUBLIC_KEY }}
 
@@ -64,4 +54,6 @@ jobs:
         id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
         with:
-          action: "close"
+          action: close
+          # IMPORTANTE: también necesita el token
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_HAPPY_PEBBLE_0CFF67010 }}
