@@ -11,47 +11,49 @@ on:
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # Evita ejecutar en PRs desde forks (no hay secrets)
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     name: Build and Deploy Job
-    environment: azure   # 👈 habilita environment "azure" (review/vars/secrets por env)
+    environment: azure
 
     permissions:
-       id-token: write
-       contents: read
+      id-token: write
+      contents: read
+
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
           lfs: false
+
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client
+
       - name: Get Id Token
         uses: actions/github-script@v6
         id: idtoken
         with:
-           script: |
-               const coredemo = require('@actions/core')
-               return await coredemo.getIDToken()
-           result-encoding: string
+          script: |
+            const coredemo = require('@actions/core')
+            return await coredemo.getIDToken()
+          result-encoding: string
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_HAPPY_PEBBLE_0CFF67010 }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "" # Built app content directory - optional
-          github_id_token: ${{ steps.idtoken.outputs.result }}          
-      env:
+          # Config del repo
+          app_location: "/"                 # App source code path
+          api_location: ""                  # Api source code path - optional
+          output_location: ""               # SSR/híbrido; para SSG export usar "out"
+          github_id_token: ${{ steps.idtoken.outputs.result }}
+        env:
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          # Solo si NO linkeaste el backend y llamás directo a tu Function App:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          # Pública (queda embebida en el bundle del cliente)
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}                 # si llamás directo al backend
           NEXT_PUBLIC_MP_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MP_PUBLIC_KEY }}
 
   close_pull_request_job:
