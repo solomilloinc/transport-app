@@ -39,6 +39,18 @@ jobs:
             return await coredemo.getIDToken()
           result-encoding: string
 
+      - name: Debug backend reachability
+        run: |
+          echo "BACKEND_URL=${BACKEND_URL}"
+          set -e
+          echo "→ Probando GET ${BACKEND_URL}/cities"
+          curl -i -sS -w "\nHTTP_CODE:%{http_code}\n" "${BACKEND_URL}/cities" || true
+        env:
+          BACKEND_URL: https://fa-dev-transport-api.azurewebsites.net/api
+          # FUNCTIONS_KEY: ${{ secrets.FUNCTIONS_KEY }}
+          # APIM_SUBSCRIPTION_KEY: ${{ secrets.APIM_SUBSCRIPTION_KEY }}
+          # AUTH_BEARER: ${{ secrets.AUTH_BEARER }}
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -66,5 +78,6 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: "close"
+
 
 
