@@ -53,7 +53,7 @@ jobs:
         env:
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}                 # si llamás directo al backend
+          BACKEND_URL: "https://fa-dev-transport-api.azurewebsites.net/api"               # si llamás directo al backend
           NEXT_PUBLIC_MP_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MP_PUBLIC_KEY }}
 
   close_pull_request_job:
@@ -66,3 +66,4 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: "close"
+
