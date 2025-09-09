@@ -22,7 +22,7 @@ import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse } from '@/services/types';
+import { PagedResponse, PaginationParams } from '@/services/types';
 import { emptyService, Service } from '@/interfaces/service';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { City } from '@/interfaces/city';
@@ -31,6 +31,9 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 import { getOptionIdByValue } from '@/utils/form-options';
 import { emptyServiceSchedule, ServiceSchedule } from '@/interfaces/serviceSchedule';
 import { Label } from '@/components/ui/label';
+import { usePaginationParams } from '@/utils/pagination';
+import { useApi } from '@/hooks/use-api';
+import { getServices } from '@/services/service';
 
 const initialService = {
   name: '',
@@ -72,7 +75,6 @@ export default function ServiceManagement() {
 
   // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -88,40 +90,15 @@ export default function ServiceManagement() {
   const [schedules, setSchedules] = useState<ServiceSchedule[]>([]);
   const [editSchedules, setEditSchedules] = useState<ServiceSchedule[]>([]);
 
-  // State for the paged response
-  const [servicesData, setServicesData] = useState<PagedResponse<Service>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
-  });
-  // Function to fetch vehicles data
-  const fetchServices = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
-    setIsLoading(true);
-    try {
-      const response = await get<any, Service>('/service-report', {
-        pageNumber: pageToFetch,
-        pageSize: pageSizeToFetch,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery
-          ? {
-              search: searchQuery,
-            }
-          : {},
-      });
-      setServicesData(response);
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch vehicles when search changes or on initial load
-  useEffect(() => {
-    fetchServices(currentPage, pageSize);
-  }, [searchQuery, pageSize, currentPage]);
+   const params = usePaginationParams({
+      pageNumber: currentPage,
+      filters: { search: searchQuery },
+    });
+  
+    const { data, loading, error, fetch } = useApi<Service, PaginationParams>(getServices, {
+      autoFetch: true,
+      params: params,
+    });
 
   const loadAllOptions = async () => {
     try {
@@ -130,14 +107,14 @@ export default function ServiceManagement() {
 
       // Llamadas API (pueden ir en paralelo)
       const [cityResponse, vehicleResponse] = await Promise.all([
-        get<any, City>('/city-report', {
+        get<any, PagedResponse<City>>('/city-report', {
           pageNumber: 1,
           pageSize: 10,
           sortBy: 'fecha',
           sortDescending: true,
           filters: searchQuery ? { search: searchQuery } : {},
         }),
-        get<any, Vehicle>('/vehicle-report', {
+        get<any, PagedResponse<Vehicle>>('/vehicle-report', {
           pageNumber: 1,
           pageSize: 10,
           sortBy: 'fecha',
@@ -194,7 +171,7 @@ export default function ServiceManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetchServices(); // Refresh the vehicle list
+          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -223,7 +200,7 @@ export default function ServiceManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetchServices(); // Refresh the vehicle list
+          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -278,7 +255,7 @@ export default function ServiceManagement() {
     const id = await deleteLogic(`/service-delete/${currentServiceId}`);
     setIsDeleteModalOpen(false);
     setCurrentServiceId(null);
-    fetchServices();
+    fetch({ pageNumber: currentPage });
   };
 
   const resetFilters = () => {
@@ -339,6 +316,11 @@ export default function ServiceManagement() {
           </Button>
         }
       />
+      {loading && data?.Items?.length === 0 ? (
+              <div className="flex justify-center items-center h-64">
+                <Skeleton className="h-8 w-48" />
+              </div>
+            ) : (
 
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
@@ -350,19 +332,19 @@ export default function ServiceManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={servicesData.Items}
+                data={data?.Items ?? []}
                 emptyMessage="No se encontraron servicios."
                 isLoading={isLoading}
-                skeletonRows={servicesData.PageSize}
+                skeletonRows={data?.PageSize}
               />
             </div>
 
-            {servicesData.Items.length > 0 && (
+            {data?.Items?.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={servicesData.TotalPages}
-                totalItems={servicesData.TotalRecords}
-                itemsPerPage={servicesData.PageSize}
+                totalPages={data?.TotalPages}
+                totalItems={data?.TotalRecords}
+                itemsPerPage={data?.PageSize}
                 onPageChange={setCurrentPage}
                 itemName="servicios"
               />
@@ -370,10 +352,11 @@ export default function ServiceManagement() {
           </div>
         </CardContent>
       </Card>
+       )}
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading ? (
+        {isLoading && data?.Items?.length === 0  ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -393,8 +376,8 @@ export default function ServiceManagement() {
               </CardContent>
             </Card>
           ))
-        ) : servicesData.Items.length > 0 ? (
-          servicesData.Items.map((service) => (
+        ) : data?.Items?.length > 0 ? (
+          data?.Items?.map((service) => (
             <MobileCard
               key={service.ServiceId}
               title={service.Name}

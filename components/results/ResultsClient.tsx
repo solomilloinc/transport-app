@@ -186,9 +186,10 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                     {reserves.Outbound.Items.map((trip) => (
                       <div key={trip.ReserveId} className={cn('p-4 hover:bg-gray-50 transition-colors', selectedOutboundTrip?.ReserveId === trip.ReserveId && 'bg-blue-50')}>
                         {/* Aquí va el JSX de cada item de viaje, como lo tenías antes */}
-                        <div className="grid md:grid-cols-4 gap-4 items-center">
+                        <div className="grid md:grid-cols-5 gap-4 items-center">
                           <div className="text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
                           <div className="flex items-center gap-2"><Bus className="h-5 w-5 text-blue-600" /><span>Servicio Estándar</span></div>
+                          <div className="flex items-center gap-2 text-gray-600"><Users className="h-5 w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
                           <div className="text-center"><div className="text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</div><div className="text-sm text-gray-500">por persona</div></div>
                           <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectOutbound(trip)}>Reservar</Button>
                         </div>
@@ -228,9 +229,10 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                       <div className="divide-y">
                         {reserves.Return.Items.map((trip) => (
                           <div key={trip.ReserveId} className="p-4 hover:bg-gray-50 transition-colors">
-                            <div className="grid md:grid-cols-4 gap-4 items-center">
+                            <div className="grid md:grid-cols-5 gap-4 items-center">
                               <div className="text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
                               <div className="flex items-center gap-2"><Bus className="h-5 w-5 text-blue-600" /><span>Servicio Estándar</span></div>
+                              <div className="flex items-center gap-2 text-gray-600"><Users className="h-5 w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
                               <div className="text-center"><div className="text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</div><div className="text-sm text-gray-500">por persona</div></div>
                               <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectReturn(trip)}>Seleccionar Vuelta</Button>
                             </div>
