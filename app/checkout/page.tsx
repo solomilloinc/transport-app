@@ -12,6 +12,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatWithTimezone } from '@/utils/dates';
 import { useCheckout } from '@/contexts/CheckoutContext';
+import { lockReserveSlots } from '@/services/locks';
+import { LockTimer } from '@/components/LockTimer';
 import { PassengerForm } from '@/components/passenger-form';
 import CardPaymentForm from '@/components/card-payment-form';
 import WalletPaymentForm from '@/components/wallet-payment-form';
@@ -20,7 +22,7 @@ import { CreateReserveExternalResult } from '@/interfaces/reserve';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { checkout } = useCheckout();
+  const { checkout, setLockState, isLockValid } = useCheckout();
 
   const [currentStep, setCurrentStep] =
     useState<'passengers' | 'payment' | 'review'>('passengers');
@@ -29,10 +31,13 @@ export default function CheckoutPage() {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'wallet'>('card');
+  const [lockError, setLockError] = useState<string | null>(null);
 
   const [formattedDepartureDate, setFormattedDepartureDate] = useState('');
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
-  
+
+
+
   useEffect(() => {
     setFormattedDepartureDate(formatWithTimezone(checkout.outboundTrip?.DepartureDate ?? ''));
     setFormattedReturnDate(formatWithTimezone(checkout.returnTrip?.DepartureDate ?? ''));
@@ -93,9 +98,46 @@ export default function CheckoutPage() {
     };
   }, [passengerData, checkout.outboundTrip, checkout.returnTrip, finalTotal]);
 
-  const goToNextStep = () => {
-    if (currentStep === 'passengers') setCurrentStep('review');
-    else if (currentStep === 'review') setCurrentStep('payment');
+  // Función para bloquear slots
+  const lockSlots = async (): Promise<boolean> => {
+    try {
+      setLockError(null);
+      const lockResponse = await lockReserveSlots({
+        outboundReserveId: checkout.outboundTrip?.ReserveId || 0,
+        returnReserveId: checkout.returnTrip?.ReserveId || null,
+        passengerCount: checkout.passengers,
+      });
+
+      const lockState = {
+        lockToken: lockResponse.LockToken,
+        expiresAt: lockResponse.ExpiresAt,
+        timeoutMinutes: lockResponse.TimeoutMinutes,
+      };
+
+      setLockState(lockState);
+      return true;
+    } catch (error) {
+      console.error('Error locking slots:', error);
+      setLockError('No se pudieron reservar los asientos. Intente nuevamente.');
+      return false;
+    }
+  };
+
+  const goToNextStep = async () => {
+    if (currentStep === 'passengers') {
+      setCurrentStep('review');
+    } else if (currentStep === 'review') {
+      // Verificar si tenemos un lock válido
+      if (checkout.lockState && isLockValid()) {
+        setCurrentStep('payment');
+      } else {
+        // Lock slots antes de proceder al pago
+        const success = await lockSlots();
+        if (success) {
+          setCurrentStep('payment');
+        }
+      }
+    }
   };
   
   const goToPreviousStep = () => {
@@ -123,8 +165,18 @@ export default function CheckoutPage() {
     if (!finalTotal || finalTotal <= 0) {
       throw new Error('El total debe ser mayor a 0.');
     }
-    
-    const response = await post('/passenger-reserves-create-external', createWalletPayload);
+
+    if (!checkout.lockState?.lockToken || !isLockValid()) {
+      throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
+    }
+
+    const payloadWithLock = {
+      lockToken: checkout.lockState.lockToken,
+      items: createWalletPayload.Items,
+      payment: null,
+    };
+
+    const response = await post('/passenger-reserves-create-with-lock', payloadWithLock);
     const responseData = typeof response === 'string' ? JSON.parse(response) : response;
 
     // La API debe devolver PreferenceId cuando Payment es null
@@ -149,6 +201,10 @@ export default function CheckoutPage() {
     try {
       if (!finalTotal || finalTotal <= 0) {
         throw new Error('El total debe ser mayor a 0.');
+      }
+
+      if (!checkout.lockState?.lockToken || !isLockValid()) {
+        throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
       }
 
       const compraDescripcion = checkout.returnTrip ? 'Pasaje ida y vuelta' : 'Pasaje de ida';
@@ -190,7 +246,9 @@ firstName: p.firstName,
       }
 
       const payload = {
-        Payment: {
+        lockToken: checkout.lockState.lockToken,
+        items: items,
+        payment: {
           transactionAmount: Number(finalTotal.toFixed(2)),
           token: data.token,
           description: compraDescripcion,
@@ -200,10 +258,9 @@ firstName: p.firstName,
           identificationType: data?.identification?.type,
           identificationNumber: data?.identification?.number,
         },
-        Items: items,
       };
 
-      const response = await post('/passenger-reserves-create-external', payload);
+      const response = await post('/passenger-reserves-create-with-lock', payload);
       const responseData: CreateReserveExternalResult =
         typeof response === 'string' ? JSON.parse(response) : response;
 
@@ -244,6 +301,30 @@ firstName: p.firstName,
               )}
 
               <h1 className="text-2xl font-bold text-blue-800 font-display mb-4">Complete su reserva</h1>
+
+              {/* Timer Component - Aislado para evitar re-renders */}
+              <LockTimer
+                lockToken={checkout.lockState?.lockToken}
+                expiresAt={checkout.lockState?.expiresAt}
+                onExpire={() => {
+                  // No limpiar inmediatamente para permitir mostrar el mensaje de expiración
+                  console.log('Timer expired');
+                }}
+                onRestart={() => {
+                  setLockState(null);
+                  setCurrentStep('passengers');
+                  setLockError(null);
+                }}
+              />
+
+              {/* Lock Error Display */}
+              {lockError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="text-sm text-red-600">{lockError}</div>
+                  </div>
+                </div>
+              )}
 
               {/* Steps */}
               <div className="mb-8">
