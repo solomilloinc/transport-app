@@ -41,6 +41,7 @@ export interface ReserveSummaryItem {
     DepartureHour: string;
     DepartureDate: string;
     Price: number;
+    AvailableQuantity: number;
 }
 
 export interface CreateReserveExternalResult{

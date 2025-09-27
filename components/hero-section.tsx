@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -183,11 +184,12 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                           <PopoverTrigger asChild>
                             <Button variant="outline" className="w-full justify-start text-left font-normal border-input">
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {departureDate ? format(departureDate, 'PPP') : <span>Seleccionar fecha</span>}
+                              {departureDate ? format(departureDate, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
                             <Calendar
+                              locale={es}
                               mode="single"
                               selected={departureDate}
                               onSelect={setDepartureDate}
@@ -206,11 +208,12 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                             <PopoverTrigger asChild>
                               <Button variant="outline" className="w-full justify-start text-left font-normal border-input">
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {returnDate ? format(returnDate, 'PPP') : <span>Seleccionar fecha</span>}
+                                {returnDate ? format(returnDate, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
                               <Calendar
+                                locale={es}
                                 mode="single"
                                 selected={returnDate}
                                 onSelect={setReturnDate}
