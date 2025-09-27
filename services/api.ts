@@ -20,6 +20,12 @@ export async function put<T>(url: string, request?: T, options?: { skipAuth?: bo
   return response.data;
 }
 
+export async function postWithResponse<T, R>(url: string, request?: T, options?: { skipAuth?: boolean }): Promise<R> {
+  const axios = await getServerAxios(options);
+  const response = await axios.post<R>(url, request);
+  return response.data;
+}
+
 export async function deleteLogic(url: string, options?: { skipAuth?: boolean }): Promise<boolean> {
   const axios = await getServerAxios(options);
   const response = await axios.delete<boolean>(url);
