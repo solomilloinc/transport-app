@@ -45,7 +45,7 @@ const initialService = {
   departureHour: '',
   isHoliday: false,
   vehicleId: 0,
-  schedules: [] as ServiceSchedule[],
+  Schedules: [] as ServiceSchedule[], // Keep as Schedules for form consistency
 };
 
 const initialSchedule = {
@@ -58,20 +58,27 @@ const initialSchedule = {
 };
 
 const validationSchema = {
+  Name: { required: true, message: 'El nombre es requerido' },
+  OriginId: { required: true, message: 'El origen es requerido' },
+  DestinationId: { required: true, message: 'El destino es requerido' },
+  StartDay: { required: true, message: 'El día de inicio es requerido' },
+  EndDay: { required: true, message: 'El día de fin es requerido' },
+  EstimatedDuration: { required: true, message: 'La duración estimada es requerida' },
+  VehicleId: { required: true, message: 'El vehículo es requerido' },
+};
+
+const editValidationSchema = {
   name: { required: true, message: 'El nombre es requerido' },
   originId: { required: true, message: 'El origen es requerido' },
   destinationId: { required: true, message: 'El destino es requerido' },
   startDay: { required: true, message: 'El día de inicio es requerido' },
   endDay: { required: true, message: 'El día de fin es requerido' },
   estimatedDuration: { required: true, message: 'La duración estimada es requerida' },
-  departureHour: { required: true, message: 'La hora de partida es requerida' },
-  isHoliday: { required: true, message: 'El estado de feriado es requerido' },
   vehicleId: { required: true, message: 'El vehículo es requerido' },
 };
 
 export default function ServiceManagement() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
   // Separate state for current page to avoid double fetching
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,7 +88,7 @@ export default function ServiceManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentServiceId, setCurrentServiceId] = useState<number | null>(null);
   const addForm = useFormValidation(emptyService, validationSchema);
-  const editForm = useFormValidation(initialService, validationSchema);
+  const editForm = useFormValidation(initialService, editValidationSchema);
   const [cities, setCities] = useState<SelectOption[]>([]);
   const [vehicles, setVehicles] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
@@ -163,7 +170,18 @@ export default function ServiceManagement() {
   const submitAddService = async () => {
     addForm.handleSubmit(async (data) => {
       try {
-        const response = await post('/service-create', data);
+        // Transform the data to match the API expectations
+        const transformedData = {
+          ...data,
+          EstimatedDuration: data.EstimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
+          StartDay: data.StartDay, // Keep in main service
+          EndDay: data.EndDay,     // Keep in main service
+          Schedules: data.Schedules.map(schedule => ({
+            ...schedule,
+            DepartureHour: schedule.DepartureHour + ':00' // Convert HH:MM to HH:MM:SS format
+          }))
+        };
+        const response = await post('/service-create', transformedData);
         if (response) {
           toast({
             title: 'Servicio creado',
@@ -190,9 +208,32 @@ export default function ServiceManagement() {
   };
 
   const submitEditService = async () => {
-    addForm.handleSubmit(async (data) => {
+    console.log('submitEditService called');
+    console.log('editForm.data:', editForm.data);
+    console.log('editForm.errors:', editForm.errors);
+    console.log('currentServiceId:', currentServiceId);
+
+    editForm.handleSubmit(async (data) => {
+      console.log('handleSubmit callback called with data:', data);
       try {
-        const response = await put(`/service-update/${currentServiceId}`, data);
+        // Transform the data to match the API expectations
+        const transformedData = {
+          Name: data.name,
+          OriginId: data.originId,
+          DestinationId: data.destinationId,
+          EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
+          StartDay: data.startDay,
+          EndDay: data.endDay,
+          VehicleId: data.vehicleId,
+          Schedules: editSchedules.map(schedule => ({
+            ...schedule,
+            DepartureHour: schedule.DepartureHour.includes(':')
+              ? schedule.DepartureHour + ':00'
+              : schedule.DepartureHour // Convert HH:MM to HH:MM:SS format
+          }))
+        };
+        console.log('Transformed data for update:', transformedData);
+        const response = await put(`/service-update/${currentServiceId}`, transformedData);
         if (response) {
           toast({
             title: 'Servicio actualizado',
@@ -227,6 +268,27 @@ export default function ServiceManagement() {
     addForm.setField('Schedules', updatedSchedules);
   };
 
+  // Edit schedule functions
+  const addEditSchedule = () => {
+    const newSchedule = { ...emptyServiceSchedule };
+    setEditSchedules([...editSchedules, newSchedule]);
+  };
+
+  const removeEditSchedule = (index: number) => {
+    const updatedSchedules = [...editSchedules];
+    updatedSchedules.splice(index, 1);
+    setEditSchedules(updatedSchedules);
+  };
+
+  const handleEditScheduleChange = (index: number, field: string, value: any) => {
+    const updatedSchedules = [...editSchedules];
+    updatedSchedules[index] = {
+      ...updatedSchedules[index],
+      [field]: value,
+    };
+    setEditSchedules(updatedSchedules);
+  };
+
   const handleAddService = () => {
     setCurrentServiceId(null);
     addForm.resetForm();
@@ -236,12 +298,40 @@ export default function ServiceManagement() {
 
   const handleEditService = (service: Service) => {
     setCurrentServiceId(service.ServiceId);
+    // Convert TimeSpan format (HH:MM:SS) back to HH:MM for the time input
+    const durationParts = service.EstimatedDuration.split(':');
+    const formattedDuration = `${durationParts[0]}:${durationParts[1]}`;
+
+    console.log('Service for editing:', service);
+    console.log('Service.Schedulers:', service.Schedulers);
+
     editForm.setField('name', service.Name);
     editForm.setField('originId', service.OriginId);
     editForm.setField('destinationId', service.DestinationId);
-    editForm.setField('estimatedDuration', service.EstimatedDuration);
+    editForm.setField('estimatedDuration', formattedDuration);
+    editForm.setField('startDay', service.StartDay || 1); // Default to Monday if not provided
+    editForm.setField('endDay', service.EndDay || 5);   // Default to Friday if not provided
     editForm.setField('vehicleId', service.Vehicle.VehicleId);
-    setEditSchedules(service.Schedules || []);
+
+    console.log('Setting StartDay:', service.StartDay);
+    console.log('Setting EndDay:', service.EndDay);
+    console.log('EditForm data after setting:', editForm.data);
+
+    // Convert schedules DepartureHour from TimeSpan (HH:MM:SS) to HH:MM for time inputs
+    const schedulers = service.Schedulers || [];
+    console.log('Original schedulers:', schedulers);
+
+    const formattedSchedulers = schedulers.length > 0
+      ? schedulers.map(scheduler => ({
+          ...scheduler,
+          DepartureHour: scheduler.DepartureHour.includes(':')
+            ? scheduler.DepartureHour.split(':').slice(0, 2).join(':')
+            : scheduler.DepartureHour
+        }))
+      : [{ ...emptyServiceSchedule }]; // Si no hay schedulers, crear uno por defecto
+
+    console.log('Formatted schedulers:', formattedSchedulers);
+    setEditSchedules(formattedSchedulers);
     setIsEditModalOpen(true);
     loadAllOptions();
   };
@@ -316,7 +406,7 @@ export default function ServiceManagement() {
           </Button>
         }
       />
-      {loading && data?.Items?.length === 0 ? (
+      {loading ? (
               <div className="flex justify-center items-center h-64">
                 <Skeleton className="h-8 w-48" />
               </div>
@@ -334,7 +424,7 @@ export default function ServiceManagement() {
                 columns={columns}
                 data={data?.Items ?? []}
                 emptyMessage="No se encontraron servicios."
-                isLoading={isLoading}
+                isLoading={loading}
                 skeletonRows={data?.PageSize}
               />
             </div>
@@ -356,7 +446,7 @@ export default function ServiceManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading && data?.Items?.length === 0  ? (
+        {loading ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -412,7 +502,7 @@ export default function ServiceManagement() {
             {/* Información Personal */}
             <div className="w-full">
               <FormField label="Nombre" required error={addForm.errors.Name}>
-                <Input id="name" placeholder="Nombre" value={addForm.data.Name} onChange={(e) => addForm.setField('name', e.target.value)} />
+                <Input id="name" placeholder="Nombre" value={addForm.data.Name} onChange={(e) => addForm.setField('Name', e.target.value)} />
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -479,15 +569,16 @@ export default function ServiceManagement() {
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Duración Estimada" required error={addForm.errors.EstimatedDuration}>
+              <FormField label="Duración Estimada (HH:MM)" required error={addForm.errors.EstimatedDuration}>
                 <Input
                   id="estimatedDuration"
-                  placeholder="Duración Estimada"
+                  type="time"
+                  placeholder="HH:MM"
                   value={addForm.data.EstimatedDuration}
                   onChange={(e) => addForm.setField('EstimatedDuration', e.target.value)}
                 />
               </FormField>
-              <FormField label="Vehículo" required error={addForm.errors.vehicleId}>
+              <FormField label="Vehículo" required error={addForm.errors.VehicleId}>
                 <ApiSelect
                   value={String(addForm.data.VehicleId)}
                   onValueChange={(value) => addForm.setField('VehicleId', Number(value))}
@@ -506,7 +597,7 @@ export default function ServiceManagement() {
 
               {/* Schedule List */}
               <div className="space-y-3">
-                {addForm.data.Schedules.map((schedule, index) => (
+                {(addForm.data.Schedules || []).map((schedule, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
@@ -522,19 +613,19 @@ export default function ServiceManagement() {
                         <Label className="text-sm text-muted-foreground">Es Feriado</Label>
                         <Select
                           value={schedule.IsHoliday.toString()}
-                          onValueChange={(value) => handleScheduleChange(index, 'IsHoliday', Number.parseInt(value))}
+                          onValueChange={(value) => handleScheduleChange(index, 'IsHoliday', value === 'true')}
                         >
                           <SelectTrigger className="mt-1">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="0">No</SelectItem>
-                            <SelectItem value="1">Sí</SelectItem>
+                            <SelectItem value="false">No</SelectItem>
+                            <SelectItem value="true">Sí</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-                    {addForm.data.Schedules.length > 1 && (
+                    {(addForm.data.Schedules || []).length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -614,7 +705,7 @@ export default function ServiceManagement() {
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Dia Inicio" required error={editForm.errors.startDay}>
-                <Select onValueChange={(value) => editForm.setField('startDay', value)}>
+                <Select value={String(editForm.data.startDay)} onValueChange={(value) => editForm.setField('startDay', Number(value))}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -630,7 +721,7 @@ export default function ServiceManagement() {
                 </Select>
               </FormField>
               <FormField label="Dia Fin" required error={editForm.errors.endDay}>
-                <Select onValueChange={(value) => editForm.setField('endDate', value)}>
+                <Select value={String(editForm.data.endDay)} onValueChange={(value) => editForm.setField('endDay', Number(value))}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -647,32 +738,14 @@ export default function ServiceManagement() {
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Duración Estimada" required error={editForm.errors.estimatedDuration}>
+              <FormField label="Duración Estimada (HH:MM)" required error={editForm.errors.estimatedDuration}>
                 <Input
                   id="edit-estimatedDuration"
+                  type="time"
+                  placeholder="HH:MM"
                   value={editForm.data.estimatedDuration}
                   onChange={(e) => editForm.setField('estimatedDuration', e.target.value)}
                 />
-              </FormField>
-              <FormField label="Hora de Partida">
-                <Input
-                  id="edit-departureHour"
-                  value={editForm.data.departureHour}
-                  onChange={(e) => editForm.setField('departureHour', e.target.value)}
-                />
-              </FormField>
-            </div>
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Feriado" required error={editForm.errors.isHoliday}>
-                <Select onValueChange={(value) => editForm.setField('isHoliday', value === 'true')}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Sí</SelectItem>
-                    <SelectItem value="false">No</SelectItem>
-                  </SelectContent>
-                </Select>
               </FormField>
               <FormField label="Vehículo" required error={editForm.errors.vehicleId}>
                 <ApiSelect
@@ -687,6 +760,66 @@ export default function ServiceManagement() {
                   emptyMessage="No hay vehículos disponibles"
                 />
               </FormField>
+            </div>
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Horarios de Salida</Label>
+
+              {/* Edit Schedule List */}
+              <div className="space-y-3">
+                {console.log('Rendering editSchedules:', editSchedules)}
+                {editSchedules.map((schedule, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm text-muted-foreground">Hora de Salida</Label>
+                        <Input
+                          type="time"
+                          value={schedule.DepartureHour}
+                          onChange={(e) => handleEditScheduleChange(index, 'DepartureHour', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-muted-foreground">Es Feriado</Label>
+                        <Select
+                          value={schedule.IsHoliday.toString()}
+                          onValueChange={(value) => handleEditScheduleChange(index, 'IsHoliday', value === 'true')}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="false">No</SelectItem>
+                            <SelectItem value="true">Sí</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {editSchedules.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeEditSchedule(index)}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Edit Schedule Button */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addEditSchedule}
+                className="w-full border-dashed border-2 h-12 text-muted-foreground hover:text-foreground hover:border-solid bg-transparent"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Horario
+              </Button>
             </div>
           </div>
         </div>

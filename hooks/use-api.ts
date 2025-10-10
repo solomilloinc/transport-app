@@ -40,9 +40,8 @@ export const useApi = <T, P,>(apiCall: (param: P) => UseApiCall<T>, options?: Us
 
   useEffect(() => {
     if (options?.autoFetch) {
-      return fetch(options.params || {} as P);
+      fetch(options.params || {} as P);
     }
-
   }, [fetch, options?.autoFetch, options?.params])
 
   return { loading, data, reset, error, fetch }
