@@ -1,0 +1,345 @@
+﻿npx : [33mThe CJS build of Vite's Node API is deprecated. See 
+https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+En línea: 1 Carácter: 1
++ npx vitest run --reporter=verbose 2>&1 | Out-File -FilePath test-outp ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([33mThe CJS bu...e details.[39m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Projects/transport-app[39m
+
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould merge class names[32m 27[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould handle undefined and null values[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould handle conditional classes[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould merge tailwind classes correctly (last wins)[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould merge tailwind color classes correctly[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould handle empty input[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould handle array of classes[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould handle object syntax[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/lib/utils.test.ts[2m > [22mcn utility[2m > [22mshould combine different input types[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22minitial state[2m > [22mshould not be loading initially when autoFetch is false[32m 63[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22minitial state[2m > [22mshould have empty data initially[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22minitial state[2m > [22mshould have no error initially[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22mfetch[2m > [22mshould set loading to true when fetch is called[32m 13[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22minitial state[2m > [22mshould initialize with provided data[32m 70[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22minitial state[2m > [22mshould initialize with empty errors[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22minitial state[2m > [22mshould initialize with empty touched fields[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22minitial state[2m > [22mshould not be submitting initially[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateField[2m > [22mshould return error for empty required field[32m 25[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateField[2m > [22mshould return error for invalid custom rule[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateField[2m > [22mshould return undefined for valid field[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateField[2m > [22mshould return undefined for field without validation[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22msetField[2m > [22mshould update field value[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22msetField[2m > [22mshould mark field as touched[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22msetField[2m > [22mshould validate field on subsequent changes after touched[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateForm[2m > [22mshould return false when form has errors[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateForm[2m > [22mshould return true when form is valid[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateForm[2m > [22mshould validate only specified fields when provided[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mvalidateForm[2m > [22mshould populate errors object[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mhandleSubmit[2m > [22mshould call onSubmit when form is valid[32m 13[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mhandleSubmit[2m > [22mshould not call onSubmit when form is invalid[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mhandleSubmit[2m > [22mshould mark all fields as touched after submit attempt[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mresetForm[2m > [22mshould reset data to initial values[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mresetForm[2m > [22mshould clear errors[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-form-validation.test.ts[2m > [22museFormValidation[2m > [22mresetForm[2m > [22mshould clear touched fields[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22minitial state[2m > [22mshould have null outboundTrip initially[32m 66[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22minitial state[2m > [22mshould have 1 passenger initially[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22minitial state[2m > [22mshould have null returnTrip initially[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22minitial state[2m > [22mshould initialize with the provided sort column[32m 154[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22minitial state[2m > [22mshould initialize with ascending direction[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22minitial state[2m > [22mshould return items sorted by initial column in ascending order[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22mhandleSort[2m > [22mshould toggle direction when same column is clicked[32m 13[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22mhandleSort[2m > [22mshould change column and reset to asc when different column is clicked[32m 11[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22mhandleSort[2m > [22mshould sort items in descending order when direction is desc[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22msorting with different columns[2m > [22mshould sort by age correctly[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22msorting with different columns[2m > [22mshould sort by age in descending order[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22medge cases[2m > [22mshould handle undefined items[32m 11[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22medge cases[2m > [22mshould handle empty array[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-table-sort.test.ts[2m > [22museTableSort[2m > [22medge cases[2m > [22mshould not mutate original array[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22mfetch[2m > [22mshould populate data on successful fetch[32m 133[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22mfetch[2m > [22mshould set loading to false after fetch completes[32m 95[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22msetCheckout[2m > [22mshould update checkout state[32m 20[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22msetLockState[2m > [22mshould set lock state[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22msetLockState[2m > [22mshould clear lock state when null is passed[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22mclearCheckout[2m > [22mshould reset to default state[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22misLockValid[2m > [22mshould return false when no lock state[32m 12[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22misLockValid[2m > [22mshould return true when lock is not expired[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22misLockValid[2m > [22mshould return false when lock is expired[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22mgetTimeRemaining[2m > [22mshould return 0 when no lock state[32m 16[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22mgetTimeRemaining[2m > [22mshould return remaining seconds[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22mgetTimeRemaining[2m > [22mshould return 0 when lock has expired[32m 12[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22mfetch[2m > [22mshould clear error on successful fetch[32m 64[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/contexts/CheckoutContext.test.tsx[2m > [22mCheckoutContext[2m > [22mProvider[2m > [22mshould render children[32m 76[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22merror handling[2m > [22mshould set error on failed fetch[32m 89[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22merror handling[2m > [22mshould set loading to false after error[32m 77[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mrendering[2m > [22mshould render table headers[32m 204[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mrendering[2m > [22mshould render data rows[32m 37[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22mreset[2m > [22mshould reset data to empty object[32m 100[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mrendering[2m > [22mshould render correct number of rows[32m 232[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mempty state[2m > [22mshould show default empty message when no data[32m 19[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mempty state[2m > [22mshould show custom empty message[32m 15[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mloading state[2m > [22mshould show skeleton when loading[32m 26[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > [22mshould render with children text[33m 335[2mms[22m[39m
+ [31m├ù[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > [22mshould render with default variant[32m 53[2mms[22m[39m
+[31m   ÔåÆ [2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"bg-primary"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  bg-primary[31m
+Received:
+[31m  inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-blue-500 text-white hover:bg-blue-600 h-10 px-4 py-2[31m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > [22mshould render with destructive variant[32m 25[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mloading state[2m > [22mshould render specified number of skeleton rows[32m 49[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mloading state[2m > [22mshould render 5 skeleton rows by default[32m 67[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mcustom cell rendering[2m > [22mshould use custom cell renderer when provided[32m 23[2mms[22m[39m
+ [31m├ù[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mhidden columns[2m > [22mshould apply hidden class to hidden columns[32m 43[2mms[22m[39m
+[31m   ÔåÆ [2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"hidden"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  hidden[31m
+Received:
+[31m  border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted[31m[39m
+ [32mÔ£ô[39m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m > [22mcolumn width[2m > [22mshould apply custom width to columns[32m 36[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > [22mshould render with outline variant[32m 32[2mms[22m[39m
+ [31m├ù[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > [22mshould render with ghost variant[32m 32[2mms[22m[39m
+[31m   ÔåÆ [2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"hover:bg-accent"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  hover:bg-accent[31m
+Received:
+[31m  inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-blue-50 hover:text-blue-500 h-10 px-4 py-2[31m[39m
+ [31m├ù[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > [22mshould render with link variant[32m 37[2mms[22m[39m
+[31m   ÔåÆ [2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"text-primary"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  text-primary[31m
+Received:
+[31m  inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-blue-500 underline-offset-4 hover:underline h-10 px-4 py-2[31m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22msizes[2m > [22mshould render default size[32m 18[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22msizes[2m > [22mshould render small size[32m 23[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22msizes[2m > [22mshould render large size[32m 26[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22msizes[2m > [22mshould render icon size[32m 17[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22minteractions[2m > [22mshould call onClick when clicked[32m 138[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22minteractions[2m > [22mshould not call onClick when disabled[32m 66[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22minteractions[2m > [22mshould have disabled attribute when disabled prop is true[32m 18[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22masChild[2m > [22mshould render as child element when asChild is true[32m 27[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mcustom className[2m > [22mshould merge custom classNames[32m 16[2mms[22m[39m
+ [31m├ù[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mtype attribute[2m > [22mshould have button type by default[32m 13[2mms[22m[39m
+[31m   ÔåÆ [2mexpect([22m[31melement[31m[2m).toHaveAttribute([22m[32m[32m"type"[32m[31m[2m, [22m[32m[32m"button"[32m[31m[2m) // element.getAttribute("type") === "button"[22m
+
+Expected the element to have attribute:
+[32m  type="button"[31m
+Received:
+[31m  null[31m[39m
+ [32mÔ£ô[39m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mtype attribute[2m > [22mshould allow submit type[32m 15[2mms[22m[39m
+ [31m├ù[39m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22mautoFetch[2m > [22mshould fetch automatically when autoFetch is true[33m 1083[2mms[22m[39m
+[31m   ÔåÆ expected true to be false // Object.is equality
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div />[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22memailRule[2m > [22mshould validate correct emails[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22memailRule[2m > [22mshould reject invalid emails[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22memailRule[2m > [22mshould have correct error message[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mminLengthRule[2m > [22mshould validate strings meeting minimum length[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mminLengthRule[2m > [22mshould reject strings below minimum length[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mminLengthRule[2m > [22mshould have correct error message[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmaxLengthRule[2m > [22mshould validate strings within maximum length[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmaxLengthRule[2m > [22mshould reject strings exceeding maximum length[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmaxLengthRule[2m > [22mshould have correct error message[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mminValueRule[2m > [22mshould validate numbers at or above minimum[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mminValueRule[2m > [22mshould reject numbers below minimum[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mminValueRule[2m > [22mshould have correct error message[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmaxValueRule[2m > [22mshould validate numbers at or below maximum[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmaxValueRule[2m > [22mshould reject numbers above maximum[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmaxValueRule[2m > [22mshould have correct error message[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmatchFieldRule[2m > [22mshould validate when fields match[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmatchFieldRule[2m > [22mshould reject when fields do not match[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mmatchFieldRule[2m > [22mshould have correct error message[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mphoneRule[2m > [22mshould validate correct phone numbers[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mphoneRule[2m > [22mshould reject invalid phone numbers[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mphoneRule[2m > [22mshould have correct error message[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mnumbersOnlyRule[2m > [22mshould validate strings with only numbers[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mnumbersOnlyRule[2m > [22mshould reject strings with non-numeric characters[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mnumbersOnlyRule[2m > [22mshould have correct error message[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mlettersOnlyRule[2m > [22mshould validate strings with only letters and spaces[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mlettersOnlyRule[2m > [22mshould reject strings with numbers or special characters[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mlettersOnlyRule[2m > [22mshould have correct error message[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mdateFormatRule[2m > [22mshould validate correct date format (YYYY-MM-DD)[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mdateFormatRule[2m > [22mshould reject incorrect date formats[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/validation-rules.test.ts[2m > [22mvalidation-rules[2m > [22mdateFormatRule[2m > [22mshould have correct error message[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/pagination.test.ts[2m > [22mpagination utilities[2m > [22mwithDefaultPagination[2m > [22mshould return default values when no params provided[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/pagination.test.ts[2m > [22mpagination utilities[2m > [22mwithDefaultPagination[2m > [22mshould preserve provided pageNumber[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/pagination.test.ts[2m > [22mpagination utilities[2m > [22mwithDefaultPagination[2m > [22mshould preserve provided pageSize[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/pagination.test.ts[2m > [22mpagination utilities[2m > [22mwithDefaultPagination[2m > [22mshould preserve provided sortBy[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/pagination.test.ts[2m > [22mpagination utilities[2m > [22mwithDefaultPagination[2m > [22mshould preserve provided sortDescending[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/pagination.test.ts[2m > [22mpagination utilities[2m > [22mwithDefaultPagination[2m > [22mshould preserve provided filters[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/pagination.test.ts[2m > [22mpagination utilities[2m > [22mwithDefaultPagination[2m > [22mshould merge all provided params with defaults[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/dates.test.ts[2m > [22mdates utilities[2m > [22mparseToLocalDate[2m > [22mshould parse ISO string to Date object[32m 16[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/dates.test.ts[2m > [22mdates utilities[2m > [22mparseToLocalDate[2m > [22mshould parse dates correctly[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/dates.test.ts[2m > [22mdates utilities[2m > [22mformatWithTimezone[2m > [22mshould format date with Argentina timezone[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/dates.test.ts[2m > [22mdates utilities[2m > [22mformatWithTimezone[2m > [22mshould return empty string for undefined input[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/dates.test.ts[2m > [22mdates utilities[2m > [22mformatWithTimezone[2m > [22mshould return empty string for empty string input[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/dates.test.ts[2m > [22mdates utilities[2m > [22mformatWithTimezone[2m > [22mshould use custom timezone when provided[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m __tests__/utils/dates.test.ts[2m > [22mdates utilities[2m > [22mformatWithTimezone[2m > [22mshould format date in medium style (es-AR locale)[32m 2[2mms[22m[39m
+
+[31mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[39m[1m[41m Failed Tests 6 [49m[22m[31mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[39m
+
+[41m[1m FAIL [22m[49m __tests__/hooks/use-api.test.ts[2m > [22museApi[2m > [22mautoFetch[2m > 
+[22mshould fetch automatically when autoFetch is true
+[31m[1mAssertionError[22m: expected true to be false // Object.is equality
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div />[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+[36m [2mÔØ»[22m __tests__/hooks/use-api.test.ts:[2m209:40[22m[39m
+    [90m207| [39m
+    [90m208| [39m      [35mawait[39m [34mwaitFor[39m(() [33m=>[39m {
+    [90m209| [39m        
+[34mexpect[39m(result[33m.[39mcurrent[33m.[39mloading)[33m.[39m[34mtoBe[39m([35mfalse[39m)
+    [90m   | [39m                                       [31m^[39m
+    [90m210| [39m      })
+    [90m211| [39m
+[90m [2mÔØ»[22m runWithExpensiveErrorDiagnosticsDisabled 
+node_modules/@testing-library/dom/dist/config.js:[2m47:12[22m[39m
+[90m [2mÔØ»[22m checkCallback node_modules/@testing-library/dom/dist/wait-for.js:[2m124:77[22m[39m
+[90m [2mÔØ»[22m Timeout.checkRealTimersCallback 
+node_modules/@testing-library/dom/dist/wait-for.js:[2m118:16[22m[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/6]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m __tests__/components/dashboard/dashboard-table.test.tsx[2m > [22mDashboardTable[2m 
+> [22mhidden columns[2m > [22mshould apply hidden class to hidden columns
+[31m[1mError[22m: 
+[2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"hidden"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  hidden[31m
+Received:
+[31m  border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted[31m[39m
+[36m [2mÔØ»[22m __tests__/components/dashboard/dashboard-table.test.tsx:[2m124:38[22m[39m
+    [90m122| [39m      [90m// The ID header should have the hidden class[39m
+    [90m123| [39m      [35mconst[39m idHeader [33m=[39m 
+screen[33m.[39m[34mgetByText[39m([32m'ID'[39m)
+    [90m124| [39m      
+[34mexpect[39m(idHeader[33m.[39mparentElement)[33m.[39m[34mtoHaveClass[39m([32m'hidden'[39m)
+    [90m   | [39m                                     [31m^[39m
+    [90m125| [39m    })
+    [90m126| [39m  })
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/6]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > 
+[22mshould render with default variant
+[31m[1mError[22m: 
+[2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"bg-primary"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  bg-primary[31m
+Received:
+[31m  inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium 
+ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 
+focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 
+[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-blue-500 text-white hover:bg-blue-600 h-10 px-4 
+py-2[31m[39m
+[36m [2mÔØ»[22m __tests__/components/ui/button.test.tsx:[2m18:22[22m[39m
+    [90m 16| [39m      
+    [90m 17| [39m      [35mconst[39m button [33m=[39m 
+screen[33m.[39m[34mgetByRole[39m([32m'button'[39m)
+    [90m 18| [39m      [34mexpect[39m(button)[33m.[39m[34mtoHaveClass[39m([32m'bg-primary'[39m)
+    [90m   | [39m                     [31m^[39m
+    [90m 19| [39m    })
+    [90m 20| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/6]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > 
+[22mshould render with ghost variant
+[31m[1mError[22m: 
+[2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"hover:bg-accent"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  hover:bg-accent[31m
+Received:
+[31m  inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium 
+ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 
+focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 
+[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-blue-50 hover:text-blue-500 h-10 px-4 
+py-2[31m[39m
+[36m [2mÔØ»[22m __tests__/components/ui/button.test.tsx:[2m39:22[22m[39m
+    [90m 37| [39m      
+    [90m 38| [39m      [35mconst[39m button [33m=[39m 
+screen[33m.[39m[34mgetByRole[39m([32m'button'[39m)
+    [90m 39| [39m      [34mexpect[39m(button)[33m.[39m[34mtoHaveClass[39m([32m'hover:bg-accent'[39m)
+    [90m   | [39m                     [31m^[39m
+    [90m 40| [39m    })
+    [90m 41| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/6]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mrendering[2m > 
+[22mshould render with link variant
+[31m[1mError[22m: 
+[2mexpect([22m[31melement[31m[2m).toHaveClass([22m[32m[32m"text-primary"[32m[31m[2m)[22m
+
+Expected the element to have class:
+[32m  text-primary[31m
+Received:
+[31m  inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium 
+ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 
+focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 
+[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-blue-500 underline-offset-4 hover:underline 
+h-10 px-4 py-2[31m[39m
+[36m [2mÔØ»[22m __tests__/components/ui/button.test.tsx:[2m46:22[22m[39m
+    [90m 44| [39m      
+    [90m 45| [39m      [35mconst[39m button [33m=[39m 
+screen[33m.[39m[34mgetByRole[39m([32m'button'[39m)
+    [90m 46| [39m      [34mexpect[39m(button)[33m.[39m[34mtoHaveClass[39m([32m'text-primary'[39m)
+    [90m   | [39m                     [31m^[39m
+    [90m 47| [39m    })
+    [90m 48| [39m  })
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[5/6]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m __tests__/components/ui/button.test.tsx[2m > [22mButton[2m > [22mtype 
+attribute[2m > [22mshould have button type by default
+[31m[1mError[22m: 
+[2mexpect([22m[31melement[31m[2m).toHaveAttribute([22m[32m[32m"type"[32m[31m[2m, 
+[22m[32m[32m"button"[32m[31m[2m) // element.getAttribute("type") === "button"[22m
+
+Expected the element to have attribute:
+[32m  type="button"[31m
+Received:
+[31m  null[31m[39m
+[36m [2mÔØ»[22m __tests__/components/ui/button.test.tsx:[2m138:42[22m[39m
+    [90m136| [39m      
+[34mrender[39m([33m<[39m[33mButton[39m[33m>[39mSubmit[33m<[39m[33m/[39m[33mButton[39m[33m>[39m)
+    [90m137| [39m      
+    [90m138| [39m      expect(screen.getByRole('button')).toHaveAttribute('type', 'buttÔÇª
+    [90m   | [39m                                         [31m^[39m
+    [90m139| [39m    })
+    [90m140| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[6/6]ÔÄ»[22m[39m
+
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m7 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[31m6 failed[39m[22m[2m | [22m[1m[32m132 passed[39m[22m[90m (138)[39m
+[2m   Start at [22m 10:19:55
+[2m   Duration [22m 8.63s[2m (transform 1.85s, setup 4.06s, collect 6.41s, tests 4.27s, environment 22.87s, prepare 3.25s)[22m
+

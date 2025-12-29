@@ -252,7 +252,7 @@ export default function PriceManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeletePrice(price.ReservePriceId)}
           >
             <Trash className="h-4 w-4" />
@@ -270,7 +270,7 @@ export default function PriceManagement() {
         action={
           <Button onClick={() => handleAddPrice()}>
             <CreditCard className="mr-2 h-4 w-4" />
-            Añadir Precio
+            Agregar
           </Button>
         }
       />
@@ -349,7 +349,7 @@ export default function PriceManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir Nuevo Precio"
+        title="Agregar Nuevo Precio"
         description="Crea un nuevo precio completando el formulario a continuación."
         onSubmit={() => submitAddPrice()}
         submitText="Crear Precio"

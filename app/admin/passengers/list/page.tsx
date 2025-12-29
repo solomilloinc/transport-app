@@ -188,7 +188,7 @@ export default function PassengersManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeletePassenger(passenger.CustomerId)}
           >
             <Trash className="h-4 w-4" />
@@ -206,7 +206,7 @@ export default function PassengersManagement() {
         action={
           <Button onClick={() => handleAddPassegers()}>
             <UserPlusIcon className="mr-2 h-4 w-4" />
-            Añadir pasajero
+            Agregar
           </Button>
         }
       />
@@ -289,7 +289,7 @@ export default function PassengersManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir pasajero"
+        title="Agregar pasajero"
         description="Crea un nuevo pasajero completando el formulario a continuación."
         onSubmit={() => submitAddPassenger()}
         submitText="Crear pasajero"

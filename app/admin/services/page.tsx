@@ -384,7 +384,7 @@ export default function ServiceManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeleteService(service.ServiceId)}
           >
             <Trash className="h-4 w-4" />
@@ -402,15 +402,11 @@ export default function ServiceManagement() {
         action={
           <Button onClick={() => handleAddService()}>
             <Wrench className="mr-2 h-4 w-4" />
-            Añadir Servicio
+            Agregar
           </Button>
         }
       />
-      {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <Skeleton className="h-8 w-48" />
-              </div>
-            ) : (
+      
 
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
@@ -442,7 +438,6 @@ export default function ServiceManagement() {
           </div>
         </CardContent>
       </Card>
-       )}
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
@@ -492,7 +487,7 @@ export default function ServiceManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir nuevo servicio"
+        title="Agregar nuevo servicio"
         description="Crea un nuevo servicio completando el formulario a continuación."
         onSubmit={() => submitAddService()}
         submitText="Crear Servicio"
@@ -766,7 +761,6 @@ export default function ServiceManagement() {
 
               {/* Edit Schedule List */}
               <div className="space-y-3">
-                {console.log('Rendering editSchedules:', editSchedules)}
                 {editSchedules.map((schedule, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">

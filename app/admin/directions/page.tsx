@@ -204,7 +204,7 @@ export default function DirectionManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeleteDirection(direction.DirectionId)}
           >
             <Trash className="h-4 w-4" />
@@ -222,7 +222,7 @@ export default function DirectionManagement() {
         action={
           <Button onClick={() => handleAddDirection()}>
             <TruckIcon className="mr-2 h-4 w-4" />
-            Añadir Direccion
+            Agregar
           </Button>
         }
       />
@@ -300,7 +300,7 @@ export default function DirectionManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir direccion"
+        title="Agregar direccion"
         description="Crea una direccion completando el formulario a continuación."
         onSubmit={() => submitAddDirection()}
         submitText="Crear direccion"

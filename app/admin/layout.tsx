@@ -1,26 +1,22 @@
 'use client';
 
 import type React from 'react';
-
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Building,
   Bus,
   Calendar,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   CreditCard,
   LogOut,
-  LogOutIcon,
   MapPin,
-  Menu,
   Settings,
   User,
   UserCheck,
-  UserIcon,
   Users,
   Wrench,
+  Home,
+  LayoutDashboard,
 } from 'lucide-react';
 import {
   Sidebar as SidebarComponent,
@@ -38,30 +34,33 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
+  SidebarRail,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Suspense, useState } from 'react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { Suspense, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { signOut } from 'next-auth/react';
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
-  const { data: session } = useSession();
-  const userRole = (session?.user as any)?.[
-    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
-  ]?.toLowerCase();
+// Tipo para items del menú
+interface MenuItemType {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  path: string;
+  roles: string[];
+  key?: string;
+  submenu?: { name: string; path: string; roles: string[] }[];
+}
 
-  const toggleMenu = (menuKey: string) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menuKey]: !prev[menuKey],
-    }));
-  };
-  const menuItems = [
+// Configuración de menú centralizada
+const MENU_CONFIG: {
+  main: MenuItemType[];
+  config: MenuItemType[];
+  customer: MenuItemType[];
+} = {
+  main: [
     {
       name: 'Reservas',
       icon: Calendar,
@@ -91,6 +90,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       path: '/admin/drivers',
       roles: ['admin'],
     },
+  ],
+  config: [
     {
       name: 'Usuarios',
       icon: Settings,
@@ -107,7 +108,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       name: 'Direcciones',
       icon: MapPin,
       path: '/admin/directions',
-      key: 'directions',
       roles: ['admin'],
     },
     {
@@ -118,11 +118,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       roles: ['admin'],
       submenu: [
         { name: 'Coches', path: '/admin/vehicles', roles: ['admin'] },
-        {
-          name: 'Tipos',
-          path: '/admin/vehicles/types',
-          roles: ['admin'],
-        },
+        { name: 'Tipos', path: '/admin/vehicles/types', roles: ['admin'] },
       ],
     },
     {
@@ -131,6 +127,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       path: '/admin/prices',
       roles: ['admin'],
     },
+  ],
+  customer: [
     {
       name: 'Mis Datos',
       icon: UserCheck,
@@ -143,131 +141,277 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       path: '/passengers/bookings',
       roles: ['cliente'],
     },
-  ];
+  ],
+};
+
+// Componente para renderizar items del menú
+function MenuItem({ 
+  item, 
+  pathname, 
+  userRole, 
+  isExpanded, 
+  onToggle 
+}: { 
+  item: MenuItemType; 
+  pathname: string; 
+  userRole: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const isActive = item.submenu 
+    ? pathname.startsWith(item.path) 
+    : pathname === item.path;
+
+  if (item.submenu && item.key) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          tooltip={item.name}
+          isActive={isActive}
+          onClick={onToggle}
+          className="transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950"
+        >
+          <item.icon className="h-4 w-4" />
+          <span className="font-medium">{item.name}</span>
+          <ChevronDown
+            className={cn(
+              'ml-auto h-4 w-4 shrink-0 transition-transform duration-300',
+              isExpanded && 'rotate-180'
+            )}
+          />
+        </SidebarMenuButton>
+
+        <div
+          className={cn(
+            'overflow-hidden transition-all duration-300 ease-in-out',
+            isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+          )}
+        >
+          <SidebarMenuSub>
+            {item.submenu
+              ?.filter((subItem) => subItem.roles?.includes(userRole))
+              .map((subItem) => (
+                <SidebarMenuSubItem key={subItem.path}>
+                  <SidebarMenuSubButton 
+                    asChild 
+                    isActive={pathname === subItem.path}
+                    className="transition-colors duration-200 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950"
+                  >
+                    <Link href={subItem.path}>{subItem.name}</Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              ))}
+          </SidebarMenuSub>
+        </div>
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton 
+        asChild 
+        isActive={isActive} 
+        tooltip={item.name}
+        className="transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950"
+      >
+        <Link href={item.path}>
+          <item.icon className="h-4 w-4" />
+          <span className="font-medium">{item.name}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  const { data: session } = useSession();
+  
+  const userRole = (session?.user as any)?.[
+    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+  ]?.toLowerCase();
+
+  const userName = session?.user?.name || 'Usuario';
+  const userEmail = session?.user?.email || '';
+  const userInitials = userName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const toggleMenu = (menuKey: string) => {
+    setExpandedMenus((prev) => ({
+      ...prev,
+      [menuKey]: !prev[menuKey],
+    }));
+  };
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/', redirect: true });
     router.push('/');
   };
 
-  // Check if user is logged in
-  //   useEffect(() => {
-  //     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-  //     const userRole = localStorage.getItem("userRole");
+  // Filtrar menús por rol
+  const filteredMainMenu = useMemo(() => 
+    MENU_CONFIG.main.filter((item) => item.roles?.includes(userRole)),
+    [userRole]
+  );
 
-  //     if (!isLoggedIn || userRole !== "admin") {
-  //       router.push("/");
-  //     }
-  //   }, [router]);
+  const filteredConfigMenu = useMemo(() => 
+    MENU_CONFIG.config.filter((item) => item.roles?.includes(userRole)),
+    [userRole]
+  );
+
+  const filteredCustomerMenu = useMemo(() => 
+    MENU_CONFIG.customer.filter((item) => item.roles?.includes(userRole)),
+    [userRole]
+  );
+
+  const isCustomerView = userRole === 'cliente';
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <SidebarComponent>
-          <SidebarHeader>
-            <div className="flex items-center gap-2 px-4 py-2">
-              <Link href="/" className="font-bold text-xl text-blue-500">
-                ZerosTour
-              </Link>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Admin</span>
+        <SidebarComponent className="border-r border-sidebar-border bg-slate-50 dark:bg-slate-900">
+          {/* Header mejorado */}
+          <SidebarHeader className="border-b border-sidebar-border">
+            <div className="flex items-center gap-3 px-4 py-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25">
+                <Bus className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <Link href="/" className="font-bold text-lg text-foreground hover:text-blue-600 transition-colors">
+                  ZerosTour
+                </Link>
+                <span className="text-xs text-muted-foreground">
+                  {isCustomerView ? 'Portal Cliente' : 'Panel Admin'}
+                </span>
+              </div>
             </div>
           </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Principal</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems
-                    .filter((item) => item.roles?.includes(userRole))
-                    .map((item) => {
-                      const isActive = item.submenu ? pathname.startsWith(item.path) : pathname === item.path;
 
-                      // If the item has a submenu
-                      if (item.submenu && item.key) {
-                        const isExpanded = expandedMenus[item.key] || false;
+          <SidebarContent className="px-2">
+            {/* Menú Principal */}
+            {(filteredMainMenu.length > 0 || filteredCustomerMenu.length > 0) && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  {isCustomerView ? 'Mi Cuenta' : 'Principal'}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {(isCustomerView ? filteredCustomerMenu : filteredMainMenu).map((item) => (
+                      <MenuItem
+                        key={item.path}
+                        item={item}
+                        pathname={pathname}
+                        userRole={userRole}
+                        isExpanded={item.key ? expandedMenus[item.key] || false : false}
+                        onToggle={() => item.key && toggleMenu(item.key)}
+                      />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
-                        return (
-                          <SidebarMenuItem key={item.path}>
-                            <div className="w-full">
-                              <SidebarMenuButton
-                                tooltip={item.name}
-                                isActive={isActive}
-                                onClick={() => toggleMenu(item.key!)}
-                              >
-                                <item.icon />
-                                <span>{item.name}</span>
-                                <ChevronDown
-                                  className={cn(
-                                    'ml-auto h-4 w-4 shrink-0 transition-transform duration-200',
-                                    isExpanded && 'rotate-180'
-                                  )}
-                                />
-                              </SidebarMenuButton>
-
-                              {isExpanded && (
-                                <SidebarMenuSub>
-                                  {item.submenu
-                                    ?.filter((subItem) => subItem.roles?.includes(userRole))
-                                    .map((subItem) => (
-                                      <SidebarMenuSubItem key={subItem.path}>
-                                        <SidebarMenuSubButton asChild isActive={pathname === subItem.path}>
-                                          <Link href={subItem.path}>{subItem.name}</Link>
-                                        </SidebarMenuSubButton>
-                                      </SidebarMenuSubItem>
-                                    ))}
-                                </SidebarMenuSub>
-                              )}
-                            </div>
-                          </SidebarMenuItem>
-                        );
-                      }
-
-                      // Regular menu item without submenu
-                      return (
-                        <SidebarMenuItem key={item.path}>
-                          <SidebarMenuButton asChild isActive={isActive} tooltip={item.name}>
-                            <Link href={item.path}>
-                              <item.icon />
-                              <span>{item.name}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {/* Menú de Configuración (solo admin) */}
+            {filteredConfigMenu.length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                  Configuración
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filteredConfigMenu.map((item) => (
+                      <MenuItem
+                        key={item.path}
+                        item={item}
+                        pathname={pathname}
+                        userRole={userRole}
+                        isExpanded={item.key ? expandedMenus[item.key] || false : false}
+                        onToggle={() => item.key && toggleMenu(item.key)}
+                      />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
           </SidebarContent>
-          <SidebarFooter>
+
+          {/* Footer con info de usuario */}
+          <SidebarFooter className="border-t border-sidebar-border">
             <SidebarMenu>
+              {/* Info del usuario */}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut}>
-                  <LogOutIcon />
+                <div className="flex items-center gap-3 px-2 py-3">
+                  <Avatar className="h-9 w-9 border-2 border-blue-100">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm font-medium">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium truncate">{userName}</span>
+                    <span className="text-xs text-muted-foreground truncate">{userEmail}</span>
+                  </div>
+                </div>
+              </SidebarMenuItem>
+              
+              <Separator className="my-1" />
+              
+              {/* Link a inicio */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Ir al inicio">
+                  <Link href="/" className="text-muted-foreground hover:text-foreground">
+                    <Home className="h-4 w-4" />
+                    <span>Ir al inicio</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              {/* Cerrar sesión */}
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={handleSignOut}
+                  tooltip="Cerrar sesión"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" />
                   <span>Cerrar sesión</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
+
+          {/* Rail para resize */}
+          <SidebarRail />
         </SidebarComponent>
-        <div className="flex-1">
-          <header className="sticky top-0 z-40 border-b bg-background">
-            <div className="flex h-16 items-center justify-between px-4">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger />
-                <div className="hidden md:block text-sm">
-                  <p className="font-medium">Bienvenido, Usuario Admin</p>
-                  <p className="text-muted-foreground">Hoy es {new Date().toLocaleDateString('es-ES')}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 w-[120px] justify-end">
-                <Button variant="outline" size="sm">
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  Usuario Admin
-                </Button>
+
+        {/* Contenido principal */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header simplificado */}
+          <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex h-14 items-center gap-4 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex-1">
+                <h1 className="text-sm font-medium">
+                  {new Date().toLocaleDateString('es-ES', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </h1>
               </div>
             </div>
           </header>
-          <main className="p-4 md:p-6 w-full">
+
+          {/* Main content */}
+          <main className="flex-1 p-4 md:p-6">
             <Suspense>{children}</Suspense>
           </main>
         </div>

@@ -157,7 +157,7 @@ export default function CitiesManagement() {
           <Button size="sm" variant="outline" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEditCity(city)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleDeleteCity(city.Id)}>
+          <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300" onClick={() => handleDeleteCity(city.Id)}>
             <Trash className="h-4 w-4" />
           </Button>
         </div>
@@ -173,7 +173,7 @@ export default function CitiesManagement() {
         action={
           <Button onClick={() => setIsAddModalOpen(true)}>
             <Building className="mr-2 h-4 w-4" />
-            Añadir ciudad
+            Agregar
           </Button>
         }
       />
@@ -259,7 +259,7 @@ export default function CitiesManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir ciudad"
+        title="Agregar ciudad"
         description="Crea una nueva ciudad completando el formulario a continuación."
         onSubmit={() => submitAddCity()}
         submitText="Crear Ciudad"

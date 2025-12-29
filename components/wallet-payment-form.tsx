@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 
 interface WalletPaymentFormProps {
   amount: number;
@@ -29,6 +29,13 @@ interface WalletPaymentFormProps {
   disabled?: boolean;
 }
 
+// Debug logging solo en desarrollo
+const debugLog = (...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[WalletPayment]', ...args);
+  }
+};
+
 function WalletPaymentForm({ 
   amount,
   onSubmit,
@@ -36,30 +43,125 @@ function WalletPaymentForm({
   onReady,
   disabled = false 
 }: WalletPaymentFormProps) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [containerId] = useState(() => `walletBrick_container_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-  const [isInitialized, setIsInitialized] = useState(false);
+  // Usar useRef para el ID del contenedor (estable entre renders)
+  const containerIdRef = useRef(`walletBrick_${Math.random().toString(36).substr(2, 9)}`);
+  const containerId = containerIdRef.current;
+  
+  // Guard para evitar doble inicialización (especialmente en React Strict Mode)
+  const isInitializedRef = useRef(false);
+  const controllerRef = useRef<any>(null);
+  
+  // Estados para UI
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  console.log('WalletPaymentForm render:', { containerId, disabled, isInitialized });
-
-  useEffect(() => {
-    if (disabled) {
-      console.log('Wallet disabled, skipping initialization');
+  // Callback estable para inicializar el brick
+  const initializeWalletBrick = useCallback(() => {
+    // Verificar que el container existe
+    const container = document.getElementById(containerId);
+    if (!container) {
+      debugLog('Container not found, retrying...');
+      setTimeout(() => initializeWalletBrick(), 100);
       return;
     }
 
-    console.log('Starting wallet initialization for:', containerId);
+    // Si ya hay un controller, no reinicializar
+    if (controllerRef.current) {
+      debugLog('Controller already exists, skipping init');
+      return;
+    }
 
-    // Evitar cargar múltiples veces el SDK
+    // Verificar SDK disponible
+    if (!(window as any).MercadoPago) {
+      setError('SDK de MercadoPago no disponible');
+      setLoading(false);
+      return;
+    }
+
+    // Verificar public key
+    if (!process.env.NEXT_PUBLIC_MP_PUBLIC_KEY) {
+      setError('Clave pública de MercadoPago no configurada');
+      setLoading(false);
+      return;
+    }
+
+    // Limpiar contenido previo
+    container.innerHTML = '';
+    debugLog('Initializing wallet brick in:', containerId);
+
+    try {
+      const mp = new (window as any).MercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY, { 
+        locale: 'es-AR' 
+      });
+      const bricksBuilder = mp.bricks();
+
+      bricksBuilder
+        .create('wallet', containerId, {
+          initialization: {
+            redirectMode: 'self'
+          },
+          callbacks: {
+            onReady: () => {
+              debugLog('Wallet brick ready');
+              setLoading(false);
+              onReady?.();
+            },
+            onSubmit: () => {
+              return new Promise((resolve, reject) => {
+                onSubmit({ payload: { Payment: null, Items: [] } })
+                  .then((preference_id) => {
+                    resolve(preference_id);
+                  })
+                  .catch((err) => {
+                    console.error('Error in onSubmit callback:', err);
+                    reject(err);
+                  });
+              });
+            },
+            onError: (err: any) => {
+              console.error('Wallet Brick error:', err);
+              setError('Error en el componente Wallet');
+              setLoading(false);
+              onError?.(err);
+            },
+          },
+        })
+        .then((controller: any) => {
+          debugLog('Wallet controller created');
+          controllerRef.current = controller;
+        })
+        .catch((err: any) => {
+          console.error('Error initializing Wallet Brick:', err);
+          setError('Error al inicializar el componente Wallet');
+          setLoading(false);
+          onError?.(err);
+        });
+    } catch (err) {
+      console.error('Error in initializeWalletBrick:', err);
+      setError('Error al configurar MercadoPago');
+      setLoading(false);
+      onError?.(err);
+    }
+  }, [containerId, onSubmit, onError, onReady]);
+
+  useEffect(() => {
+    // No hacer nada si está deshabilitado o ya inicializado
+    if (disabled || isInitializedRef.current) {
+      return;
+    }
+    
+    // Marcar como inicializado ANTES de hacer cualquier cosa
+    // Esto previene doble ejecución en React Strict Mode
+    isInitializedRef.current = true;
+    debugLog('Starting wallet initialization');
+
+    // Verificar si el script ya existe
     const existingScript = document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]');
     
     if (existingScript) {
-      // Si el SDK ya está cargado, inicializar directamente
       if ((window as any).MercadoPago) {
         initializeWalletBrick();
       } else {
-        // Si el script existe pero no está cargado, esperar
         existingScript.addEventListener('load', initializeWalletBrick);
       }
     } else {
@@ -75,119 +177,19 @@ function WalletPaymentForm({
       document.body.appendChild(script);
     }
 
+    // Cleanup
     return () => {
-      // Limpiar solo el controlador específico, no el SDK global
-      if ((window as any).walletBrickController) {
+      if (controllerRef.current) {
         try {
-          (window as any).walletBrickController.unmount();
-          console.log('Unmounted wallet controller for:', containerId);
+          controllerRef.current.unmount();
+          debugLog('Unmounted wallet controller');
         } catch (e) {
-          console.warn('Error unmounting wallet brick controller:', e);
+          // Silently ignore unmount errors
         }
-        (window as any).walletBrickController = null;
+        controllerRef.current = null;
       }
     };
-  }, [disabled, containerId]);
-
-  const initializeWalletBrick = () => {
-    try {
-      console.log('initializeWalletBrick called for:', containerId);
-      
-      // Verificar que el container existe antes de crear el brick
-      const container = document.getElementById(containerId);
-      if (!container) {
-        console.warn(`Container ${containerId} not found, retrying...`);
-        setTimeout(initializeWalletBrick, 100);
-        return;
-      }
-
-      // Si ya hay un wallet brick activo, limpiarlo primero
-      if ((window as any).walletBrickController) {
-        console.log('Existing wallet brick found, cleaning up...');
-        try {
-          (window as any).walletBrickController.unmount();
-        } catch (e) {
-          console.warn('Error unmounting existing controller:', e);
-        }
-        (window as any).walletBrickController = null;
-      }
-
-      // Verificar que el SDK esté disponible
-      if (!(window as any).MercadoPago) {
-        console.error('MercadoPago SDK not available');
-        setError('SDK de MercadoPago no disponible');
-        setLoading(false);
-        return;
-      }
-
-      // Verificar que tenemos la public key
-      if (!process.env.NEXT_PUBLIC_MP_PUBLIC_KEY) {
-        console.error('MercadoPago public key not found');
-        setError('Clave pública de MercadoPago no configurada');
-        setLoading(false);
-        return;
-      }
-
-      // Limpiar contenido previo del container
-      container.innerHTML = '';
-      console.log('Creating wallet brick in container:', containerId);
-
-      const mp = new (window as any).MercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY, { 
-        locale: 'es-AR' 
-      });
-      const bricksBuilder = mp.bricks();
-
-      bricksBuilder
-        .create('wallet', containerId, {
-          initialization: {
-            redirectMode: 'self'
-          },
-          callbacks: {
-            onReady: () => {
-              console.log('Wallet brick ready for:', containerId);
-              setLoading(false);
-              setIsInitialized(true);
-              onReady?.();
-            },
-            onSubmit: () => {
-              return new Promise((resolve, reject) => {
-                // Llamar al callback onSubmit que viene desde el componente padre
-                onSubmit({ payload: { Payment: null, Items: [] } })
-                  .then((preference_id) => {
-                    // El padre devuelve el preference_id que MP necesita
-                    resolve(preference_id);
-                  })
-                  .catch((err) => {
-                    console.error('Error in onSubmit callback:', err);
-                    reject(err);
-                  });
-              });
-            },
-            onError: (error: any) => {
-              console.error('Wallet Brick error:', error);
-              setError('Error en el componente Wallet');
-              setLoading(false);
-              onError?.(error);
-            },
-          },
-        })
-        .then((controller: any) => {
-          console.log('Wallet brick controller created for:', containerId);
-          (window as any).walletBrickController = controller;
-        })
-        .catch((err: any) => {
-          console.error('Error initializing Wallet Brick:', err);
-          setError('Error al inicializar el componente Wallet');
-          setLoading(false);
-          onError?.(err);
-        });
-    } catch (err) {
-      console.error('Error in initializeWalletBrick:', err);
-      setError('Error al configurar MercadoPago');
-      setLoading(false);
-      onError?.(err);
-    }
-  };
+  }, [disabled, initializeWalletBrick, onError]);
 
   if (disabled) {
     return (
