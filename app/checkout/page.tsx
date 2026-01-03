@@ -611,10 +611,12 @@ firstName: p.firstName,
                     <div className="flex items-center">
                       <span>{checkout.outboundTrip?.DepartureHour}</span>
                       <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
+                      <span>{checkout.outboundTrip?.ArrivalHour}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Bus className="h-4 w-4 text-blue-600" />
+                     <span>{checkout.outboundTrip?.VehicleName}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-blue-600" />
@@ -644,10 +646,14 @@ firstName: p.firstName,
                         <div className="flex items-center">
                           <span>{checkout.returnTrip?.DepartureHour}</span>
                           <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
+                          <span>{checkout.returnTrip?.ArrivalHour}</span>
+
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Bus className="h-4 w-4 text-blue-600" />
+                                             <span>{checkout.returnTrip?.VehicleName}</span>
+
                       </div>
                     </div>
                   </>

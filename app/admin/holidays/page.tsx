@@ -187,7 +187,7 @@ export default function HolidaysManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeleteHoliday(holiday.HolidayId)}
           >
             <Trash className="h-4 w-4" />
@@ -205,7 +205,7 @@ export default function HolidaysManagement() {
         action={
           <Button onClick={() => handleAddHolidays()}>
             <UserPlusIcon className="mr-2 h-4 w-4" />
-            Añadir feriado
+            Agregar
           </Button>
         }
       />
@@ -284,7 +284,7 @@ export default function HolidaysManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir feriado"
+        title="Agregar feriado"
         description="Crea un nuevo feriado completando el formulario a continuación."
         onSubmit={() => submitAddHoliday()}
         submitText="Crear feriado"

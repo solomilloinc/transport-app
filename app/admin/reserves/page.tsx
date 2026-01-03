@@ -231,7 +231,7 @@ export default function ReservationsPage() {
             </Button>
             <Button onClick={handleAddPassenger}>
               <TicketPlus className=" mr-2 h-6 w-6" />
-              Añadir Reserva
+              Agregar
             </Button>
           </div>
         }

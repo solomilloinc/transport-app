@@ -163,7 +163,7 @@ export default function DriversManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeleteDriver(driver.DriverId)}
           >
             <Trash className="h-4 w-4" />
@@ -181,7 +181,7 @@ export default function DriversManagement() {
         action={
           <Button onClick={() => setIsAddModalOpen(true)}>
             <User className="mr-2 h-4 w-4" />
-            Añadir chofer
+            Agregar
           </Button>
         }
       />
@@ -264,7 +264,7 @@ export default function DriversManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir chofer"
+        title="Agregar chofer"
         description="Crea un nuevo chofer completando el formulario a continuación."
         onSubmit={() => submitAddDriver()}
         submitText="Crear Chofer"

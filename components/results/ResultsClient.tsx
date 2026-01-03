@@ -43,6 +43,8 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
   // local y desactivamos el indicador de carga.
   useEffect(() => {
     setReserves(initialReserves);
+    debugger
+    console.log(initialReserves)
     setLoading(false);
   }, [initialReserves]);
 

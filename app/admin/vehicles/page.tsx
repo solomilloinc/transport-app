@@ -209,7 +209,7 @@ export default function VehicleManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeleteVehicle(vehicle.VehicleId)}
           >
             <Trash className="h-4 w-4" />
@@ -227,7 +227,7 @@ export default function VehicleManagement() {
         action={
           <Button onClick={() => handleAddVehicle()}>
             <TruckIcon className="mr-2 h-4 w-4" />
-            Añadir Vehiculo
+            Agregar
           </Button>
         }
       />
@@ -315,7 +315,7 @@ export default function VehicleManagement() {
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
-        title="Añadir Nuevo Vehiculo"
+        title="Agregar Nuevo Vehiculo"
         description="Crea un nuevo vehiculo completando el formulario a continuación."
         onSubmit={() => submitAddVehicle()}
         submitText="Crear Vehiculo"
