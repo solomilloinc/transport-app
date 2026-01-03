@@ -278,7 +278,6 @@ firstName: p.firstName,
       if (responseData.Status === 'approved') {
         const reserveId = checkout.outboundTrip?.ReserveId;
         router.push(`/booking-confirmation?success=true&reserveId=${reserveId}`);
-        clearCheckout();
       } else {
         router.push(`/booking-confirmation?status=${encodeURIComponent(responseData.Status || 'unknown')}`);
       }

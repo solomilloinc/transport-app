@@ -19,3 +19,10 @@ export const getPassengerReserves = (id: number): UseApiCall<PassengerReserveRep
     call: get<any, PagedResponse<PassengerReserveReport>>( `/passenger-reserve-report/${id}`, finalParams),
   };
 };
+
+export const getSummaryReserves = (reserveId: number): UseApiCall<ReserveReport> => {
+  const finalParams = withDefaultPagination();
+  return {
+    call: get<any, PagedResponse<ReserveReport>>( `/reserve-payment-summary/${reserveId}`, finalParams),
+  };
+}

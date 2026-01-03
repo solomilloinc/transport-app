@@ -323,7 +323,7 @@ export default function ReservationsPage() {
         isConfirming={isDeleting}
       />
 
-      {/* <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} /> */}
+      <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} />
     </div>
   );
 }

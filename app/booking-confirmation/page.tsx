@@ -11,13 +11,22 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useCheckout } from "@/contexts/CheckoutContext";
 
 export default function BookingConfirmationPage() {
   const searchParams = useSearchParams();
+  const { clearCheckout } = useCheckout();
   const status = searchParams.get("status");
   const success = searchParams.get("success") === "true";
   const reserveId = searchParams.get("reserveId");
   const isApproved = success || status === "approved";
+
+  useEffect(() => {
+    if (isApproved) {
+      clearCheckout();
+    }
+  }, [isApproved, clearCheckout]);
 
   if (!isApproved) {
     return (
