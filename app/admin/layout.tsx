@@ -75,7 +75,7 @@ const MENU_CONFIG: {
       roles: ['admin', 'user'],
       submenu: [
         { name: 'Lista', path: '/admin/passengers/list', roles: ['admin', 'user'] },
-        { name: 'Deudas', path: '/admin/passengers/deudas', roles: ['admin', 'user'] },
+        { name: 'Deudas', path: '/admin/passengers/debts', roles: ['admin', 'user'] },
       ],
     },
     {

@@ -223,7 +223,7 @@ export default function PassengersManagement() {
                 columns={columns}
                 data={data?.Items ?? []}
                 emptyMessage="No se encontraron pasajeros."
-                isLoading={isLoading}
+                isLoading={loading}
                 skeletonRows={data?.PageSize}
               />
             </div>

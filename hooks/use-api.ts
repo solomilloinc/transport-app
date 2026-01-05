@@ -9,23 +9,23 @@ type UseApiOptions<P> = {
 
 type CustomError = Error | null;
 
-interface UseApiResult<T, P> {
+interface UseApiResult<T, P, R = PagedResponse<T>> {
   loading: boolean;
-  data: PagedResponse<T>;
+  data: R;
   error: CustomError;
   fetch: (param: P) => void;
   reset: () => void;
 }
 
-export const useApi = <T, P,>(apiCall: (param: P) => UseApiCall<T>, options?: UseApiOptions<P>): UseApiResult<T, P> => {
+export const useApi = <T, P, R = PagedResponse<T>>(apiCall: (param: P) => UseApiCall<T, R>, options?: UseApiOptions<P>): UseApiResult<T, P, R> => {
   const [loading, setLoading] = useState<boolean>(false)
-  const [data, setData] = useState<PagedResponse<T>>({} as PagedResponse<T>)
+  const [data, setData] = useState<R>({} as R)
   const [error, setError] = useState<CustomError>(null)
-  
-  const reset = () => setData({} as PagedResponse<T>);
-  
+
+  const reset = () => setData({} as R);
+
   const fetch = useCallback((param: P) => {
-    const { call} = apiCall(param);
+    const { call } = apiCall(param);
     setLoading(true);
 
     call.then((response) => {

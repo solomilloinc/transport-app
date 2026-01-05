@@ -1,12 +1,12 @@
 'use client';
 
-import { ArrowUpDown, ChevronDown, ChevronUp, CurrencyIcon, Edit2, TrashIcon } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronUp, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
 
-export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'price';
+export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
 type SortDirection = 'asc' | 'desc';
 
 interface PassengerListTableProps {
@@ -19,8 +19,8 @@ interface PassengerListTableProps {
   onEdit: (passenger: PassengerReserveReport) => void;
   onDelete: (passenger: PassengerReserveReport) => void;
   onAddPayment: (passenger: PassengerReserveReport) => void;
-  onPriceChange: (id: number, value: string) => void;
   getClientBalance: (dni: string) => number | null;
+  disabledPassengers?: number[];
 }
 
 export function PassengerListTable({
@@ -33,8 +33,8 @@ export function PassengerListTable({
   onEdit,
   onDelete,
   onAddPayment,
-  onPriceChange,
   getClientBalance,
+  disabledPassengers = [],
 }: PassengerListTableProps) {
   const renderSortIndicator = (column: PassengerSortColumn) => {
     if (sortColumn !== column) {
@@ -56,12 +56,12 @@ export function PassengerListTable({
       <table className="w-full border-collapse table-fixed">
         <thead>
           <tr className="border-b text-left text-sm font-medium text-gray-500">
-            <th className="py-3 pr-4 w-[20%]">
+            <th className="py-3 pr-4 w-[24%]">
               <button className="flex items-center font-medium text-gray-500 hover:text-gray-700" onClick={() => onSort('name')}>
                 Pasajero {renderSortIndicator('name')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[20%]">
+            <th className="py-3 pr-4 w-[11%]">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('pickup')}
@@ -69,7 +69,7 @@ export function PassengerListTable({
                 Subida {renderSortIndicator('pickup')}
               </button>
             </th>
-            <th className="py-3 pr-4 text-center">
+            <th className="py-3 pr-4 text-center w-[6%]">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('paid')}
@@ -77,7 +77,7 @@ export function PassengerListTable({
                 Pagado {renderSortIndicator('paid')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[15%]">
+            <th className="py-3 pr-4 w-[22%] text-center">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('paymentMethod')}
@@ -85,15 +85,15 @@ export function PassengerListTable({
                 Medio de pago {renderSortIndicator('paymentMethod')}
               </button>
             </th>
-            <th className="py-3 pr-4 text-center w-[10%]">
+            <th className="py-3 pr-4 text-center w-[12%]">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                onClick={() => onSort('price')}
+                onClick={() => onSort('paidAmount')}
               >
-                Monto {renderSortIndicator('price')}
+                Monto {renderSortIndicator('paidAmount')}
               </button>
             </th>
-            <th className="py-3 pl-4 text-right w-[15%]">Acciones</th>
+            <th className="py-3 pl-4 text-right w-[25%]">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -106,6 +106,7 @@ export function PassengerListTable({
                     checked={passenger.HasTraveled}
                     onCheckedChange={(checked) => onCheckPassenger(passenger, checked as boolean)}
                     className="mr-2"
+                    disabled={disabledPassengers.includes(passenger.PassengerId)}
                   />
                   <div>
                     <label htmlFor={`passenger-${passenger.PassengerId}`} className="font-medium">
@@ -129,30 +130,30 @@ export function PassengerListTable({
                 {passenger.PickupLocationName}
               </td>
               <td className="py-3 pr-4 text-center">
-                <Checkbox id={`paid-${passenger.PassengerId}`} checked={passenger.IsPayment} className="mx-auto" disabled />
-              </td>
-              <td className="py-3 pr-4 text-center">{passenger.PaymentMethodName}</td>
-              <td className="py-3 pr-4 text-center">
-                <Input
-                  type="text"
-                  value={passenger.Price}
-                  onChange={(e) => onPriceChange(passenger.PassengerId, e.target.value)}
-                  className={`w-24 text-right font-mono mx-auto ${!passenger.IsPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!passenger.IsPayment}
+                <Checkbox
+                  id={`paid-${passenger.PassengerId}`}
+                  checked={passenger.IsPayment}
+                  className="mx-auto"
+                  onCheckedChange={(checked) => {
+                    if (checked) onAddPayment(passenger);
+                  }}
                 />
+              </td>
+              <td className="py-3 pr-4 text-center">{passenger.PaymentMethods}</td>
+              <td className="py-3 pr-4 text-center font-mono font-medium">
+                ${(passenger.PaidAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               <td className="py-3 pl-4 text-right">
                 <div className="flex justify-end items-center">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-green-600 hover:bg-green-50 hover:text-green-700"
-                    onClick={() => onAddPayment(passenger)}
-                    disabled={!passenger.IsPayment}
-                    title="Añadir Pago"
+                  <div
+                    className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ml-4 mr-2 ${
+                      passenger.HasTraveled
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
                   >
-                    <CurrencyIcon className="h-4 w-4" />
-                  </Button>
+                    {passenger.HasTraveled ? 'Subió' : 'No subió'}
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"

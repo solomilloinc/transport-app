@@ -17,14 +17,14 @@ export interface PagedResponse<T = any> {
   TotalPages: number;
 }
 
-export interface PagedReserveResponse<T = any>{
+export interface PagedReserveResponse<T = any> {
   Outbound: PagedResponse<T>;
   Return: PagedResponse<T>;
 }
 
 
-export interface UseApiCall<T> {
-  call: Promise<PagedResponse<T>>;
+export interface UseApiCall<T, R = PagedResponse<T>> {
+  call: Promise<R>;
 }
 
 export interface PaginationParams {

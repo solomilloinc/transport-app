@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, use } from 'react';
-import { post } from '@/services/api';
+import { post, put } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
-import { emptyPassengerCreate, PassengerReserveReport } from '@/interfaces/passengerReserve';
-import { validationConfigEditReserve } from '@/validations/reserveSchema';
+import { emptyPassengerCreate, PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
+import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 
 interface EditPassengerReserveDialogProps {
   open: boolean;
@@ -30,7 +30,7 @@ export function EditPassengerReserveDialog({
   isLoadingDirections,
 }: EditPassengerReserveDialogProps) {
   const { toast } = useToast();
-  const form = useFormValidation(emptyPassengerCreate, validationConfigEditReserve);
+  const form = useFormValidation(emptyPassengerCreate, reserveValidationSchema);
 
   useEffect(() => {
     if (passengerReserve) {
@@ -42,13 +42,14 @@ export function EditPassengerReserveDialog({
 
   const handleSubmit = () => {
     form.handleSubmit(async (data) => {
+      if (!passengerReserve) return;
       try {
-        const response = await post(
-          `/passenger-reserve-update/${passengerReserve?.PassengerId}`,
-          {
-            ...data,
-          }
-        );
+        const updatePayload: PassengerReserveUpdate = {
+          pickupLocationId: data.PickupLocationId,
+          dropoffLocationId: data.DropoffLocationId,
+          hasTraveled: passengerReserve.HasTraveled,
+        };
+        const response = await put(`/passenger-reserve-update/${passengerReserve.PassengerId}`, updatePayload);
 
         if (response) {
           toast({

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { PlusCircleIcon, TrashIcon } from 'lucide-react';
-import { emptyPaymentCreate, Payment } from '@/interfaces/payment';
+import { emptyPaymentCreate, PassengerPaymentCreate, Payment } from '@/interfaces/payment';
 import { validationConfigPayment } from '@/validations/paymentSchema';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
 
@@ -68,7 +68,12 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
 
     form.setIsSubmitting(true);
     try {
-      const response = await post(`/reserve-create-payments/${passengerReserve?.ReserveId}/${passengerReserve?.CustomerId}`, payments);
+      const payload: PassengerPaymentCreate[] = payments.map((p) => ({
+        transactionAmount: p.TransactionAmount,
+        paymentMethod: p.PaymentMethod,
+      }));
+
+      const response = await post(`/reserve-payments-create/${passengerReserve?.ReserveId}/${passengerReserve?.CustomerId}`, payload);
       if (response) {
         toast({ title: 'Pago cargado', description: 'El pago ha sido cargado exitosamente', variant: 'success' });
         onSuccess();

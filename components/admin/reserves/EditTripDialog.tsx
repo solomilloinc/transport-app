@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { post, get } from '@/services/api';
+import { put, get } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { Input } from '@/components/ui/input';
-import { emptyEditReserve, ReserveReport } from '@/interfaces/reserve';
+import { emptyEditReserve, ReserveReport, ReserveUpdate } from '@/interfaces/reserve';
 import { validationConfigEditReserve } from '@/validations/reserveSchema';
 import { Vehicle } from '@/interfaces/vehicle';
+import { PagedResponse } from '@/services/types';
 
 interface EditTripDialogProps {
   open: boolean;
@@ -30,7 +31,7 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
     setIsLoadingVehicles(true);
     setVehiclesError(null);
     try {
-      const response = await get<any, Vehicle>('/vehicle-report', {
+      const response = await get<any, PagedResponse<Vehicle>>('/vehicle-report', {
         pageNumber: 1,
         pageSize: 100, // Fetch more vehicles
         sortBy: 'name',
@@ -68,8 +69,16 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
 
   const handleSubmit = () => {
     form.handleSubmit(async (data) => {
+      if (!trip) return;
       try {
-        const response = await post('/reserve-update', { ...trip, ...data });
+        const updatePayload: ReserveUpdate = {
+          vehicleId: data.VehicleId,
+          driverId: trip.DriverId,
+          reserveDate: trip.ReserveDate,
+          departureHour: data.DepartureHour,
+          status: trip.Status,
+        };
+        const response = await put(`/reserve-update/${trip.ReserveId}`, updatePayload);
 
         if (response) {
           toast({ title: 'Viaje actualizado', description: 'El viaje ha sido actualizado exitosamente.', variant: 'success' });
