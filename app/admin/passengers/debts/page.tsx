@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, subYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   Search, 
@@ -37,8 +37,8 @@ export default function DebtsPage() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [isCustomerPopoverOpen, setIsCustomerPopoverOpen] = useState(false);
   
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
+  const [toDate, setToDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -85,8 +85,8 @@ export default function DebtsPage() {
   };
 
   const resetFilters = () => {
-    setFromDate('');
-    setToDate('');
+    setFromDate(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
+    setToDate(format(new Date(), 'yyyy-MM-dd'));
     setCurrentPage(1);
   };
 

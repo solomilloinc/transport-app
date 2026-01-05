@@ -70,3 +70,15 @@ export interface ReserveUpdate {
     departureHour: string;
     status: number;
 }
+
+export interface PaymentMethodSummary {
+    paymentMethodId: number;
+    paymentMethodName: string;
+    amount: number;
+}
+
+export interface ReservePaymentSummary {
+    reserveId: number;
+    paymentsByMethod: PaymentMethodSummary[];
+    totalAmount: number;
+}

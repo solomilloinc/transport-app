@@ -393,7 +393,7 @@ export default function ReservationsPage() {
 
       <CancelTripDialog open={isCancelTripDialogOpen} onOpenChange={setIsCancelTripDialogOpen} trip={tripToCancel} onConfirm={handleConfirmCancelTrip} isConfirming={isCancellingTrip} />
 
-      {/* <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} /> */}
+      <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} />
     </div>
   );
 }
