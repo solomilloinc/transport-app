@@ -232,10 +232,10 @@ export default function ReservationsPage() {
     setIsCancellingTrip(true);
     try {
       const updatePayload: ReserveUpdate = {
-        vehicleId: tripToCancel.VehicleId,
-        driverId: tripToCancel.DriverId,
-        reserveDate: tripToCancel.ReserveDate,
-        departureHour: tripToCancel.DepartureHour,
+        vehicleId: null,
+        driverId: null,
+        reserveDate: null,
+        departureHour: null,
         status: ReserveStatusEnum.Cancelled,
       };
       const response = await put(`/reserve-update/${tripToCancel.ReserveId}`, updatePayload);

@@ -64,10 +64,10 @@ export interface CreateReserveExternalResult {
 }
 
 export interface ReserveUpdate {
-    vehicleId: number;
-    driverId: number;
-    reserveDate: string;
-    departureHour: string;
+    vehicleId?: number | null;
+    driverId?: number | null;
+    reserveDate?: string | null;
+    departureHour?: string | null;
     status: number;
 }
 
