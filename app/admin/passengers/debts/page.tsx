@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { format, subYears } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   Search, 
@@ -28,18 +28,20 @@ import { useApi } from '@/hooks/use-api';
 import { getPassengers } from '@/services/passenger';
 import { getCustomerAccountSummary } from '@/services/customerAccount';
 import { Passenger } from '@/interfaces/passengers';
-import { CustomerAccountSummary, Transaction } from '@/interfaces/customerAccount';
+import { CustomerAccountSummary, Transaction, TransactionTypeLabels, TransactionTypeOptions } from '@/interfaces/customerAccount';
 import { PaginationParams } from '@/services/types';
 import { usePaginationParams } from '@/utils/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function DebtsPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Passenger | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [isCustomerPopoverOpen, setIsCustomerPopoverOpen] = useState(false);
   
-  const [fromDate, setFromDate] = useState<string>(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
+  const [fromDate, setFromDate] = useState<string>(format(subMonths(new Date(), 3), 'yyyy-MM-dd'));
   const [toDate, setToDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  
+  const [transactionType, setTransactionType] = useState<string>('');
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
@@ -50,6 +52,7 @@ export default function DebtsPage() {
     pageNumber: currentPage,
     pageSize: pageSize,
     filters: {
+      transactionType: transactionType ? parseInt(transactionType) : null,
       fromDate: fromDate || null,
       toDate: toDate || null,
     }
@@ -85,34 +88,48 @@ export default function DebtsPage() {
   };
 
   const resetFilters = () => {
-    setFromDate(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
+    setFromDate(format(subMonths(new Date(), 3), 'yyyy-MM-dd'));
     setToDate(format(new Date(), 'yyyy-MM-dd'));
+    setTransactionType('');
     setCurrentPage(1);
   };
 
+  const getTransactionTypeStyle = (type: string) => {
+    switch (type) {
+      case 'Payment':
+        return 'bg-green-100 text-green-800';
+      case 'Charge':
+        return 'bg-red-100 text-red-800';
+      case 'Adjustment':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Refund':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const columns = [
-    { 
-      header: 'Fecha', 
-      accessor: 'Date', 
+    {
+      header: 'Fecha',
+      accessor: 'Date',
       width: '15%',
       cell: (t: Transaction) => format(new Date(t.Date), 'dd/MM/yyyy HH:mm', { locale: es })
     },
     { header: 'Descripción', accessor: 'Description', width: '45%' },
-    { 
-      header: 'Tipo', 
-      accessor: 'TransactionType', 
+    {
+      header: 'Tipo',
+      accessor: 'TransactionType',
       width: '15%',
       cell: (t: Transaction) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          t.TransactionType === 'Payment' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {t.TransactionType === 'Payment' ? 'Pago' : 'Cargo'}
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTransactionTypeStyle(t.TransactionType)}`}>
+          {TransactionTypeLabels[t.TransactionType] || t.TransactionType}
         </span>
       )
     },
-    { 
-      header: 'Monto', 
-      accessor: 'Amount', 
+    {
+      header: 'Monto',
+      accessor: 'Amount',
       className: 'text-right',
       width: '15%',
       cell: (t: Transaction) => (
@@ -138,7 +155,7 @@ export default function DebtsPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <div className="space-y-2">
               <Label htmlFor="customer-search">Pasajero</Label>
               <Popover open={isCustomerPopoverOpen} onOpenChange={setIsCustomerPopoverOpen}>
@@ -192,10 +209,26 @@ export default function DebtsPage() {
             </div>
 
             <div className="space-y-2">
+              <Label>Tipo de Transacción</Label>
+              <Select value={transactionType || 'all'} onValueChange={(value) => { setTransactionType(value === 'all' ? '' : value); setCurrentPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TransactionTypeOptions.map((option) => (
+                    <SelectItem key={option.value || 'all'} value={option.value || 'all'}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Desde</Label>
-              <Input 
-                type="date" 
-                value={fromDate} 
+              <Input
+                type="date"
+                value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
               />
             </div>
@@ -203,9 +236,9 @@ export default function DebtsPage() {
             <div className="space-y-2">
               <Label>Hasta</Label>
               <div className="flex gap-2">
-                <Input 
-                  type="date" 
-                  value={toDate} 
+                <Input
+                  type="date"
+                  value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                 />
                 <Button variant="ghost" className="px-3" onClick={resetFilters}>X</Button>
@@ -226,7 +259,7 @@ export default function DebtsPage() {
                 </div>
                 <h3 className="text-3xl font-bold">
                   $ {summary?.CurrentBalance?.toLocaleString() ?? 0}
-                </h3> 
+                </h3>
                 <p className="mt-2 text-xs text-blue-200">Total acumulado a la fecha</p>
               </CardContent>
             </Card>

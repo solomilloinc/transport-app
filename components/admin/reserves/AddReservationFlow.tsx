@@ -154,8 +154,10 @@ export function AddReservationFlow({
       setPassengerReserves([reserveData]);
 
       if (data.ReserveTypeId === 2) {
-        // Round trip
-        setReturnDate(new Date());
+        // Round trip - usar la fecha del viaje de ida como fecha inicial de vuelta
+        const tripDate = new Date(initialTrip!.ReserveDate);
+        setReturnDate(tripDate);
+        setMonth(tripDate);
         setStep(FlowStep.SELECT_RETURN_TRIP);
       } else {
         // One way

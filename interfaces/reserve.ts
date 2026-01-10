@@ -72,13 +72,13 @@ export interface ReserveUpdate {
 }
 
 export interface PaymentMethodSummary {
-    paymentMethodId: number;
-    paymentMethodName: string;
-    amount: number;
+    PaymentMethodId: number;
+    PaymentMethodName: string;
+    Amount: number;
 }
 
 export interface ReservePaymentSummary {
-    reserveId: number;
-    paymentsByMethod: PaymentMethodSummary[];
-    totalAmount: number;
+    ReserveId: number;
+    PaymentsByMethod: PaymentMethodSummary[];
+    TotalAmount: number;
 }

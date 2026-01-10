@@ -43,6 +43,7 @@ import { Separator } from '@/components/ui/separator';
 import { Suspense, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { signOut, useSession } from 'next-auth/react';
+import { logoutFromBackend } from '@/services/auth-client';
 
 // Tipo para items del menú
 interface MenuItemType {
@@ -228,6 +229,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { data: session } = useSession();
   
   const userRole = (session?.user as any)?.[
@@ -251,8 +253,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/', redirect: true });
-    router.push('/');
+    setIsLoggingOut(true);
+    try {
+      // Primero revocar el refresh token en el backend
+      await logoutFromBackend();
+      // Luego cerrar la sesión de NextAuth
+      await signOut({ callbackUrl: '/', redirect: true });
+    } catch (error) {
+      console.error('Error durante logout:', error);
+      // Aún así intentar cerrar la sesión local
+      await signOut({ callbackUrl: '/', redirect: true });
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   // Filtrar menús por rol
@@ -374,13 +387,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               
               {/* Cerrar sesión */}
               <SidebarMenuItem>
-                <SidebarMenuButton 
+                <SidebarMenuButton
                   onClick={handleSignOut}
                   tooltip="Cerrar sesión"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={isLoggingOut}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Cerrar sesión</span>
+                  <span>{isLoggingOut ? 'Cerrando...' : 'Cerrar sesión'}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

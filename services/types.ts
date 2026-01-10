@@ -44,7 +44,22 @@ export interface PaginationParams {
 declare module 'next-auth' {
   interface Session {
     accessToken?: string;
+    error?: string; // 'RefreshTokenError' cuando la renovación falla
     user: {
+      id: string;
+      email: string;
+      role: string;
+      name?: string;
+    };
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    accessToken?: string;
+    accessTokenExpires?: number;
+    error?: string;
+    user?: {
       id: string;
       email: string;
       role: string;

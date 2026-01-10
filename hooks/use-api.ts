@@ -1,6 +1,6 @@
-
 import { PagedResponse, UseApiCall } from "@/services/types";
 import { useCallback, useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 
 type UseApiOptions<P> = {
   autoFetch?: boolean;
@@ -15,6 +15,29 @@ interface UseApiResult<T, P, R = PagedResponse<T>> {
   error: CustomError;
   fetch: (param: P) => void;
   reset: () => void;
+}
+
+/**
+ * Detecta si un error es de sesión expirada
+ */
+function isSessionExpiredError(error: unknown): boolean {
+  if (!error) return false;
+
+  const message = error instanceof Error
+    ? error.message
+    : String(error);
+
+  return message.includes('SessionExpiredError') ||
+         message.includes('Sesión expirada') ||
+         message.includes('No autorizado');
+}
+
+/**
+ * Maneja errores de sesión expirada redirigiendo al login
+ */
+function handleSessionExpired() {
+  console.warn('Sesión expirada - redirigiendo al login');
+  signOut({ callbackUrl: '/', redirect: true });
 }
 
 export const useApi = <T, P, R = PagedResponse<T>>(apiCall: (param: P) => UseApiCall<T, R>, options?: UseApiOptions<P>): UseApiResult<T, P, R> => {
@@ -32,6 +55,11 @@ export const useApi = <T, P, R = PagedResponse<T>>(apiCall: (param: P) => UseApi
       setData(response);
       setError(null);
     }).catch((err) => {
+      // Detectar error de sesión expirada y redirigir al login
+      if (isSessionExpiredError(err)) {
+        handleSessionExpired();
+        return;
+      }
       setError(err)
     }).finally(() => {
       setLoading(false)

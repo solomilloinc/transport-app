@@ -53,11 +53,11 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Pagos por Método</h4>
               <div className="grid gap-3">
-                {summary.paymentsByMethod.length > 0 ? (
-                  summary.paymentsByMethod.map((item) => (
-                    <div key={item.paymentMethodId} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                      <span className="font-medium">{item.paymentMethodName}</span>
-                      <span className="text-lg font-bold text-blue-600">${item.amount.toLocaleString()}</span>
+                {summary.PaymentsByMethod.length > 0 ? (
+                  summary.PaymentsByMethod.map((item) => (
+                    <div key={item.PaymentMethodId} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                      <span className="font-medium">{item.PaymentMethodName}</span>
+                      <span className="text-lg font-bold text-blue-600">${item.Amount.toLocaleString()}</span>
                     </div>
                   ))
                 ) : (
@@ -69,7 +69,7 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
             <div className="mt-6 pt-4 border-t">
               <div className="flex justify-between items-center px-2">
                 <span className="text-lg font-semibold">Total General</span>
-                <span className="text-2xl font-bold text-green-600">${summary.totalAmount.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-green-600">${summary.TotalAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>

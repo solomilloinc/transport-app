@@ -10,6 +10,7 @@ export const getCustomerAccountSummary = (customerId: number, params?: Partial<P
             pageNumber: finalParams.pageNumber,
             pageSize: finalParams.pageSize,
             filters: {
+                TransactionType: finalParams.filters?.transactionType,
                 FromDate: finalParams.filters?.fromDate,
                 ToDate: finalParams.filters?.toDate
             }
