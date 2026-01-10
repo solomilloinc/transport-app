@@ -20,21 +20,12 @@ export interface PassengerReserve extends Auditable {
 }
 
 export interface PassengerReserveCreate extends Omit<PassengerReserve, 'CustomerReserveId' | 'IsRoundTrip' | 'Payments' | 'Status' | 'CreatedBy' | 'CreatedDate' | 'UpdatedBy' | 'UpdatedDate'> {
-    ReserveId: number
-    CustomerId: number
-    IsPayment: boolean
-    StatusPaymentId: number
-    ReserveTypeId: number
-    PaymentMethods: string
-    PaidAmount: number
-    PickupLocationId: number
-    DropoffLocationId: number
     PickupLocationReturnId?: number
     DropoffLocationReturnId?: number
-    HasTraveled: boolean
+    Price: number
 }
 
-export const emptyPassengerCreate: Omit<PassengerReserveCreate, 'PaidAmount' | 'PaymentMethods' | 'HasTraveled'> = {
+export const emptyPassengerCreate: Omit<PassengerReserveCreate, 'PaidAmount' | 'PaymentMethods' | 'HasTraveled' | 'Price'> = {
     PassengerId: 0,
     ReserveId: 0,
     CustomerId: 0,
@@ -43,7 +34,7 @@ export const emptyPassengerCreate: Omit<PassengerReserveCreate, 'PaidAmount' | '
     IsPayment: true,
     StatusPaymentId: 1, // Assuming 1 means paid
     PaymentMethod: 1, // Assuming 1 is cash
-    ReserveTypeId: 1
+    ReserveTypeId: 1,
 }
 
 export interface PassengerReserveReport extends PassengerReserve {
