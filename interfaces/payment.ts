@@ -5,12 +5,17 @@ export interface Payment {
 
 export const emptyPaymentCreate = {
     TransactionAmount: 0.00,
-    PaymentMethod:0
+    PaymentMethod: 0
 }
 
 export enum PaymentMethod {
-   Efectivo = 1,
-   Online = 2,
-   Tarjeta = 3,
-   Transferencia = 4
+    Efectivo = 1,
+    Online = 2,
+    Tarjeta = 3,
+    Transferencia = 4
+}
+
+export interface PassengerPaymentCreate {
+    transactionAmount: number
+    paymentMethod: number
 }

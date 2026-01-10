@@ -17,14 +17,14 @@ export interface PagedResponse<T = any> {
   TotalPages: number;
 }
 
-export interface PagedReserveResponse<T = any>{
+export interface PagedReserveResponse<T = any> {
   Outbound: PagedResponse<T>;
   Return: PagedResponse<T>;
 }
 
 
-export interface UseApiCall<T> {
-  call: Promise<PagedResponse<T>>;
+export interface UseApiCall<T, R = PagedResponse<T>> {
+  call: Promise<R>;
 }
 
 export interface PaginationParams {
@@ -44,7 +44,22 @@ export interface PaginationParams {
 declare module 'next-auth' {
   interface Session {
     accessToken?: string;
+    error?: string; // 'RefreshTokenError' cuando la renovación falla
     user: {
+      id: string;
+      email: string;
+      role: string;
+      name?: string;
+    };
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    accessToken?: string;
+    accessTokenExpires?: number;
+    error?: string;
+    user?: {
       id: string;
       email: string;
       role: string;

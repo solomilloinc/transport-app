@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { X } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
@@ -13,11 +14,12 @@ interface TripSelectionPanelProps {
   onDateChange: (date: Date | undefined) => void;
   selectedTrip: ReserveReport | null;
   onTripSelect: (trip: ReserveReport) => void;
+  onCancelTrip: (trip: ReserveReport) => void;
   trips: ReserveReport[] | undefined;
   isLoading: boolean;
 }
 
-export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, onTripSelect, trips, isLoading }: TripSelectionPanelProps) {
+export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, onTripSelect, onCancelTrip, trips, isLoading }: TripSelectionPanelProps) {
   const [month, setMonth] = useState<Date>(new Date());
 
   return (
@@ -33,7 +35,7 @@ export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, o
               month={month}
               onMonthChange={setMonth}
               locale={es}
-              fromMonth={new Date()}
+              fromMonth={subMonths(new Date(), 1)}
               classNames={{
                 cell: 'h-6 w-6 sm:h-7 sm:w-7 text-center text-[10px] sm:text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
                 day: 'h-6 w-6 sm:h-7 sm:w-7 p-0 font-normal text-[10px] sm:text-xs aria-selected:opacity-100',
@@ -47,19 +49,38 @@ export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, o
               {isLoading && <div className="text-center py-4 text-gray-500">Cargando viajes...</div>}
               {!isLoading &&
                 trips?.map((trip) => (
-                  <button
-                    key={trip.ReserveId}
-                    className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
-                      selectedTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => onTripSelect(trip)}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="font-medium">{trip.DepartureHour}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-md ${trip.ReservedQuantity >= trip.AvailableQuantity ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{trip.ReservedQuantity}/{trip.AvailableQuantity}</span>
-                    </div>
-                    <div className="text-gray-600">{trip.OriginName} → {trip.DestinationName}</div>
-                  </button>
+                  <div key={trip.ReserveId} className="relative group">
+                    <button
+                      className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
+                        selectedTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => onTripSelect(trip)}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="font-medium">{trip.DepartureHour}</span>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded-md ${
+                            trip.ReservedQuantity >= trip.AvailableQuantity ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                          }`}
+                        >
+                          {trip.ReservedQuantity}/{trip.AvailableQuantity}
+                        </span>
+                      </div>
+                      <div className="text-gray-600">
+                        {trip.OriginName} → {trip.DestinationName}
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCancelTrip(trip);
+                      }}
+                      className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-5 h-5 bg-red-100 text-red-500 rounded-full shadow-sm hover:bg-red-200 transition-colors z-10 border border-red-200"
+                      title="Cancelar viaje"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 ))}
               {!isLoading && trips?.length === 0 && <div className="text-center py-4 text-gray-500">No hay viajes disponibles.</div>}
             </div>

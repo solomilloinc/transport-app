@@ -14,11 +14,12 @@ import { AddPaymentDialog } from '@/components/admin/reserves/AddPaymentDialog';
 import { DeleteAction, DeleteConfirmationDialog } from '@/components/admin/reserves/DeleteConfirmationDialog';
 import { PassengerListTable, PassengerSortColumn } from '@/components/admin/reserves/PassengerListTable';
 import { TripSelectionPanel } from '@/components/admin/reserves/TripSelectionPanel';
+import { CancelTripDialog } from '@/components/admin/reserves/CancelTripDialog';
 import { Label } from '@/components/ui/label';
-import { deleteLogic, get } from '@/services/api';
-import { ReserveReport } from '@/interfaces/reserve';
+import { deleteLogic, get, post, put } from '@/services/api';
+import { ReserveReport, ReserveStatusEnum, ReserveUpdate } from '@/interfaces/reserve';
 import { SelectOption } from '@/components/dashboard/select';
-import { PassengerReserveReport } from '@/interfaces/passengerReserve';
+import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { toast } from '@/hooks/use-toast';
 import { Direction } from '@/interfaces/direction';
 import { useApi } from '@/hooks/use-api';
@@ -37,8 +38,8 @@ const passengerSortFns = {
   name: (a: PassengerReserveReport, b: PassengerReserveReport) => a.FullName.localeCompare(b.FullName),
   pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.PickupLocationName.localeCompare(b.PickupLocationName),
   paid: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.IsPayment) - Number(b.IsPayment),
-  paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.PaymentMethodName || '').localeCompare(b.PaymentMethodName || ''),
-  price: (a: PassengerReserveReport, b: PassengerReserveReport) => a.Price - b.Price,
+  paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.PaymentMethods || '').localeCompare(b.PaymentMethods),
+  paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.PaidAmount) - Number(b.PaidAmount),
 };
 
 export default function ReservationsPage() {
@@ -60,6 +61,10 @@ export default function ReservationsPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<SelectOption[]>([]);
   const [isReserveDialogOpen, setIsReserveDialogOpen] = useState(false);
+  const [isCancelTripDialogOpen, setIsCancelTripDialogOpen] = useState(false);
+  const [tripToCancel, setTripToCancel] = useState<ReserveReport | null>(null);
+  const [isCancellingTrip, setIsCancellingTrip] = useState(false);
+  const [disabledPassengers, setDisabledPassengers] = useState<number[]>([]);
 
   const [isAddPaymentReserveModalOpen, setIsAddPaymentReserveModalOpen] = useState(false);
 
@@ -144,8 +149,33 @@ export default function ReservationsPage() {
   };
   // Handle passenger checkbox change
   const handlePassengerReserveCheck = async (passenger: PassengerReserveReport, checked: boolean) => {
-    const updatedPassenger = { ...passenger, HasTraveled: checked };
-    //aca hacer la llamada api
+    // Evitar múltiples clics con cooldown de 10 segundos
+    setDisabledPassengers((prev) => [...prev, passenger.PassengerId]);
+
+    try {
+      const updatePayload: PassengerReserveUpdate = {
+        pickupLocationId: passenger.PickupLocationId,
+        dropoffLocationId: passenger.DropoffLocationId,
+        hasTraveled: checked,
+      };
+      const response = await put(`/passenger-reserve-update/${passenger.PassengerId}`, updatePayload);
+
+      if (response) {
+        toast({ title: 'Estado actualizado', description: 'El estado del pasajero ha sido actualizado.', variant: 'success' });
+        if (selectedTrip) {
+          fetchPassengerReserves(selectedTrip.ReserveId);
+        }
+      } else {
+        toast({ title: 'Error', description: 'No se pudo actualizar el estado.', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Ocurrió un error al actualizar el estado.', variant: 'destructive' });
+    } finally {
+      // Remover del estado de deshabilitado después de 10 segundos
+      setTimeout(() => {
+        setDisabledPassengers((prev) => prev.filter((id) => id !== passenger.PassengerId));
+      }, 10000);
+    }
   };
 
   // Handle delete passenger
@@ -188,6 +218,43 @@ export default function ReservationsPage() {
   const handleEditReserve = (selectedTrip?: ReserveReport) => {
     if (selectedTrip) {
       setIsReserveDialogOpen(true);
+    }
+  };
+
+  const handleCancelTripClick = (trip: ReserveReport) => {
+    setTripToCancel(trip);
+    setIsCancelTripDialogOpen(true);
+  };
+
+  const handleConfirmCancelTrip = async () => {
+    if (!tripToCancel) return;
+
+    setIsCancellingTrip(true);
+    try {
+      const updatePayload: ReserveUpdate = {
+        vehicleId: null,
+        driverId: null,
+        reserveDate: null,
+        departureHour: null,
+        status: ReserveStatusEnum.Cancelled,
+      };
+      const response = await put(`/reserve-update/${tripToCancel.ReserveId}`, updatePayload);
+
+      if (response) {
+        toast({ title: 'Viaje cancelado', description: 'El viaje ha sido cancelado exitosamente.', variant: 'success' });
+        setIsCancelTripDialogOpen(false);
+        setTripToCancel(null);
+        if (selectedDate) fetchReserves(format(selectedDate, 'yyyyMMdd'));
+        if (selectedTrip?.ReserveId === tripToCancel.ReserveId) {
+          setSelectedTrip(null);
+        }
+      } else {
+        toast({ title: 'Error', description: 'Error al cancelar el viaje.', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Ocurrió un error al cancelar el viaje.', variant: 'destructive' });
+    } finally {
+      setIsCancellingTrip(false);
     }
   };
 
@@ -242,6 +309,7 @@ export default function ReservationsPage() {
           onDateChange={setSelectedDate}
           selectedTrip={selectedTrip}
           onTripSelect={setSelectedTrip}
+          onCancelTrip={handleCancelTripClick}
           trips={dataReserves?.Items}
           isLoading={loadingReserves}
         />
@@ -269,8 +337,8 @@ export default function ReservationsPage() {
                 onEdit={handleEditPassengerReserve}
                 onDelete={handleDeletePassengerReserveClick}
                 onAddPayment={handleAddPaymentPassengerReserve}
-                onPriceChange={() => {}} // Placeholder, implement if needed
                 getClientBalance={() => null} // Placeholder, implement if needed
+                disabledPassengers={disabledPassengers}
               />
             </div>
           </CardContent>
@@ -323,7 +391,9 @@ export default function ReservationsPage() {
         isConfirming={isDeleting}
       />
 
-      {/* <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} /> */}
+      <CancelTripDialog open={isCancelTripDialogOpen} onOpenChange={setIsCancelTripDialogOpen} trip={tripToCancel} onConfirm={handleConfirmCancelTrip} isConfirming={isCancellingTrip} />
+
+      <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} />
     </div>
   );
 }
