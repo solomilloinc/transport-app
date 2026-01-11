@@ -5,8 +5,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { useApi } from '@/hooks/use-api';
-import { ReserveReport, ReservePaymentSummary } from '@/interfaces/reserve';
-import { getReservePaymentSummary } from '@/services/reserves';
+import { ReserveReport } from '@/interfaces/reserve';
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,37 +19,23 @@ import { toast } from 'sonner';
 interface PaymentSummaryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trip: ReserveReport | null;
+  currentCashBox: CashBox | null;
+  onSuccess?: () => void;
+  loading?: boolean;
 }
 
-export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummaryDialogProps) {
-  const {
-    data: summaryResponse,
-    loading,
-    error,
-    fetch: fetchSummary,
-  } = useApi<ReservePaymentSummary, number>(getReservePaymentSummary, { autoFetch: false });
+const formatSafeDate = (dateStr: string | undefined | null, formatStr: string) => {
+  if (!dateStr) return '--:--';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '--:--';
+  return format(date, formatStr, { locale: es });
+};
 
-
+export function PaymentSummaryDialog({ open, onOpenChange, currentCashBox, onSuccess, loading: loadingCashBox }: PaymentSummaryDialogProps) {
   const { fetch: fetchClose, loading: closing } = useApi<any, { description: string }, number>(closeCashBox, { autoFetch: false });
-
-  const {
-    data: currentCashBox,
-    loading: loadingCashBox,
-    fetch: fetchCurrentCashBox,
-  } = useApi<any, any, CashBox>(getCurrentCashBox, { autoFetch: false });
 
   const [closingMode, setClosingMode] = useState(false);
   const [description, setDescription] = useState('');
-
-  useEffect(() => {
-    if (open) {
-      if (trip) fetchSummary(trip.ReserveId);
-      fetchCurrentCashBox({});
-    }
-  }, [open, trip]);
-
-  const summary = summaryResponse?.Items?.[0];
 
   const handleCloseCashBox = async () => {
     if (!description.trim()) return;
@@ -61,6 +46,7 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
       setClosingMode(false);
       setDescription('');
       onOpenChange(false);
+      if (onSuccess) onSuccess();
     } catch (e) {
       toast.error('Error al cerrar la caja');
     }
@@ -75,12 +61,10 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Detalle de Pagos</DialogTitle>
-          {trip && (
-            <DialogDescription>
-              Pagos de la reserva para {format(new Date(trip.ReserveDate), "EEEE, d 'de' MMMM", { locale: es })} - {trip.DepartureHour}
-            </DialogDescription>
-          )}
+          <DialogTitle>Detalle de Pagos de Caja</DialogTitle>
+          <DialogDescription>
+            Resumen acumulado de los pagos recibidos en la caja actual.
+          </DialogDescription>
         </DialogHeader>
 
         {currentCashBox && (
@@ -91,29 +75,28 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
             </div>
             <p className="text-sm font-medium text-blue-900">{currentCashBox.Description}</p>
             <div className="flex justify-between text-sm pt-1">
-                <span className="text-blue-700">Abierta: {format(new Date(currentCashBox.OpenedAt), "HH:mm", { locale: es })}hs</span>
-                <span className="font-bold text-blue-800">${currentCashBox.TotalAmount?.toLocaleString()}</span>
+              <span className="text-blue-700">Abierta: {formatSafeDate(currentCashBox.OpenedAt, "HH:mm")}hs</span>
+              <span className="font-bold text-blue-800">${currentCashBox.TotalAmount?.toLocaleString() ?? '0'}</span>
             </div>
           </div>
         )}
-        
-        {loading && <div className="py-10 text-center">Cargando resumen...</div>}
-        {error && <div className="py-10 text-center text-red-500">Error al cargar el resumen.</div>}
-        
-        {summary && !loading && (
+
+        {loadingCashBox && <div className="py-10 text-center">Cargando información de caja...</div>}
+
+        {currentCashBox && !loadingCashBox && (
           <div className="space-y-4 py-4">
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Pagos por Método</h4>
               <div className="grid gap-3">
-                {summary.PaymentsByMethod.length > 0 ? (
-                  summary.PaymentsByMethod.map((item) => (
+                {currentCashBox.PaymentsByMethod && currentCashBox.PaymentsByMethod.length > 0 ? (
+                  currentCashBox.PaymentsByMethod.map((item) => (
                     <div key={item.PaymentMethodId} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                       <span className="font-medium">{item.PaymentMethodName}</span>
-                      <span className="text-lg font-bold text-blue-600">${item.Amount.toLocaleString()}</span>
+                      <span className="text-lg font-bold text-blue-600">${item.Amount?.toLocaleString() ?? '0'}</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center py-4 text-gray-400 italic">No hay pagos registrados para esta reserva.</p>
+                  <p className="text-center py-4 text-gray-400 italic">No hay pagos registrados en esta caja.</p>
                 )}
               </div>
             </div>
@@ -121,13 +104,13 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
             <div className="mt-6 pt-4 border-t">
               <div className="flex justify-between items-center px-2">
                 <span className="text-lg font-semibold">Total General</span>
-                <span className="text-2xl font-bold text-green-600">${summary.TotalAmount.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-green-600">${currentCashBox.TotalAmount?.toLocaleString() ?? '0'}</span>
               </div>
             </div>
           </div>
         )}
 
-        {summary && closingMode && (
+        {currentCashBox && closingMode && (
           <div className="space-y-4 py-4 border-t">
             <div className="space-y-2">
               <Label htmlFor="description">Descripción del Cierre</Label>
@@ -145,8 +128,8 @@ export function PaymentSummaryDialog({ open, onOpenChange, trip }: PaymentSummar
         <DialogFooter className="flex flex-col sm:flex-row gap-2">
           {!closingMode ? (
             <>
-              {summary?.CashBoxId && (
-                <Button variant="destructive" onClick={() => setClosingMode(true)} disabled={loading}>
+              {currentCashBox?.CashBoxId && (
+                <Button variant="destructive" onClick={() => setClosingMode(true)} disabled={loadingCashBox}>
                   Cerrar Caja
                 </Button>
               )}

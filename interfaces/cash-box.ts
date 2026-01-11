@@ -1,3 +1,4 @@
+import { PaymentMethodSummary } from "./reserve";
 
 export default interface CashBox {
     CashBoxId: number,
@@ -9,5 +10,6 @@ export default interface CashBox {
     ClosedByUserEmail: string,
     ReserveId: number,
     TotalPayments: number,
-    TotalAmount: number
+    TotalAmount: number,
+    PaymentsByMethod: PaymentMethodSummary[];
 }

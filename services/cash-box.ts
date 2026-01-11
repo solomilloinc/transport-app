@@ -1,5 +1,5 @@
 import { UseApiCall } from "./types";
-import { get, post } from "./api";
+import { get, post, getPure } from "./api";
 import CashBox from "@/interfaces/cash-box";
 
 /**
@@ -7,7 +7,7 @@ import CashBox from "@/interfaces/cash-box";
  */
 export const getCurrentCashBox = (): UseApiCall<any, CashBox> => {
     return {
-        call: get<any, CashBox>(`/cashbox/current`),
+        call: getPure<CashBox>(`/cashbox/current`),
     };
 };
 

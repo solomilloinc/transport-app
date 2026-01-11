@@ -26,9 +26,15 @@ import { toast } from '@/hooks/use-toast';
 import { PagedResponse } from '@/services/types';
 import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
 import { ReservePrice } from '@/interfaces/reservePrice';
-import { Service } from '@/interfaces/service';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { maxValueRule } from '@/utils/validation-rules';
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+  }).format(amount);
+};
 
 const initialReservePriceForm = {
   serviceId: '',
@@ -55,7 +61,7 @@ export default function PriceManagement() {
     },
     price: {
       required: { message: 'El precio es requerido' },
-      rules: [maxValueRule(1000)],
+      rules: [maxValueRule(100000)],
     },
     reserveTypeId: {
       required: { message: 'El tipo de reserva es requerido' },
@@ -219,13 +225,17 @@ export default function PriceManagement() {
 
   const columns = [
     { header: 'Sevicio', accessor: 'ServiceName', width: '30%' },
-    { header: 'ReserveType', accessor: 'ReserveType', width: '15%' },
+    {
+      header: 'Tipo de Reserva',
+      accessor: 'ReserveTypeId',
+      width: '20%',
+      cell: (price: ReservePrice) => (price.ReserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta'),
+    },
     {
       header: 'Precio',
-      accessor: 'price',
-      cell: (price: ReservePrice) => <>${price.Price} </>,
-      hidden: true,
+      accessor: 'Price',
       width: '15%',
+      cell: (price: ReservePrice) => formatCurrency(price.Price),
     },
     {
       header: 'Estado',
@@ -333,9 +343,9 @@ export default function PriceManagement() {
             <MobileCard
               key={price.ReservePriceId}
               title={price.ServiceName}
-              subtitle={price.Price.toString()}
+              subtitle={formatCurrency(price.Price)}
               badge={<StatusBadge status={price.Status ? 'Activo' : 'Inactivo'} />}
-              fields={[{ label: 'Tipo de Reserva', value: price.ReserveTypeId }]}
+              fields={[{ label: 'Tipo de Reserva', value: price.ReserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta' }]}
               onEdit={() => handleEditPrice(price)}
               onDelete={() => handleDeletePrice(price.ReservePriceId)}
             />
@@ -408,7 +418,7 @@ export default function PriceManagement() {
         onSubmit={() => submitEditPrice()}
         submitText="Guardar Cambios"
       >
-        <FormField label="Servicio" required error={editForm.errors.name}>
+        <FormField label="Servicio" required error={editForm.errors.serviceId}>
           <ApiSelect
             value={String(editForm.data.serviceId)}
             onValueChange={(value) => editForm.setField('serviceId', Number(value))}
@@ -435,12 +445,18 @@ export default function PriceManagement() {
             </SelectContent>
           </Select>
         </FormField>
-        <FormField label="Precio" required error={editForm.errors.price}>
+        <FormField label="Precio ($)" required error={editForm.errors.price}>
           <Input
-            id="price"
-            placeholder="Precio"
-            value={editForm.data.price}
-            onChange={(e) => editForm.setField('price', Number(e.target.value))}
+            type="number"
+            value={editForm.data.price || ''}
+            onChange={(e) => {
+              const value = e.target.value === '' ? '' : Number.parseFloat(e.target.value);
+              editForm.setField('price', value);
+            }}
+            min="0.01"
+            step="0.01"
+            placeholder="Ingrese el precio"
+            className="w-full"
           />
         </FormField>
       </FormDialog>
