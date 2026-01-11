@@ -79,6 +79,7 @@ export interface PaymentMethodSummary {
 
 export interface ReservePaymentSummary {
     ReserveId: number;
+    CashBoxId: number;
     PaymentsByMethod: PaymentMethodSummary[];
     TotalAmount: number;
 }

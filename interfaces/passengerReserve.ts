@@ -19,7 +19,7 @@ export interface PassengerReserve extends Auditable {
     PaidAmount: number
 }
 
-export interface PassengerReserveCreate extends Omit<PassengerReserve, 'CustomerReserveId' | 'IsRoundTrip' | 'Payments' | 'Status' | 'CreatedBy' | 'CreatedDate' | 'UpdatedBy' | 'UpdatedDate'> {
+export interface PassengerReserveCreate extends Omit<PassengerReserve, 'CustomerReserveId' | 'IsRoundTrip' | 'Payments' | 'Status' | 'HasTraveled' | 'PaidAmount' | 'PaymentMethods' | 'CreatedBy' | 'CreatedDate' | 'UpdatedBy' | 'UpdatedDate'> {
     PickupLocationReturnId?: number
     DropoffLocationReturnId?: number
     Price: number
