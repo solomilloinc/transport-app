@@ -13,7 +13,7 @@ interface UseApiResult<T, P, R = PagedResponse<T>> {
   loading: boolean;
   data: R;
   error: CustomError;
-  fetch: (param: P) => void;
+  fetch: (param: P) => Promise<R>;
   reset: () => void;
 }
 
@@ -28,8 +28,8 @@ function isSessionExpiredError(error: unknown): boolean {
     : String(error);
 
   return message.includes('SessionExpiredError') ||
-         message.includes('Sesión expirada') ||
-         message.includes('No autorizado');
+    message.includes('Sesión expirada') ||
+    message.includes('No autorizado');
 }
 
 /**
@@ -51,20 +51,22 @@ export const useApi = <T, P, R = PagedResponse<T>>(apiCall: (param: P) => UseApi
     const { call } = apiCall(param);
     setLoading(true);
 
-    call.then((response) => {
+    return call.then((response) => {
       setData(response);
       setError(null);
+      return response;
     }).catch((err) => {
       // Detectar error de sesión expirada y redirigir al login
       if (isSessionExpiredError(err)) {
         handleSessionExpired();
-        return;
+        throw err;
       }
       setError(err)
+      throw err;
     }).finally(() => {
       setLoading(false)
     })
-  }, [apiCall])
+  }, [apiCall]);
 
   useEffect(() => {
     if (options?.autoFetch) {

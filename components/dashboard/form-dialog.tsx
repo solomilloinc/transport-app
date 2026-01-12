@@ -40,7 +40,7 @@ export function FormDialog({
         </DialogHeader>
         <div className="grid gap-4">{children}</div>
         <DialogFooter>
-          <Button type="submit" onClick={onSubmit} disabled={isLoading && disabled}>
+          <Button type="submit" onClick={onSubmit} disabled={isLoading || disabled}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitText}
           </Button>

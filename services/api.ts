@@ -8,6 +8,15 @@ export async function get<TFilter = any, TResponseItem = any>(url: string, reque
   return response.data;
 }
 
+/**
+ * Standard GET request (not for reports).
+ */
+export async function getPure<TResponse = any>(url: string, params?: any, options?: { skipAuth?: boolean }): Promise<TResponse> {
+  const axios = await getServerAxios(options);
+  const response = await axios.get<TResponse>(url, { params });
+  return response.data;
+}
+
 export async function post<T>(url: string, request?: T, options?: { skipAuth?: boolean }): Promise<number> {
   const axios = await getServerAxios(options);
   const response = await axios.post<number>(url, request);

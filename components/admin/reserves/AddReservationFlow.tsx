@@ -116,6 +116,13 @@ export function AddReservationFlow({
     }
   }, [returnDate]);
 
+  // Effect to preload paymentAmount when entering CONFIRM_PAYMENT step
+  useEffect(() => {
+    if (step === FlowStep.CONFIRM_PAYMENT && !paymentAmount && reservationPayments.length === 0) {
+      setPaymentAmount(getRemainingBalance().toString());
+    }
+  }, [step]);
+
   const resetFlow = () => {
     setStep(null);
     reserveForm.resetForm();
@@ -155,6 +162,7 @@ export function AddReservationFlow({
 
       if (data.ReserveTypeId === 2) {
         // Round trip - usar la fecha del viaje de ida como fecha inicial de vuelta
+        reserveForm.setField('IsPayment', true);
         const tripDate = new Date(initialTrip!.ReserveDate);
         setReturnDate(tripDate);
         setMonth(tripDate);
@@ -182,7 +190,7 @@ export function AddReservationFlow({
         CustomerId: selectedPassenger!.CustomerId,
         PickupLocationId: Number(reserveForm.data.PickupLocationReturnId),
         DropoffLocationId: Number(reserveForm.data.DropoffLocationReturnId),
-        Price: returnTrip.Prices.find((price) => price.ReserveTypeId === data.ReserveTypeId)?.Price || 0,
+        Price: returnTrip.Prices.find((p) => p.ReserveTypeId === data.ReserveTypeId)?.Price || 0,
       };
 
       setPassengerReserves((prev) => [...prev, returnReserveData]);
@@ -191,14 +199,22 @@ export function AddReservationFlow({
   };
 
   const handleAddPayment = () => {
-    if (Number(paymentAmount) > 0) {
-      const newPayment = { PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: Number(paymentAmount) };
+    const amount = Number(paymentAmount) || getRemainingBalance();
+    const remaining = getRemainingBalance();
+
+    if (amount > 0) {
+      if (amount > remaining) {
+        toast({
+          title: 'Monto excedido',
+          description: `El monto ($${amount.toLocaleString()}) no puede superar el saldo restante ($${remaining.toLocaleString()}).`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const newPayment = { PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: amount };
       console.log('➕ Agregando pago:', newPayment);
-      setReservationPayments((prev) => {
-        const updated = [...prev, newPayment];
-        console.log('💰 Lista de pagos actualizada:', updated);
-        return updated;
-      });
+      setReservationPayments((prev) => [...prev, newPayment]);
       setSelectedPaymentMethod('1');
       setPaymentAmount('');
     }
@@ -213,33 +229,48 @@ export function AddReservationFlow({
   };
 
   const getTotalReserveAmount = () => {
-    return passengerReserves.reduce((total, reserve) => total + reserve.Price, 0);
+    // El precio de la primera reserva ya representa el total para el tipo de reserva seleccionado
+    return passengerReserves.length > 0 ? passengerReserves[0].Price : 0;
+  };
+
+  const getRemainingBalance = () => {
+    return Math.max(0, getTotalReserveAmount() - getTotalPaymentAmount());
   };
 
   const finalizeReservation = async () => {
     reserveForm.setIsSubmitting(true);
-    
+
     console.log('🏁 Finalizando reserva...');
     console.log('📦 Reservas de pasajeros:', passengerReserves);
     console.log('💰 Pagos existentes:', reservationPayments);
     console.log('✅ Tiene pago habilitado:', reserveForm.data.IsPayment);
-    
+
     let paymentsToSend: Payment[] = [];
-    
+
     if (reserveForm.data.IsPayment) {
-      // Si está marcado "Registrar pago", crear automáticamente el pago con el total
-      if (reservationPayments.length === 0) {
-        // Auto-crear pago con el total si no hay pagos agregados
-        const totalAmount = getTotalReserveAmount();
-        paymentsToSend = [{ PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: totalAmount }];
-        console.log('🤖 Auto-creando pago con total:', paymentsToSend[0]);
-      } else {
-        // Usar los pagos que ya se agregaron manualmente
+      const totalReserveAmount = getTotalReserveAmount();
+      const totalPaymentAmount = getTotalPaymentAmount();
+
+      // Si hay pagos cargados manualmente, deben coincidir con el total
+      if (reservationPayments.length > 0) {
+        if (totalPaymentAmount !== totalReserveAmount) {
+          toast({
+            title: 'Error en el pago',
+            description: `El total de los pagos ($${totalPaymentAmount.toLocaleString()}) debe coincidir exactamente con el total de la reserva ($${totalReserveAmount.toLocaleString()}).`,
+            variant: 'destructive',
+          });
+          reserveForm.setIsSubmitting(false);
+          return;
+        }
         paymentsToSend = reservationPayments;
         console.log('👤 Usando pagos manuales:', paymentsToSend);
+      } else {
+        // Auto-crear pago con el total si no hay pagos agregados
+        paymentsToSend = [{ PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: totalReserveAmount }];
+        console.log('🤖 Auto-creando pago con total:', paymentsToSend[0]);
       }
     }
-    
+
     try {
       const response = await post('/passenger-reserves-create', { items: passengerReserves, payments: paymentsToSend });
       if (response) {
@@ -382,9 +413,8 @@ export function AddReservationFlow({
                   {dataReturnReserves?.Items?.map((trip) => (
                     <button
                       key={trip.ReserveId}
-                      className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${
-                        returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                      }`}
+                      className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                        }`}
                       onClick={() => setReturnTrip(trip)}
                     >
                       <span>{trip.DepartureHour}</span>
@@ -430,6 +460,7 @@ export function AddReservationFlow({
         onSubmit={finalizeReservation}
         submitText="Confirmar Reserva"
         isLoading={reserveForm.isSubmitting}
+        disabled={reserveForm.data.IsPayment && Math.abs(getTotalPaymentAmount() - getTotalReserveAmount()) > 1}
       >
         <div className="space-y-6 py-4">
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
@@ -461,9 +492,14 @@ export function AddReservationFlow({
           </div>
           <div className="rounded-lg border p-4 space-y-4">
             <FormField>
-              <Checkbox id="payment-enabled" checked={reserveForm.data.IsPayment} onCheckedChange={(c) => reserveForm.setField('IsPayment', c)} />
+              <Checkbox
+                id="payment-enabled"
+                checked={reserveForm.data.IsPayment}
+                onCheckedChange={(c) => reserveForm.setField('IsPayment', c)}
+                disabled={reserveForm.data.ReserveTypeId === 2}
+              />
               <Label htmlFor="payment-enabled" className="ml-2 text-sm font-medium">
-                Registrar pago con la reserva
+                Registrar pago con la reserva {reserveForm.data.ReserveTypeId === 2 && '(Obligatorio para ida y vuelta)'}
               </Label>
             </FormField>
             {reserveForm.data.IsPayment && (
@@ -478,14 +514,14 @@ export function AddReservationFlow({
                     />
                   </FormField>
                   <FormField label="Monto" className="flex-1">
-                    <Input 
-                      type="number" 
-                      placeholder={`Total: $${getTotalReserveAmount().toLocaleString()}`}
-                      value={paymentAmount || (reservationPayments.length === 0 ? getTotalReserveAmount().toString() : '')} 
-                      onChange={(e) => setPaymentAmount(e.target.value)} 
+                    <Input
+                      type="number"
+                      placeholder={`Saldo: $${getRemainingBalance().toLocaleString()}`}
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
                     />
                   </FormField>
-                  <Button size="icon" onClick={handleAddPayment} disabled={!paymentAmount || Number(paymentAmount) <= 0}>
+                  <Button size="icon" onClick={handleAddPayment} disabled={getRemainingBalance() <= 0}>
                     <PlusCircleIcon className="h-4 w-4" />
                   </Button>
                 </div>
@@ -504,12 +540,18 @@ export function AddReservationFlow({
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="font-medium">Total:</span>
-                      <span className="font-bold text-lg">${getTotalPaymentAmount().toLocaleString()}</span>
-                    </div>
                   </div>
                 )}
+                <div className="space-y-1 pt-2 border-t">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Monto total de reserva:</span>
+                    <span className="font-medium font-mono">${getTotalReserveAmount().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
+                    <span className="font-bold text-lg">Total a pagar:</span>
+                    <span className="font-bold text-xl font-mono">${getTotalPaymentAmount().toLocaleString()}</span>
+                  </div>
+                </div>
               </>
             )}
           </div>

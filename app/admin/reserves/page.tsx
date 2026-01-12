@@ -30,6 +30,8 @@ import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFl
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { PagedResponse } from '@/services/types';
+import { getCurrentCashBox } from '@/services/cash-box';
+import CashBox from '@/interfaces/cash-box';
 
 // Funciones de ordenamiento para la tabla de pasajeros.
 // Al no poner un tipo explícito, TypeScript infiere el tipo más específico,
@@ -86,6 +88,12 @@ export default function ReservationsPage() {
     autoFetch: false,
   });
 
+  const {
+    loading: loadingCashBox,
+    data: dataCashBox,
+    fetch: fetchCashBox,
+  } = useApi<any, any, CashBox>(getCurrentCashBox, { autoFetch: false });
+
   // Use the new hook for sorting
   const {
     sortedItems: sortedPassengers,
@@ -106,6 +114,12 @@ export default function ReservationsPage() {
     loadAllOptions();
     loadPaymentMethod();
   }, [selectedTrip]);
+
+  useEffect(() => {
+    if (isPaymentSummaryOpen) {
+      fetchCashBox({});
+    }
+  }, [isPaymentSummaryOpen]);
 
   const loadPaymentMethod = async () => {
     const formatedDirections: SelectOption[] = Object.entries(PaymentMethod)
@@ -322,7 +336,7 @@ export default function ReservationsPage() {
                 <UserPlusIcon className="mr-2 h-5 w-5" />
                 {selectedDate
                   ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
-                    format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
+                  format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
                   : ''}{' '}
                 - {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
               </div>
@@ -393,7 +407,13 @@ export default function ReservationsPage() {
 
       <CancelTripDialog open={isCancelTripDialogOpen} onOpenChange={setIsCancelTripDialogOpen} trip={tripToCancel} onConfirm={handleConfirmCancelTrip} isConfirming={isCancellingTrip} />
 
-      <PaymentSummaryDialog open={isPaymentSummaryOpen} onOpenChange={setIsPaymentSummaryOpen} trip={selectedTrip} />
+      <PaymentSummaryDialog
+        open={isPaymentSummaryOpen}
+        onOpenChange={setIsPaymentSummaryOpen}
+        currentCashBox={dataCashBox as unknown as CashBox}
+        loading={loadingCashBox}
+        onSuccess={() => fetchCashBox({})}
+      />
     </div>
   );
 }
