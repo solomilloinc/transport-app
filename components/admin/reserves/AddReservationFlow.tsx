@@ -460,10 +460,7 @@ export function AddReservationFlow({
         onSubmit={finalizeReservation}
         submitText="Confirmar Reserva"
         isLoading={reserveForm.isSubmitting}
-        onSubmit={finalizeReservation}
-        submitText="Confirmar Reserva"
-        isLoading={reserveForm.isSubmitting}
-        disabled={reserveForm.data.IsPayment && reservationPayments.length > 0 && Math.abs(getTotalPaymentAmount() - getTotalReserveAmount()) > 1}
+        disabled={reserveForm.data.IsPayment && Math.abs(getTotalPaymentAmount() - getTotalReserveAmount()) > 1}
       >
         <div className="space-y-6 py-4">
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
