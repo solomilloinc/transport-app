@@ -190,7 +190,7 @@ export function AddReservationFlow({
         CustomerId: selectedPassenger!.CustomerId,
         PickupLocationId: Number(reserveForm.data.PickupLocationReturnId),
         DropoffLocationId: Number(reserveForm.data.DropoffLocationReturnId),
-        Price: 0, // El precio ya se cobra en el viaje de ida (ReserveTypeId: 2)
+        Price: returnTrip.Prices.find((p) => p.ReserveTypeId === data.ReserveTypeId)?.Price || 0,
       };
 
       setPassengerReserves((prev) => [...prev, returnReserveData]);
@@ -229,7 +229,8 @@ export function AddReservationFlow({
   };
 
   const getTotalReserveAmount = () => {
-    return passengerReserves.reduce((total, reserve) => total + reserve.Price, 0);
+    // El precio de la primera reserva ya representa el total para el tipo de reserva seleccionado
+    return passengerReserves.length > 0 ? passengerReserves[0].Price : 0;
   };
 
   const getRemainingBalance = () => {
@@ -238,14 +239,14 @@ export function AddReservationFlow({
 
   const finalizeReservation = async () => {
     reserveForm.setIsSubmitting(true);
-    
+
     console.log('🏁 Finalizando reserva...');
     console.log('📦 Reservas de pasajeros:', passengerReserves);
     console.log('💰 Pagos existentes:', reservationPayments);
     console.log('✅ Tiene pago habilitado:', reserveForm.data.IsPayment);
-    
+
     let paymentsToSend: Payment[] = [];
-    
+
     if (reserveForm.data.IsPayment) {
       const totalReserveAmount = getTotalReserveAmount();
       const totalPaymentAmount = getTotalPaymentAmount();
@@ -269,7 +270,7 @@ export function AddReservationFlow({
         console.log('🤖 Auto-creando pago con total:', paymentsToSend[0]);
       }
     }
-    
+
     try {
       const response = await post('/passenger-reserves-create', { items: passengerReserves, payments: paymentsToSend });
       if (response) {
@@ -412,9 +413,8 @@ export function AddReservationFlow({
                   {dataReturnReserves?.Items?.map((trip) => (
                     <button
                       key={trip.ReserveId}
-                      className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${
-                        returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                      }`}
+                      className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                        }`}
                       onClick={() => setReturnTrip(trip)}
                     >
                       <span>{trip.DepartureHour}</span>
