@@ -33,8 +33,32 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     if (!open) {
       form.resetForm();
       setPayments([]);
+    } else if (passengerReserve) {
+      // Preload remaining amount
+      const remaining = getRemainingBalance();
+      if (remaining > 0) {
+        form.setField('TransactionAmount', remaining.toString());
+      }
     }
-  }, [open]);
+  }, [open, passengerReserve]);
+
+  const getTotalReserveAmount = () => {
+    return passengerReserve?.PaidAmount || 0;
+  };
+
+  const getAlreadyPaidAmount = () => {
+    return passengerReserve?.Payments?.reduce((total, p) => total + p.TransactionAmount, 0) || 0;
+  };
+
+  const getCurrentAddedAmount = () => {
+    return payments.reduce((total, payment) => total + payment.TransactionAmount, 0);
+  };
+
+  const getRemainingBalance = () => {
+    const total = getTotalReserveAmount();
+    const paid = getAlreadyPaidAmount() + getCurrentAddedAmount();
+    return Math.max(0, total - paid);
+  };
 
   const handleAddPaymentToList = () => {
     // Basic validation before adding to the list
@@ -66,6 +90,16 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       return;
     }
 
+    const remaining = getRemainingBalance();
+    if (remaining > 0) {
+      toast({
+        title: 'Monto insuficiente',
+        description: `El total de los pagos debe cubrir el saldo restante ($${remaining.toLocaleString()}).`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     form.setIsSubmitting(true);
     try {
       const payload: PassengerPaymentCreate[] = payments.map((p) => ({
@@ -89,7 +123,16 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   };
 
   return (
-    <FormDialog open={open} onOpenChange={onOpenChange} title="Agregar pago" description={`Agrega pago de la reserva de ${passengerReserve?.FullName}`} onSubmit={handleSubmit} submitText="Guardar Pagos" isLoading={form.isSubmitting}>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Agregar pago"
+      description={`Agrega pago de la reserva de ${passengerReserve?.FullName}`}
+      onSubmit={handleSubmit}
+      submitText="Guardar Pagos"
+      isLoading={form.isSubmitting}
+      disabled={getRemainingBalance() > 0}
+    >
       <div className="flex-1 overflow-y-auto py-4">
         <div className="space-y-6">
           <div className="rounded-lg border p-4 bg-gray-50">
@@ -111,9 +154,19 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
                 <ApiSelect value={String(form.data.PaymentMethod)} onValueChange={(value) => form.setField('PaymentMethod', Number(value))} placeholder="Seleccionar medio" options={paymentMethodOptions} loading={false} error={null} />
               </FormField>
               <FormField label="Monto" className="flex-1">
-                <Input id="monto" type="number" value={form.data.TransactionAmount} onChange={(e) => form.setField('TransactionAmount', e.target.value)} />
+                <Input
+                  id="monto"
+                  type="number"
+                  placeholder={`Saldo: $${getRemainingBalance().toLocaleString()}`}
+                  value={form.data.TransactionAmount}
+                  onChange={(e) => form.setField('TransactionAmount', e.target.value)}
+                />
               </FormField>
-              <Button size="icon" onClick={handleAddPaymentToList} disabled={!form.data.TransactionAmount || Number(form.data.TransactionAmount) <= 0}>
+              <Button
+                size="icon"
+                onClick={handleAddPaymentToList}
+                disabled={!form.data.TransactionAmount || Number(form.data.TransactionAmount) <= 0}
+              >
                 <PlusCircleIcon className="h-4 w-4" />
               </Button>
             </div>
@@ -129,9 +182,27 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t"><span className="font-medium">Total a Pagar:</span><span className="font-bold text-lg">${getTotalPaymentAmount().toLocaleString()}</span></div>
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="font-medium">Total a Pagar:</span>
+                  <span className="font-bold text-lg">${getTotalPaymentAmount().toLocaleString()}</span>
+                </div>
               </div>
             )}
+
+            <div className="space-y-1 pt-4 mt-2 border-t">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Monto total de reserva:</span>
+                <span className="font-medium font-mono">${getTotalReserveAmount().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Pagado anteriormente:</span>
+                <span className="font-medium font-mono">${getAlreadyPaidAmount().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
+                <span className="font-bold text-lg">Total a pagar ahora:</span>
+                <span className="font-bold text-xl font-mono">${getTotalPaymentAmount().toLocaleString()}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
