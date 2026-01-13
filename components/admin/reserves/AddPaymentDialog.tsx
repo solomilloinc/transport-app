@@ -192,15 +192,15 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
             <div className="space-y-1 pt-4 mt-2 border-t">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Monto total de reserva:</span>
-                <span className="font-medium font-mono">${getTotalReserveAmount().toLocaleString()}</span>
+                <span className="font-medium">${getTotalReserveAmount().toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Pagado anteriormente:</span>
-                <span className="font-medium font-mono">${getAlreadyPaidAmount().toLocaleString()}</span>
+                <span className="font-medium">${getAlreadyPaidAmount().toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
                 <span className="font-bold text-lg">Total a pagar ahora:</span>
-                <span className="font-bold text-xl font-mono">${getTotalPaymentAmount().toLocaleString()}</span>
+                <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
               </div>
             </div>
           </div>

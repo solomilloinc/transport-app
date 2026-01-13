@@ -292,23 +292,23 @@ firstName: p.firstName,
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
       <Navbar />
-      <main className="container py-8">
-        <div className="mb-6">
+      <main className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <div className="mb-4 sm:mb-6">
           <Button
             variant="link"
             onClick={() => router.back()}
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 p-0 h-auto"
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 p-0 h-auto text-sm sm:text-base"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Volver
           </Button>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
-            <div className="bg-white rounded-lg border shadow-sm p-6 relative">
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-lg border shadow-sm p-4 sm:p-6 relative w-full">
 
               {/* Overlay de loading durante el pago */}
               {isSubmitting && (
@@ -317,7 +317,7 @@ firstName: p.firstName,
                 </div>
               )}
 
-              <h1 className="text-2xl font-bold text-blue-800 font-display mb-4">Complete su reserva</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-blue-800 font-display mb-4">Complete su reserva</h1>
 
               {/* Timer Component - Aislado para evitar re-renders */}
               <LockTimer
@@ -391,8 +391,8 @@ firstName: p.firstName,
               <div>
                 {currentStep === 'passengers' && (
                   <div>
-                    <h2 className="text-xl font-medium text-blue-800 mb-4">Información de los Pasajeros</h2>
-                    <p className="text-gray-600 mb-6">Por favor ingrese los detalles de cada pasajero.</p>
+                    <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Información de los Pasajeros</h2>
+                    <p className="text-gray-600 mb-6 text-sm sm:text-base">Por favor ingrese los detalles de cada pasajero.</p>
                     <PassengerForm
                       passengerCount={checkout.passengers}
                       onDataChange={handlePassengerDataChange}
@@ -403,8 +403,8 @@ firstName: p.firstName,
 
                 {currentStep === 'review' && (
                   <div>
-                    <h2 className="text-xl font-medium text-blue-800 mb-4">Revise su Reserva</h2>
-                    <p className="text-gray-600 mb-6">
+                    <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Revise su Reserva</h2>
+                    <p className="text-gray-600 mb-6 text-sm sm:text-base">
                       Por favor, revise los detalles de su reserva antes de confirmar la compra.
                     </p>
 
@@ -412,7 +412,7 @@ firstName: p.firstName,
                       {/* Ida */}
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <h3 className="font-medium text-blue-800 mb-2">Detalle del Viaje de Ida</h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           <div className="text-gray-600">Ruta:</div>
                           <div className="font-medium flex items-center">
                             {checkout.outboundTrip?.OriginName}
@@ -430,7 +430,7 @@ firstName: p.firstName,
                       {checkout.returnTrip && (
                         <div className="bg-blue-50 p-4 rounded-lg">
                           <h3 className="font-medium text-blue-800 mb-2">Detalle del Viaje de Vuelta</h3>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                             <div className="text-gray-600">Ruta:</div>
                             <div className="font-medium flex items-center">
                               {checkout.returnTrip?.OriginName}
@@ -477,19 +477,39 @@ firstName: p.firstName,
                           cancelaciones realizadas con menos de 24 horas de antelación.
                         </p>
                       </div>
+                      {/* Resumen de Precio - SOLO MOBILE */}
+                      <div className="lg:hidden bg-white p-4 rounded-lg border border-gray-200 mt-4 shadow-sm">
+                        <h3 className="font-medium text-blue-800 mb-3">Resumen de Precio</h3>
+                        <div className="space-y-2 mb-4 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Precio (ida)</span>
+                            <span>${(outboundPrice * checkout.passengers).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          {checkout.returnTrip && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Precio (vuelta)</span>
+                              <span>${(returnPrice * checkout.passengers).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-between font-bold text-lg pt-3 border-t border-gray-100">
+                          <span>Total</span>
+                          <span>${finalTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {currentStep === 'payment' && (
                   <div>
-                    <h2 className="text-xl font-medium text-blue-800 mb-4">Detalles del Pago</h2>
-                    <p className="text-gray-600 mb-6">Su información de pago es segura y está encriptada.</p>
+                    <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Detalles del Pago</h2>
+                    <p className="text-gray-600 mb-6 text-sm sm:text-base">Su información de pago es segura y está encriptada.</p>
 
                     {/* Payment Method Selector */}
                     <div className="mb-6">
                       <h3 className="font-medium text-gray-900 mb-3">Seleccione su método de pago</h3>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('card')}
@@ -586,9 +606,9 @@ firstName: p.firstName,
             </div>
           </div>
 
-          {/* Sidebar - sin cambios */}
-          <div>
-            <div className="bg-white rounded-lg border shadow-sm sticky top-24">
+          {/* Sidebar - Oculto en mobile, visible en LG */}
+          <div className="hidden lg:block">
+            <div className="bg-white rounded-lg border shadow-sm md:sticky md:top-24">
               <div className="p-4 border-b bg-blue-50">
                 <h2 className="font-bold text-blue-800 font-display">Resumen de la Reserva</h2>
               </div>

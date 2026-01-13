@@ -116,32 +116,43 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
   return (
     <>
       {/* Resumen de búsqueda y botón de volver */}
-      <div className="mb-8">
-        <Link href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
+      <div className="mb-6 sm:mb-8">
+        <Link href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-3 sm:mb-4 text-sm sm:text-base">
           <ChevronLeft className="h-4 w-4 mr-1" />
           Volver a la búsqueda
         </Link>
-        <div className="bg-white rounded-lg border p-4 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="flex items-center text-2xl font-bold text-blue-800 font-display mb-2">
-                {formatLocation(originName)}
-                <ArrowRight className="mx-2 h-6 w-6 self-center text-blue-800" />
-                {formatLocation(destinationName)}
+        <div className="bg-white rounded-lg border p-3 sm:p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            {/* Ruta */}
+            <div className="flex items-center justify-center sm:justify-start">
+              <h1 className="flex flex-wrap justify-center items-center gap-x-1 text-sm sm:text-xl md:text-2xl font-bold text-blue-800 font-display text-center leading-tight">
+                <span>{formatLocation(originName)}</span>
+                <ArrowRight className="h-3 w-3 sm:h-5 sm:w-5 md:h-6 md:w-6 flex-shrink-0 text-blue-800" />
+                <span>{formatLocation(destinationName)}</span>
               </h1>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Calendar className="h-4 w-4" />
+            </div>
+            
+            {/* Info badges */}
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>{formattedDepartureDate}</span>
-                <span>•</span>
-                <Users className="h-4 w-4" />
+              </div>
+              <span className="hidden sm:inline">•</span>
+              <div className="flex items-center gap-1">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>
                   {passengers} {Number.parseInt(passengers) === 1 ? 'Pasajero' : 'Pasajeros'}
                 </span>
               </div>
               {tripType === 'RoundTrip' && returnDate && (
-                <div className="mt-2 text-gray-600">
-                  <span className="font-medium">Vuelta:</span> {formattedReturnDate}
-                </div>
+                <>
+                  <span className="hidden sm:inline">•</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium">Vuelta:</span>
+                    <span>{formattedReturnDate}</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -188,11 +199,11 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                     {reserves.Outbound.Items.map((trip) => (
                       <div key={trip.ReserveId} className={cn('p-4 hover:bg-gray-50 transition-colors', selectedOutboundTrip?.ReserveId === trip.ReserveId && 'bg-blue-50')}>
                         {/* Aquí va el JSX de cada item de viaje, como lo tenías antes */}
-                        <div className="grid md:grid-cols-5 gap-4 items-center">
-                          <div className="text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
-                          <div className="flex items-center gap-2"><Bus className="h-5 w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                          <div className="flex items-center gap-2 text-gray-600"><Users className="h-5 w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                          <div className="text-center"><div className="text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</div><div className="text-sm text-gray-500">por persona</div></div>
+                        <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
+                          <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
+                          <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
+                          <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
+                          <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
                           <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectOutbound(trip)}>Reservar</Button>
                         </div>
                       </div>
@@ -231,11 +242,11 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                       <div className="divide-y">
                         {reserves.Return.Items.map((trip) => (
                           <div key={trip.ReserveId} className="p-4 hover:bg-gray-50 transition-colors">
-                            <div className="grid md:grid-cols-5 gap-4 items-center">
-                              <div className="text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
-                              <div className="flex items-center gap-2"><Bus className="h-5 w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                              <div className="flex items-center gap-2 text-gray-600"><Users className="h-5 w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                              <div className="text-center"><div className="text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</div><div className="text-sm text-gray-500">por persona</div></div>
+                            <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
+                              <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
+                              <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
+                              <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
+                              <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
                               <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectReturn(trip)}>Seleccionar Vuelta</Button>
                             </div>
                           </div>
