@@ -26,6 +26,8 @@ import { toast } from '@/hooks/use-toast';
 import { PagedResponse } from '@/services/types';
 import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
 import { ReservePrice } from '@/interfaces/reservePrice';
+import { City } from '@/interfaces/city';
+import { Service } from '@/interfaces/service';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { maxValueRule } from '@/utils/validation-rules';
 
@@ -37,7 +39,8 @@ const formatCurrency = (amount: number) => {
 };
 
 const initialReservePriceForm = {
-  serviceId: '',
+  originId: 0,
+  destinationId: 0,
   price: '',
   reserveTypeId: '',
 };
@@ -56,12 +59,15 @@ export default function PriceManagement() {
   const [currentPriceId, setCurrentPriceId] = useState<number | null>(null);
 
   const validationConfig = {
-    serviceId: {
-      required: { message: 'El servicio es requerido' },
+    originId: {
+      required: { message: 'El origen es requerido' },
+    },
+    destinationId: {
+      required: { message: 'El destino es requerido' },
     },
     price: {
       required: { message: 'El precio es requerido' },
-      rules: [maxValueRule(100000)],
+      rules: [maxValueRule(1000000)],
     },
     reserveTypeId: {
       required: { message: 'El tipo de reserva es requerido' },
@@ -70,7 +76,7 @@ export default function PriceManagement() {
   const addForm = useFormValidation(initialReservePriceForm, validationConfig);
   // Form state for editing a vehicle
   const editForm = useFormValidation(initialReservePriceForm, validationConfig);
-  const [services, setServices] = useState<SelectOption[]>([]);
+  const [cities, setCities] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
@@ -86,7 +92,7 @@ export default function PriceManagement() {
   const fetchPrices = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
     setIsLoading(true);
     try {
-      const response = await get<any, ReservePrice>('/reserve-price-report', {
+      const response = await get<any, PagedResponse<ReservePrice>>('/reserve-price-report', {
         pageNumber: pageToFetch,
         pageSize: pageSizeToFetch,
         sortBy: 'fecha',
@@ -109,23 +115,22 @@ export default function PriceManagement() {
     try {
       setIsOptionsLoading(true);
       setOptionsError(null);
-      const response = await get<any, Service>('/service-report', {
+      const response = await get<any, PagedResponse<City>>('/city-report', {
         pageNumber: 1,
-        pageSize: 10,
-        sortBy: 'fecha',
-        sortDescending: true,
-        filters: searchQuery ? { search: searchQuery } : {},
+        pageSize: 100,
+        sortBy: 'name',
+        sortDescending: false,
       });
       if (response) {
-        const formattedTypes = response.Items.map((service: Service) => ({
-          id: service.ServiceId.toString(),
-          value: service.ServiceId.toString(),
-          label: service.Name,
+        const formattedTypes = response.Items.map((city: City) => ({
+          id: city.Id.toString(),
+          value: city.Id.toString(),
+          label: city.Name,
         }));
-        setServices(formattedTypes);
+        setCities(formattedTypes);
       }
     } catch (error) {
-      setOptionsError('Error al cargar los servicios');
+      setOptionsError('Error al cargar las ciudades');
     } finally {
       setIsOptionsLoading(false);
     }
@@ -134,7 +139,7 @@ export default function PriceManagement() {
   const submitAddPrice = async () => {
     addForm.handleSubmit(async (data) => {
       try {
-        const response = await post(`service/${data.serviceId}/price-add`, data);
+        const response = await post('/reserve-price-create', data);
         if (response) {
           toast({
             title: 'Precio creado',
@@ -163,7 +168,7 @@ export default function PriceManagement() {
   const submitEditPrice = async () => {
     editForm.handleSubmit(async (data) => {
       try {
-        const response = await put(`service/${data.serviceId}/price-update`, data);
+        const response = await put(`/reserve-price-update/${currentPriceId}`, data);
         if (response) {
           toast({
             title: 'Precio editado',
@@ -198,7 +203,8 @@ export default function PriceManagement() {
 
   const handleEditPrice = (price: ReservePrice) => {
     setCurrentPriceId(price.ReservePriceId);
-    editForm.setField('serviceId', price.ServiceId);
+    editForm.setField('originId', price.OriginId);
+    editForm.setField('destinationId', price.DestinationId);
     editForm.setField('price', price.Price);
     editForm.setField('reserveTypeId', price.ReserveTypeId);
     setIsEditModalOpen(true);
@@ -224,11 +230,12 @@ export default function PriceManagement() {
   };
 
   const columns = [
-    { header: 'Sevicio', accessor: 'ServiceName', width: '30%' },
+    { header: 'Origen', accessor: 'OriginName', width: '25%' },
+    { header: 'Destino', accessor: 'DestinationName', width: '25%' },
     {
       header: 'Tipo de Reserva',
       accessor: 'ReserveTypeId',
-      width: '20%',
+      width: '15%',
       cell: (price: ReservePrice) => (price.ReserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta'),
     },
     {
@@ -241,14 +248,14 @@ export default function PriceManagement() {
       header: 'Estado',
       accessor: 'status',
       className: 'text-center',
-      width: '20%',
+      width: '10%',
       cell: (price: ReservePrice) => <StatusBadge status={price.Status} />,
     },
     {
       header: 'Acciones',
       accessor: 'actions',
       className: 'text-right',
-      width: '20%',
+      width: '10%',
       cell: (price: ReservePrice) => (
         <div className="flex justify-end gap-2">
           <Button
@@ -276,7 +283,7 @@ export default function PriceManagement() {
     <div className="space-y-6">
       <PageHeader
         title="Precios"
-        description="Gestiona y visualiza toda la información de los precios de los servicios."
+        description="Gestiona y visualiza toda la información de los precios base por tramo."
         action={
           <Button onClick={() => handleAddPrice()}>
             <CreditCard className="mr-2 h-4 w-4" />
@@ -289,7 +296,7 @@ export default function PriceManagement() {
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
             <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por ciudad..." />
             </FilterBar>
 
             <div className="hidden md:block w-full">
@@ -342,9 +349,9 @@ export default function PriceManagement() {
           pricesData.Items.map((price) => (
             <MobileCard
               key={price.ReservePriceId}
-              title={price.ServiceName}
+              title={`${price.OriginName} → ${price.DestinationName}`}
               subtitle={formatCurrency(price.Price)}
-              badge={<StatusBadge status={price.Status ? 'Activo' : 'Inactivo'} />}
+              badge={<StatusBadge status={price.Status} />}
               fields={[{ label: 'Tipo de Reserva', value: price.ReserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta' }]}
               onEdit={() => handleEditPrice(price)}
               onDelete={() => handleDeletePrice(price.ReservePriceId)}
@@ -355,61 +362,71 @@ export default function PriceManagement() {
         )}
       </div>
 
-      {/* Add Customer Modal */}
+      {/* Add Price Modal */}
       <FormDialog
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         title="Agregar Nuevo Precio"
-        description="Crea un nuevo precio completando el formulario a continuación."
+        description="Crea un nuevo precio base entre dos ciudades."
         onSubmit={() => submitAddPrice()}
         submitText="Crear Precio"
       >
-        <FormField label="Servicio" required error={addForm.errors.serviceId}>
-          <ApiSelect
-            value={String(addForm.data.serviceId)}
-            onValueChange={(value) => addForm.setField('serviceId', Number(value))}
-            placeholder="Seleccionar servicio"
-            options={services}
-            loading={isOptionsLoading}
-            error={optionsError}
-            loadingMessage="Cargando servicios..."
-            errorMessage="Error al cargar los servicios"
-            emptyMessage="No hay servicios disponibles"
-          />
-        </FormField>
-        <FormField label="Tipo de Reserva" required error={addForm.errors.reserveTypeId}>
-          <ApiSelect
-            value={String(addForm.data.reserveTypeId)}
-            onValueChange={(value) => addForm.setField('reserveTypeId', Number(value))}
-            placeholder="Seleccionar tipo de reserva"
-            options={[
-              { id: '1', value: '1', label: 'Solo Ida' },
-              { id: '2', value: '2', label: 'Ida y vuelta' },
-            ]}
-            loading={isOptionsLoading}
-            error={optionsError}
-            loadingMessage="Cargando tipos de reserva..."
-            errorMessage="Error al cargar los tipos de reserva"
-            emptyMessage="No hay tipos de reserva disponibles"
-          />
-        </FormField>
-        <FormField label="Precio Base ($)" required error={addForm.errors.price}>
-          <Input
-            type="number"
-            value={addForm.data.price || ''}
-            onChange={(e) => {
-              const value = e.target.value === '' ? '' : Number.parseFloat(e.target.value);
-              addForm.setField('price', value);
-            }}
-            min="0.01"
-            step="0.01"
-            placeholder="Ingrese el precio"
-            className="w-full"
-          />
-        </FormField>
+        <div className="space-y-4">
+          <FormField label="Origen" required error={addForm.errors.originId}>
+            <ApiSelect
+              value={String(addForm.data.originId)}
+              onValueChange={(value) => addForm.setField('originId', Number(value))}
+              placeholder="Seleccionar origen"
+              options={cities}
+              loading={isOptionsLoading}
+              error={optionsError}
+              loadingMessage="Cargando ciudades..."
+              errorMessage="Error al cargar las ciudades"
+              emptyMessage="No hay ciudades disponibles"
+            />
+          </FormField>
+          <FormField label="Destino" required error={addForm.errors.destinationId}>
+            <ApiSelect
+              value={String(addForm.data.destinationId)}
+              onValueChange={(value) => addForm.setField('destinationId', Number(value))}
+              placeholder="Seleccionar destino"
+              options={cities.filter(c => c.id !== String(addForm.data.originId))}
+              loading={isOptionsLoading}
+              error={optionsError}
+              loadingMessage="Cargando ciudades..."
+              errorMessage="Error al cargar las ciudades"
+              emptyMessage="No hay ciudades disponibles"
+            />
+          </FormField>
+          <FormField label="Tipo de Reserva" required error={addForm.errors.reserveTypeId}>
+            <ApiSelect
+              value={String(addForm.data.reserveTypeId)}
+              onValueChange={(value) => addForm.setField('reserveTypeId', Number(value))}
+              placeholder="Seleccionar tipo de reserva"
+              options={[
+                { id: '1', value: '1', label: 'Solo Ida' },
+                { id: '2', value: '2', label: 'Ida y vuelta' },
+              ]}
+            />
+          </FormField>
+          <FormField label="Precio Base ($)" required error={addForm.errors.price}>
+            <Input
+              type="number"
+              value={addForm.data.price || ''}
+              onChange={(e) => {
+                const value = e.target.value === '' ? '' : Number.parseFloat(e.target.value);
+                addForm.setField('price', value);
+              }}
+              min="0.01"
+              step="100"
+              placeholder="Ingrese el precio"
+              className="w-full"
+            />
+          </FormField>
+        </div>
       </FormDialog>
 
-      {/* Edit Customer Modal */}
+      {/* Edit Price Modal */}
       <FormDialog
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
@@ -418,47 +435,62 @@ export default function PriceManagement() {
         onSubmit={() => submitEditPrice()}
         submitText="Guardar Cambios"
       >
-        <FormField label="Servicio" required error={editForm.errors.serviceId}>
-          <ApiSelect
-            value={String(editForm.data.serviceId)}
-            onValueChange={(value) => editForm.setField('serviceId', Number(value))}
-            placeholder="Seleccionar servicio"
-            options={services}
-            loading={isOptionsLoading}
-            error={optionsError}
-            loadingMessage="Cargando servicios..."
-            errorMessage="Error al cargar los servicios"
-            emptyMessage="No hay servicios disponibles"
-          />
-        </FormField>
-        <FormField label="Tipo de Reserva" required error={editForm.errors.reserveTypeId}>
-          <Select
-            value={String(editForm.data.reserveTypeId)}
-            onValueChange={(value) => editForm.setField('reserveTypeId', Number(value))}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seleccionar tipo de reserva" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">Solo Ida</SelectItem>
-              <SelectItem value="2">Ida y vuelta</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
-        <FormField label="Precio ($)" required error={editForm.errors.price}>
-          <Input
-            type="number"
-            value={editForm.data.price || ''}
-            onChange={(e) => {
-              const value = e.target.value === '' ? '' : Number.parseFloat(e.target.value);
-              editForm.setField('price', value);
-            }}
-            min="0.01"
-            step="0.01"
-            placeholder="Ingrese el precio"
-            className="w-full"
-          />
-        </FormField>
+        <div className="space-y-4">
+          <FormField label="Origen" required error={editForm.errors.originId}>
+            <ApiSelect
+              value={String(editForm.data.originId)}
+              onValueChange={(value) => editForm.setField('originId', Number(value))}
+              placeholder="Seleccionar origen"
+              options={cities}
+              loading={isOptionsLoading}
+              error={optionsError}
+              loadingMessage="Cargando ciudades..."
+              errorMessage="Error al cargar las ciudades"
+              emptyMessage="No hay ciudades disponibles"
+            />
+          </FormField>
+          <FormField label="Destino" required error={editForm.errors.destinationId}>
+            <ApiSelect
+              value={String(editForm.data.destinationId)}
+              onValueChange={(value) => editForm.setField('destinationId', Number(value))}
+              placeholder="Seleccionar destino"
+              options={cities.filter(c => c.id !== String(editForm.data.originId))}
+              loading={isOptionsLoading}
+              error={optionsError}
+              loadingMessage="Cargando ciudades..."
+              errorMessage="Error al cargar las ciudades"
+              emptyMessage="No hay ciudades disponibles"
+            />
+          </FormField>
+          <FormField label="Tipo de Reserva" required error={editForm.errors.reserveTypeId}>
+            <Select
+              value={String(editForm.data.reserveTypeId)}
+              onValueChange={(value) => editForm.setField('reserveTypeId', Number(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar tipo de reserva" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Solo Ida</SelectItem>
+                <SelectItem value="2">Ida y vuelta</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Precio ($)" required error={editForm.errors.price}>
+            <Input
+              type="number"
+              value={editForm.data.price || ''}
+              onChange={(e) => {
+                const value = e.target.value === '' ? '' : Number.parseFloat(e.target.value);
+                editForm.setField('price', value);
+              }}
+              min="0.01"
+              step="100"
+              placeholder="Ingrese el precio"
+              className="w-full"
+            />
+          </FormField>
+        </div>
       </FormDialog>
 
       {/* Delete Confirmation Modal */}
@@ -466,7 +498,7 @@ export default function PriceManagement() {
         open={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}
         onConfirm={confirmDelete}
-        description="Esta acción no se puede deshacer. Esto eliminará permanentemente al cliente y todos los datos asociados de nuestros servidores."
+        description="Esta acción no se puede deshacer. Esto eliminará permanentemente el precio de nuestros servidores."
       />
     </div>
   );

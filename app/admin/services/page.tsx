@@ -3,6 +3,7 @@
 import type React from 'react';
 
 import { useState, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 import { Bus, Clock, Edit, Plus, Search, Trash, Trash2, TruckIcon, UserPlusIcon, Wrench, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,24 @@ const editValidationSchema = {
   vehicleId: { required: true, message: 'El vehículo es requerido' },
 };
 
+const tripValidationSchema = {
+  originId: { required: true, message: 'El origen es requerido' },
+  destinationId: { required: true, message: 'El destino es requerido' },
+  departureHour: { required: true, message: 'La hora de partida es requerida' },
+  vehicleId: { required: true, message: 'El vehículo es requerido' },
+  estimatedDuration: { required: true, message: 'La duración estimada es requerida' },
+  reserveDate: { required: true, message: 'La fecha es requerida' },
+};
+
+const initialTripForm = {
+  originId: 0,
+  destinationId: 0,
+  departureHour: '10:00',
+  vehicleId: 0,
+  estimatedDuration: '01:00',
+  reserveDate: format(new Date(), 'yyyy-MM-dd'),
+};
+
 export default function ServiceManagement() {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -86,9 +105,11 @@ export default function ServiceManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAddTripModalOpen, setIsAddTripModalOpen] = useState(false);
   const [currentServiceId, setCurrentServiceId] = useState<number | null>(null);
   const addForm = useFormValidation(emptyService, validationSchema);
   const editForm = useFormValidation(initialService, editValidationSchema);
+  const tripForm = useFormValidation(initialTripForm, tripValidationSchema);
   const [cities, setCities] = useState<SelectOption[]>([]);
   const [vehicles, setVehicles] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
@@ -259,6 +280,41 @@ export default function ServiceManagement() {
     });
   };
 
+  const submitAddTrip = async () => {
+    tripForm.handleSubmit(async (data) => {
+      try {
+        const transformedData = {
+          ...data,
+          EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
+          DepartureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
+          // ReserveDate ya viene en formato yyyy-MM-dd del input date
+        };
+        const response = await post('/reserve-create', transformedData);
+        if (response) {
+          toast({
+            title: 'Viaje creado',
+            description: 'El viaje ha sido creado exitosamente',
+            variant: 'success',
+          });
+          setIsAddTripModalOpen(false);
+          // Opcionalmente refrescar si hay algo que refrescar
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Error al crear el viaje',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Ocurrió un error al crear el viaje',
+          variant: 'destructive',
+        });
+      }
+    });
+  };
+
   const handleScheduleChange = (index: number, field: string, value: any) => {
     const updatedSchedules = [...addForm.data.Schedules];
     updatedSchedules[index] = {
@@ -400,10 +456,20 @@ export default function ServiceManagement() {
         title="Servicios"
         description="Gestiona y visualiza toda la información de los servicios."
         action={
-          <Button onClick={() => handleAddService()}>
-            <Wrench className="mr-2 h-4 w-4" />
-            Agregar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => {
+              tripForm.resetForm();
+              setIsAddTripModalOpen(true);
+              loadAllOptions();
+            }}>
+              <TruckIcon className="mr-2 h-4 w-4" />
+              Agregar viaje
+            </Button>
+            <Button onClick={() => handleAddService()}>
+              <Wrench className="mr-2 h-4 w-4" />
+              Agregar
+            </Button>
+          </div>
         }
       />
       
@@ -820,6 +886,85 @@ export default function ServiceManagement() {
       </FormDialog>
 
       {/* Delete Confirmation Modal */}
+      <FormDialog
+        open={isAddTripModalOpen}
+        onOpenChange={setIsAddTripModalOpen}
+        title="Crear Nuevo Viaje"
+        description="Crea una instancia de viaje específica completando el formulario."
+        onSubmit={() => submitAddTrip()}
+        submitText="Crear Viaje"
+      >
+        <div className="w-full grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Origen" required error={tripForm.errors.originId}>
+              <ApiSelect
+                value={String(tripForm.data.originId)}
+                onValueChange={(value) => tripForm.setField('originId', Number(value))}
+                placeholder="Seleccionar origen"
+                options={cities}
+                loading={isOptionsLoading}
+                error={optionsError}
+                loadingMessage="Cargando ciudades..."
+                errorMessage="Error al cargar las ciudades"
+                emptyMessage="No hay ciudades disponibles"
+              />
+            </FormField>
+            <FormField label="Destino" required error={tripForm.errors.destinationId}>
+              <ApiSelect
+                value={String(tripForm.data.destinationId)}
+                onValueChange={(value) => tripForm.setField('destinationId', Number(value))}
+                placeholder="Seleccionar destino"
+                options={cities.filter((city) => city.id !== String(tripForm.data.originId))}
+                disabled={tripForm.data.originId === 0}
+                loading={isOptionsLoading}
+                error={optionsError}
+                loadingMessage="Cargando destinos..."
+                errorMessage="Error al cargar los destinos"
+                emptyMessage="No hay destinos disponibles"
+              />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Vehículo" required error={tripForm.errors.vehicleId}>
+              <ApiSelect
+                value={String(tripForm.data.vehicleId)}
+                onValueChange={(value) => tripForm.setField('vehicleId', Number(value))}
+                placeholder="Seleccionar vehículo"
+                options={vehicles}
+                loading={isOptionsLoading}
+                error={optionsError}
+                loadingMessage="Cargando vehiculos..."
+                errorMessage="Error al cargar los vehículos"
+                emptyMessage="No hay vehículos disponibles"
+              />
+            </FormField>
+            <FormField label="Fecha de Viaje" required error={tripForm.errors.reserveDate}>
+              <Input
+                type="date"
+                value={tripForm.data.reserveDate}
+                onChange={(e) => tripForm.setField('reserveDate', e.target.value)}
+              />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Hora de Partida" required error={tripForm.errors.departureHour}>
+              <Input
+                type="time"
+                value={tripForm.data.departureHour}
+                onChange={(e) => tripForm.setField('departureHour', e.target.value)}
+              />
+            </FormField>
+            <FormField label="Duración Estimada (HH:MM)" required error={tripForm.errors.estimatedDuration}>
+              <Input
+                type="time"
+                value={tripForm.data.estimatedDuration}
+                onChange={(e) => tripForm.setField('estimatedDuration', e.target.value)}
+              />
+            </FormField>
+          </div>
+        </div>
+      </FormDialog>
+
       <DeleteDialog
         open={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}
