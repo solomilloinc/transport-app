@@ -5,6 +5,8 @@ import { Vehicle } from "./vehicle";
 export interface Service {
   ServiceId: number;
   Name: string;
+  TripId: number;
+  TripName?: string;
   OriginId: number;
   OriginName: string;
   DestinationId: number;
@@ -20,6 +22,7 @@ export interface Service {
 
 export const emptyService = {
   Name: "",
+  TripId: 0,
   OriginId: 0,
   DestinationId: 0,
   EstimatedDuration: "01:00",

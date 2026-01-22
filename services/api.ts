@@ -12,8 +12,10 @@ export async function get<TFilter = any, TResponseItem = any>(url: string, reque
  * Standard GET request (not for reports).
  */
 export async function getPure<TResponse = any>(url: string, params?: any, options?: { skipAuth?: boolean }): Promise<TResponse> {
+  console.log('[getPure] Calling URL:', url, 'with params:', params);
   const axios = await getServerAxios(options);
   const response = await axios.get<TResponse>(url, { params });
+  console.log('[getPure] Response:', response.data);
   return response.data;
 }
 

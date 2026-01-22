@@ -139,7 +139,13 @@ export default function PriceManagement() {
   const submitAddPrice = async () => {
     addForm.handleSubmit(async (data) => {
       try {
-        const response = await post('/reserve-price-create', data);
+        const transformedData = {
+          OriginId: data.originId,
+          DestinationId: data.destinationId,
+          Price: data.price,
+          ReserveTypeId: data.reserveTypeId,
+        };
+        const response = await post('/price-add', transformedData);
         if (response) {
           toast({
             title: 'Precio creado',
@@ -168,7 +174,13 @@ export default function PriceManagement() {
   const submitEditPrice = async () => {
     editForm.handleSubmit(async (data) => {
       try {
-        const response = await put(`/reserve-price-update/${currentPriceId}`, data);
+        const transformedData = {
+          OriginId: data.originId,
+          DestinationId: data.destinationId,
+          Price: data.price,
+          ReserveTypeId: data.reserveTypeId,
+        };
+        const response = await put(`/price-update/${currentPriceId}`, transformedData);
         if (response) {
           toast({
             title: 'Precio editado',
@@ -217,7 +229,7 @@ export default function PriceManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/reserve-price-delete/${currentPriceId}`);
+    const id = await deleteLogic(`/price-delete/${currentPriceId}`);
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentPriceId(null);

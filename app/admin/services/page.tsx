@@ -35,9 +35,12 @@ import { Label } from '@/components/ui/label';
 import { usePaginationParams } from '@/utils/pagination';
 import { useApi } from '@/hooks/use-api';
 import { getServices } from '@/services/service';
+import { getTripsForSelect } from '@/services/trip';
+import { Trip } from '@/interfaces/trip';
 
 const initialService = {
   name: '',
+  tripId: 0,
   originId: 0,
   destinationId: 0,
   startDay: '',
@@ -60,6 +63,7 @@ const initialSchedule = {
 
 const validationSchema = {
   Name: { required: true, message: 'El nombre es requerido' },
+  TripId: { required: true, message: 'La ruta comercial es requerida' },
   OriginId: { required: true, message: 'El origen es requerido' },
   DestinationId: { required: true, message: 'El destino es requerido' },
   StartDay: { required: true, message: 'El día de inicio es requerido' },
@@ -70,6 +74,7 @@ const validationSchema = {
 
 const editValidationSchema = {
   name: { required: true, message: 'El nombre es requerido' },
+  tripId: { required: true, message: 'La ruta comercial es requerida' },
   originId: { required: true, message: 'El origen es requerido' },
   destinationId: { required: true, message: 'El destino es requerido' },
   startDay: { required: true, message: 'El día de inicio es requerido' },
@@ -79,8 +84,7 @@ const editValidationSchema = {
 };
 
 const tripValidationSchema = {
-  originId: { required: true, message: 'El origen es requerido' },
-  destinationId: { required: true, message: 'El destino es requerido' },
+  tripId: { required: true, message: 'La ruta comercial es requerida' },
   departureHour: { required: true, message: 'La hora de partida es requerida' },
   vehicleId: { required: true, message: 'El vehículo es requerido' },
   estimatedDuration: { required: true, message: 'La duración estimada es requerida' },
@@ -88,8 +92,7 @@ const tripValidationSchema = {
 };
 
 const initialTripForm = {
-  originId: 0,
-  destinationId: 0,
+  tripId: 0,
   departureHour: '10:00',
   vehicleId: 0,
   estimatedDuration: '01:00',
@@ -112,21 +115,23 @@ export default function ServiceManagement() {
   const tripForm = useFormValidation(initialTripForm, tripValidationSchema);
   const [cities, setCities] = useState<SelectOption[]>([]);
   const [vehicles, setVehicles] = useState<SelectOption[]>([]);
+  const [trips, setTrips] = useState<SelectOption[]>([]);
+  const [tripsData, setTripsData] = useState<Trip[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
   const [schedules, setSchedules] = useState<ServiceSchedule[]>([]);
   const [editSchedules, setEditSchedules] = useState<ServiceSchedule[]>([]);
 
-   const params = usePaginationParams({
-      pageNumber: currentPage,
-      filters: { search: searchQuery },
-    });
-  
-    const { data, loading, error, fetch } = useApi<Service, PaginationParams>(getServices, {
-      autoFetch: true,
-      params: params,
-    });
+  const params = usePaginationParams({
+    pageNumber: currentPage,
+    filters: { search: searchQuery },
+  });
+
+  const { data, loading, error, fetch } = useApi<Service, PaginationParams>(getServices, {
+    autoFetch: true,
+    params: params,
+  });
 
   const loadAllOptions = async () => {
     try {
@@ -134,20 +139,25 @@ export default function ServiceManagement() {
       setOptionsError(null);
 
       // Llamadas API (pueden ir en paralelo)
-      const [cityResponse, vehicleResponse] = await Promise.all([
+      const [cityResponse, vehicleResponse, tripResponse] = await Promise.all([
         get<any, PagedResponse<City>>('/city-report', {
           pageNumber: 1,
-          pageSize: 10,
-          sortBy: 'fecha',
-          sortDescending: true,
-          filters: searchQuery ? { search: searchQuery } : {},
+          pageSize: 100,
+          sortBy: 'name',
+          sortDescending: false,
         }),
         get<any, PagedResponse<Vehicle>>('/vehicle-report', {
           pageNumber: 1,
-          pageSize: 10,
+          pageSize: 100,
           sortBy: 'fecha',
           sortDescending: true,
-          filters: searchQuery ? { search: searchQuery } : {},
+        }),
+        get<any, PagedResponse<Trip>>('/trip-report', {
+          pageNumber: 1,
+          pageSize: 100,
+          sortBy: 'description',
+          sortDescending: false,
+          filters: { status: 1 },
         }),
       ]);
 
@@ -170,8 +180,19 @@ export default function ServiceManagement() {
         }));
         setVehicles(formattedVehicles);
       }
+
+      // Cargar trips
+      if (tripResponse) {
+        setTripsData(tripResponse.Items);
+        const formattedTrips = tripResponse.Items.map((trip: Trip) => ({
+          id: trip.TripId.toString(),
+          value: trip.TripId.toString(),
+          label: trip.Description,
+        }));
+        setTrips(formattedTrips);
+      }
     } catch (error) {
-      setOptionsError('Error al cargar las ciudades o los tipos de vehículos');
+      setOptionsError('Error al cargar las opciones');
     } finally {
       setIsOptionsLoading(false);
     }
@@ -240,6 +261,7 @@ export default function ServiceManagement() {
         // Transform the data to match the API expectations
         const transformedData = {
           Name: data.name,
+          TripId: data.tripId,
           OriginId: data.originId,
           DestinationId: data.destinationId,
           EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
@@ -284,10 +306,12 @@ export default function ServiceManagement() {
     tripForm.handleSubmit(async (data) => {
       try {
         const transformedData = {
-          ...data,
-          EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
+          TripId: data.tripId,
+          ReserveDate: data.reserveDate,
+          VehicleId: data.vehicleId,
           DepartureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
-          // ReserveDate ya viene en formato yyyy-MM-dd del input date
+          EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
+          IsHoliday: false,
         };
         const response = await post('/reserve-create', transformedData);
         if (response) {
@@ -362,6 +386,7 @@ export default function ServiceManagement() {
     console.log('Service.Schedulers:', service.Schedulers);
 
     editForm.setField('name', service.Name);
+    editForm.setField('tripId', service.TripId);
     editForm.setField('originId', service.OriginId);
     editForm.setField('destinationId', service.DestinationId);
     editForm.setField('estimatedDuration', formattedDuration);
@@ -379,11 +404,11 @@ export default function ServiceManagement() {
 
     const formattedSchedulers = schedulers.length > 0
       ? schedulers.map(scheduler => ({
-          ...scheduler,
-          DepartureHour: scheduler.DepartureHour.includes(':')
-            ? scheduler.DepartureHour.split(':').slice(0, 2).join(':')
-            : scheduler.DepartureHour
-        }))
+        ...scheduler,
+        DepartureHour: scheduler.DepartureHour.includes(':')
+          ? scheduler.DepartureHour.split(':').slice(0, 2).join(':')
+          : scheduler.DepartureHour
+      }))
       : [{ ...emptyServiceSchedule }]; // Si no hay schedulers, crear uno por defecto
 
     console.log('Formatted schedulers:', formattedSchedulers);
@@ -472,7 +497,7 @@ export default function ServiceManagement() {
           </div>
         }
       />
-      
+
 
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
@@ -566,8 +591,31 @@ export default function ServiceManagement() {
                 <Input id="name" placeholder="Nombre" value={addForm.data.Name} onChange={(e) => addForm.setField('Name', e.target.value)} />
               </FormField>
             </div>
+            <div className="w-full">
+              <FormField label="Ruta Comercial" required error={addForm.errors.TripId}>
+                <ApiSelect
+                  value={String(addForm.data.TripId)}
+                  onValueChange={(value) => {
+                    addForm.setField('TripId', Number(value));
+                    // Auto-fill origin and destination from trip
+                    const selectedTrip = tripsData.find(t => t.TripId === Number(value));
+                    if (selectedTrip) {
+                      addForm.setField('OriginId', selectedTrip.OriginCityId);
+                      addForm.setField('DestinationId', selectedTrip.DestinationCityId);
+                    }
+                  }}
+                  placeholder="Seleccionar ruta comercial"
+                  options={trips}
+                  loading={isOptionsLoading}
+                  error={optionsError}
+                  loadingMessage="Cargando rutas..."
+                  errorMessage="Error al cargar las rutas"
+                  emptyMessage="No hay rutas disponibles"
+                />
+              </FormField>
+            </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Origen" required error={addForm.errors.OriginId}>
+              <FormField label="Parada Origen" required error={addForm.errors.OriginId}>
                 <ApiSelect
                   value={String(addForm.data.OriginId)}
                   onValueChange={(value) => addForm.setField('OriginId', Number(value))}
@@ -580,7 +628,7 @@ export default function ServiceManagement() {
                   emptyMessage="No hay ciudades disponibles"
                 />
               </FormField>
-              <FormField label="Destino" required error={addForm.errors.DestinationId}>
+              <FormField label="Parada Destino" required error={addForm.errors.DestinationId}>
                 <ApiSelect
                   value={String(addForm.data.DestinationId)}
                   onValueChange={(value) => addForm.setField('DestinationId', Number(value))}
@@ -735,8 +783,31 @@ export default function ServiceManagement() {
                 <Input id="edit-name" placeholder="Nombre" value={editForm.data.name} onChange={(e) => editForm.setField('name', e.target.value)} />
               </FormField>
             </div>
+            <div className="w-full">
+              <FormField label="Ruta Comercial" required error={editForm.errors.tripId}>
+                <ApiSelect
+                  value={String(editForm.data.tripId)}
+                  onValueChange={(value) => {
+                    editForm.setField('tripId', Number(value));
+                    // Auto-fill origin and destination from trip
+                    const selectedTrip = tripsData.find(t => t.TripId === Number(value));
+                    if (selectedTrip) {
+                      editForm.setField('originId', selectedTrip.OriginCityId);
+                      editForm.setField('destinationId', selectedTrip.DestinationCityId);
+                    }
+                  }}
+                  placeholder="Seleccionar ruta comercial"
+                  options={trips}
+                  loading={isOptionsLoading}
+                  error={optionsError}
+                  loadingMessage="Cargando rutas..."
+                  errorMessage="Error al cargar las rutas"
+                  emptyMessage="No hay rutas disponibles"
+                />
+              </FormField>
+            </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Origen" required error={editForm.errors.originId}>
+              <FormField label="Parada Origen" required error={editForm.errors.originId}>
                 <ApiSelect
                   value={String(editForm.data.originId)}
                   onValueChange={(value) => editForm.setField('originId', Number(value))}
@@ -749,7 +820,7 @@ export default function ServiceManagement() {
                   emptyMessage="No hay ciudades disponibles"
                 />
               </FormField>
-              <FormField label="Destino" required error={editForm.errors.destinationId}>
+              <FormField label="Parada Destino" required error={editForm.errors.destinationId}>
                 <ApiSelect
                   value={String(editForm.data.destinationId)}
                   onValueChange={(value) => editForm.setField('destinationId', Number(value))}
@@ -895,32 +966,18 @@ export default function ServiceManagement() {
         submitText="Crear Viaje"
       >
         <div className="w-full grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Origen" required error={tripForm.errors.originId}>
+          <div className="w-full">
+            <FormField label="Ruta Comercial" required error={tripForm.errors.tripId}>
               <ApiSelect
-                value={String(tripForm.data.originId)}
-                onValueChange={(value) => tripForm.setField('originId', Number(value))}
-                placeholder="Seleccionar origen"
-                options={cities}
+                value={String(tripForm.data.tripId)}
+                onValueChange={(value) => tripForm.setField('tripId', Number(value))}
+                placeholder="Seleccionar ruta comercial"
+                options={trips}
                 loading={isOptionsLoading}
                 error={optionsError}
-                loadingMessage="Cargando ciudades..."
-                errorMessage="Error al cargar las ciudades"
-                emptyMessage="No hay ciudades disponibles"
-              />
-            </FormField>
-            <FormField label="Destino" required error={tripForm.errors.destinationId}>
-              <ApiSelect
-                value={String(tripForm.data.destinationId)}
-                onValueChange={(value) => tripForm.setField('destinationId', Number(value))}
-                placeholder="Seleccionar destino"
-                options={cities.filter((city) => city.id !== String(tripForm.data.originId))}
-                disabled={tripForm.data.originId === 0}
-                loading={isOptionsLoading}
-                error={optionsError}
-                loadingMessage="Cargando destinos..."
-                errorMessage="Error al cargar los destinos"
-                emptyMessage="No hay destinos disponibles"
+                loadingMessage="Cargando rutas..."
+                errorMessage="Error al cargar las rutas"
+                emptyMessage="No hay rutas disponibles"
               />
             </FormField>
           </div>

@@ -14,19 +14,19 @@ describe('CheckoutContext', () => {
   describe('initial state', () => {
     it('should have null outboundTrip initially', () => {
       const { result } = renderCheckoutHook()
-      
+
       expect(result.current.checkout.outboundTrip).toBeNull()
     })
 
     it('should have 1 passenger initially', () => {
       const { result } = renderCheckoutHook()
-      
+
       expect(result.current.checkout.passengers).toBe(1)
     })
 
     it('should have null returnTrip initially', () => {
       const { result } = renderCheckoutHook()
-      
+
       expect(result.current.checkout.returnTrip).toBeNull()
     })
   })
@@ -34,7 +34,7 @@ describe('CheckoutContext', () => {
   describe('setCheckout', () => {
     it('should update checkout state', () => {
       const { result } = renderCheckoutHook()
-      
+
       const newState: CheckoutState = {
         outboundTrip: { Id: 1 } as ReserveSummaryItem,
         returnTrip: null,
@@ -53,7 +53,7 @@ describe('CheckoutContext', () => {
   describe('setLockState', () => {
     it('should set lock state', () => {
       const { result } = renderCheckoutHook()
-      
+
       const lockState: LockState = {
         lockToken: 'abc123',
         expiresAt: new Date(Date.now() + 600000).toISOString(),
@@ -69,7 +69,7 @@ describe('CheckoutContext', () => {
 
     it('should clear lock state when null is passed', () => {
       const { result } = renderCheckoutHook()
-      
+
       // First set a lock state
       const lockState: LockState = {
         lockToken: 'abc123',
@@ -93,7 +93,7 @@ describe('CheckoutContext', () => {
   describe('clearCheckout', () => {
     it('should reset to default state', () => {
       const { result } = renderCheckoutHook()
-      
+
       // Set some state
       act(() => {
         result.current.setCheckout({
@@ -125,13 +125,13 @@ describe('CheckoutContext', () => {
 
     it('should return false when no lock state', () => {
       const { result } = renderCheckoutHook()
-      
+
       expect(result.current.isLockValid()).toBe(false)
     })
 
     it('should return true when lock is not expired', () => {
       const { result } = renderCheckoutHook()
-      
+
       vi.setSystemTime(new Date('2024-01-01T12:00:00Z'))
 
       act(() => {
@@ -147,7 +147,7 @@ describe('CheckoutContext', () => {
 
     it('should return false when lock is expired', () => {
       const { result } = renderCheckoutHook()
-      
+
       vi.setSystemTime(new Date('2024-01-01T12:15:00Z'))
 
       act(() => {
@@ -173,13 +173,13 @@ describe('CheckoutContext', () => {
 
     it('should return 0 when no lock state', () => {
       const { result } = renderCheckoutHook()
-      
+
       expect(result.current.getTimeRemaining()).toBe(0)
     })
 
     it('should return remaining seconds', () => {
       const { result } = renderCheckoutHook()
-      
+
       vi.setSystemTime(new Date('2024-01-01T12:00:00Z'))
 
       act(() => {
@@ -195,7 +195,7 @@ describe('CheckoutContext', () => {
 
     it('should return 0 when lock has expired', () => {
       const { result } = renderCheckoutHook()
-      
+
       vi.setSystemTime(new Date('2024-01-01T12:15:00Z'))
 
       act(() => {
