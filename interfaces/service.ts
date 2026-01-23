@@ -18,6 +18,7 @@ export interface Service {
   Schedulers: ServiceSchedule[]; // From API response
   Vehicle: Vehicle
   Status: string;
+  AllowedDirectionIds?: number[]; // Whitelist of allowed directions
 }
 
 export const emptyService = {
@@ -31,5 +32,6 @@ export const emptyService = {
   EndDay: 0,
   Schedules: [emptyServiceSchedule], // For form usage
   Schedulers: [emptyServiceSchedule], // For API response
-  Status: 'Activo'
+  Status: 'Activo',
+  AllowedDirectionIds: [] as number[], // Whitelist of allowed directions
 }

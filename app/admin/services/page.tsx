@@ -35,8 +35,9 @@ import { Label } from '@/components/ui/label';
 import { usePaginationParams } from '@/utils/pagination';
 import { useApi } from '@/hooks/use-api';
 import { getServices } from '@/services/service';
-import { getTripsForSelect } from '@/services/trip';
+import { getTripsForSelect, getTripById } from '@/services/trip';
 import { Trip } from '@/interfaces/trip';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const initialService = {
   name: '',
@@ -123,6 +124,20 @@ export default function ServiceManagement() {
   const [schedules, setSchedules] = useState<ServiceSchedule[]>([]);
   const [editSchedules, setEditSchedules] = useState<ServiceSchedule[]>([]);
 
+  // Directions whitelist state
+  interface DirectionOption {
+    id: number;
+    name: string;
+    type: 'pickup' | 'dropoff';
+  }
+  const [availableDirections, setAvailableDirections] = useState<DirectionOption[]>([]);
+  const [selectedDirectionIds, setSelectedDirectionIds] = useState<number[]>([]);
+  const [editSelectedDirectionIds, setEditSelectedDirectionIds] = useState<number[]>([]);
+  const [tripFormDirectionIds, setTripFormDirectionIds] = useState<number[]>([]);
+  const [tripFormAvailableDirections, setTripFormAvailableDirections] = useState<DirectionOption[]>([]);
+  const [isLoadingDirections, setIsLoadingDirections] = useState(false);
+  const [isLoadingTripFormDirections, setIsLoadingTripFormDirections] = useState(false);
+
   const params = usePaginationParams({
     pageNumber: currentPage,
     filters: { search: searchQuery },
@@ -198,6 +213,94 @@ export default function ServiceManagement() {
     }
   };
 
+  // Load directions for a specific trip
+  const loadTripDirections = async (tripId: number) => {
+    if (!tripId) {
+      setAvailableDirections([]);
+      return;
+    }
+
+    setIsLoadingDirections(true);
+    try {
+      const tripData = await getTripById(tripId);
+      const directions: DirectionOption[] = [];
+
+      // Extract pickup directions
+      const pickupOptions = tripData?.PickupOptions || (tripData as any)?.pickupOptions || [];
+      pickupOptions.forEach((opt: any) => {
+        const id = opt.directionId || opt.DirectionId;
+        const name = opt.displayName || opt.DisplayName;
+        if (id != null) {
+          directions.push({ id, name: `[Subida] ${name}`, type: 'pickup' });
+        }
+      });
+
+      // Extract dropoff directions from all cities
+      const dropoffOptionsIda = tripData?.DropoffOptionsIda || (tripData as any)?.dropoffOptionsIda || [];
+      dropoffOptionsIda.forEach((cityOpt: any) => {
+        const cityDirections = cityOpt.directions || cityOpt.Directions || [];
+        cityDirections.forEach((dir: any) => {
+          const id = dir.directionId || dir.DirectionId;
+          const name = dir.displayName || dir.DisplayName;
+          if (id != null) {
+            directions.push({ id, name: `[Bajada] ${name}`, type: 'dropoff' });
+          }
+        });
+      });
+
+      setAvailableDirections(directions);
+    } catch (error) {
+      console.error('Error loading trip directions:', error);
+      setAvailableDirections([]);
+    } finally {
+      setIsLoadingDirections(false);
+    }
+  };
+
+  // Load directions for the trip form (reserve creation)
+  const loadTripFormDirections = async (tripId: number) => {
+    if (!tripId) {
+      setTripFormAvailableDirections([]);
+      return;
+    }
+
+    setIsLoadingTripFormDirections(true);
+    try {
+      const tripData = await getTripById(tripId);
+      const directions: DirectionOption[] = [];
+
+      // Extract pickup directions
+      const pickupOptions = tripData?.PickupOptions || (tripData as any)?.pickupOptions || [];
+      pickupOptions.forEach((opt: any) => {
+        const id = opt.directionId || opt.DirectionId;
+        const name = opt.displayName || opt.DisplayName;
+        if (id != null) {
+          directions.push({ id, name: `[Subida] ${name}`, type: 'pickup' });
+        }
+      });
+
+      // Extract dropoff directions from all cities
+      const dropoffOptionsIda = tripData?.DropoffOptionsIda || (tripData as any)?.dropoffOptionsIda || [];
+      dropoffOptionsIda.forEach((cityOpt: any) => {
+        const cityDirections = cityOpt.directions || cityOpt.Directions || [];
+        cityDirections.forEach((dir: any) => {
+          const id = dir.directionId || dir.DirectionId;
+          const name = dir.displayName || dir.DisplayName;
+          if (id != null) {
+            directions.push({ id, name: `[Bajada] ${name}`, type: 'dropoff' });
+          }
+        });
+      });
+
+      setTripFormAvailableDirections(directions);
+    } catch (error) {
+      console.error('Error loading trip form directions:', error);
+      setTripFormAvailableDirections([]);
+    } finally {
+      setIsLoadingTripFormDirections(false);
+    }
+  };
+
   const addSchedule = () => {
     const newSchedule = emptyServiceSchedule;
     addForm.setField('Schedules', [...addForm.data.Schedules, newSchedule]);
@@ -221,7 +324,8 @@ export default function ServiceManagement() {
           Schedules: data.Schedules.map(schedule => ({
             ...schedule,
             DepartureHour: schedule.DepartureHour + ':00' // Convert HH:MM to HH:MM:SS format
-          }))
+          })),
+          AllowedDirectionIds: selectedDirectionIds.length > 0 ? selectedDirectionIds : null,
         };
         const response = await post('/service-create', transformedData);
         if (response) {
@@ -273,7 +377,8 @@ export default function ServiceManagement() {
             DepartureHour: schedule.DepartureHour.includes(':')
               ? schedule.DepartureHour + ':00'
               : schedule.DepartureHour // Convert HH:MM to HH:MM:SS format
-          }))
+          })),
+          AllowedDirectionIds: editSelectedDirectionIds.length > 0 ? editSelectedDirectionIds : null,
         };
         console.log('Transformed data for update:', transformedData);
         const response = await put(`/service-update/${currentServiceId}`, transformedData);
@@ -312,6 +417,7 @@ export default function ServiceManagement() {
           DepartureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
           EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
           IsHoliday: false,
+          AllowedDirectionIds: tripFormDirectionIds.length > 0 ? tripFormDirectionIds : null,
         };
         const response = await post('/reserve-create', transformedData);
         if (response) {
@@ -372,6 +478,8 @@ export default function ServiceManagement() {
   const handleAddService = () => {
     setCurrentServiceId(null);
     addForm.resetForm();
+    setSelectedDirectionIds([]);
+    setAvailableDirections([]);
     setIsAddModalOpen(true);
     loadAllOptions();
   };
@@ -413,6 +521,11 @@ export default function ServiceManagement() {
 
     console.log('Formatted schedulers:', formattedSchedulers);
     setEditSchedules(formattedSchedulers);
+
+    // Load directions for editing
+    setEditSelectedDirectionIds(service.AllowedDirectionIds || []);
+    loadTripDirections(service.TripId);
+
     setIsEditModalOpen(true);
     loadAllOptions();
   };
@@ -484,6 +597,8 @@ export default function ServiceManagement() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => {
               tripForm.resetForm();
+              setTripFormDirectionIds([]);
+              setTripFormAvailableDirections([]);
               setIsAddTripModalOpen(true);
               loadAllOptions();
             }}>
@@ -596,13 +711,17 @@ export default function ServiceManagement() {
                 <ApiSelect
                   value={String(addForm.data.TripId)}
                   onValueChange={(value) => {
-                    addForm.setField('TripId', Number(value));
+                    const tripId = Number(value);
+                    addForm.setField('TripId', tripId);
                     // Auto-fill origin and destination from trip
-                    const selectedTrip = tripsData.find(t => t.TripId === Number(value));
+                    const selectedTrip = tripsData.find(t => t.TripId === tripId);
                     if (selectedTrip) {
                       addForm.setField('OriginId', selectedTrip.OriginCityId);
                       addForm.setField('DestinationId', selectedTrip.DestinationCityId);
                     }
+                    // Load available directions for this trip
+                    setSelectedDirectionIds([]);
+                    loadTripDirections(tripId);
                   }}
                   placeholder="Seleccionar ruta comercial"
                   options={trips}
@@ -760,6 +879,49 @@ export default function ServiceManagement() {
                 Agregar Horario
               </Button>
             </div>
+
+            {/* Directions Whitelist */}
+            {addForm.data.TripId > 0 && (
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Direcciones Permitidas</Label>
+                <p className="text-sm text-muted-foreground">
+                  Selecciona las direcciones habilitadas para este servicio. Si no seleccionas ninguna, todas estarán disponibles.
+                </p>
+                {isLoadingDirections ? (
+                  <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
+                ) : availableDirections.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                    {availableDirections.map((dir) => (
+                      <div key={dir.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`dir-add-${dir.id}`}
+                          checked={selectedDirectionIds.includes(dir.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedDirectionIds([...selectedDirectionIds, dir.id]);
+                            } else {
+                              setSelectedDirectionIds(selectedDirectionIds.filter(id => id !== dir.id));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`dir-add-${dir.id}`} className="text-sm font-normal cursor-pointer">
+                          {dir.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground border rounded-lg p-3">
+                    No hay direcciones disponibles para esta ruta.
+                  </div>
+                )}
+                {selectedDirectionIds.length > 0 && (
+                  <div className="text-sm text-blue-600">
+                    {selectedDirectionIds.length} dirección(es) seleccionada(s)
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </FormDialog>
@@ -788,13 +950,17 @@ export default function ServiceManagement() {
                 <ApiSelect
                   value={String(editForm.data.tripId)}
                   onValueChange={(value) => {
-                    editForm.setField('tripId', Number(value));
+                    const tripId = Number(value);
+                    editForm.setField('tripId', tripId);
                     // Auto-fill origin and destination from trip
-                    const selectedTrip = tripsData.find(t => t.TripId === Number(value));
+                    const selectedTrip = tripsData.find(t => t.TripId === tripId);
                     if (selectedTrip) {
                       editForm.setField('originId', selectedTrip.OriginCityId);
                       editForm.setField('destinationId', selectedTrip.DestinationCityId);
                     }
+                    // Load available directions for this trip
+                    setEditSelectedDirectionIds([]);
+                    loadTripDirections(tripId);
                   }}
                   placeholder="Seleccionar ruta comercial"
                   options={trips}
@@ -952,6 +1118,49 @@ export default function ServiceManagement() {
                 Agregar Horario
               </Button>
             </div>
+
+            {/* Directions Whitelist */}
+            {editForm.data.tripId > 0 && (
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Direcciones Permitidas</Label>
+                <p className="text-sm text-muted-foreground">
+                  Selecciona las direcciones habilitadas para este servicio. Si no seleccionas ninguna, todas estarán disponibles.
+                </p>
+                {isLoadingDirections ? (
+                  <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
+                ) : availableDirections.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                    {availableDirections.map((dir) => (
+                      <div key={dir.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`dir-edit-${dir.id}`}
+                          checked={editSelectedDirectionIds.includes(dir.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditSelectedDirectionIds([...editSelectedDirectionIds, dir.id]);
+                            } else {
+                              setEditSelectedDirectionIds(editSelectedDirectionIds.filter(id => id !== dir.id));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`dir-edit-${dir.id}`} className="text-sm font-normal cursor-pointer">
+                          {dir.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground border rounded-lg p-3">
+                    No hay direcciones disponibles para esta ruta.
+                  </div>
+                )}
+                {editSelectedDirectionIds.length > 0 && (
+                  <div className="text-sm text-blue-600">
+                    {editSelectedDirectionIds.length} dirección(es) seleccionada(s)
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </FormDialog>
@@ -970,7 +1179,13 @@ export default function ServiceManagement() {
             <FormField label="Ruta Comercial" required error={tripForm.errors.tripId}>
               <ApiSelect
                 value={String(tripForm.data.tripId)}
-                onValueChange={(value) => tripForm.setField('tripId', Number(value))}
+                onValueChange={(value) => {
+                  const tripId = Number(value);
+                  tripForm.setField('tripId', tripId);
+                  // Load available directions for this trip
+                  setTripFormDirectionIds([]);
+                  loadTripFormDirections(tripId);
+                }}
                 placeholder="Seleccionar ruta comercial"
                 options={trips}
                 loading={isOptionsLoading}
@@ -1019,6 +1234,49 @@ export default function ServiceManagement() {
               />
             </FormField>
           </div>
+
+          {/* Directions Whitelist */}
+          {tripForm.data.tripId > 0 && (
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Direcciones Permitidas</Label>
+              <p className="text-sm text-muted-foreground">
+                Selecciona las direcciones habilitadas para este viaje. Si no seleccionas ninguna, todas estarán disponibles.
+              </p>
+              {isLoadingTripFormDirections ? (
+                <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
+              ) : tripFormAvailableDirections.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                  {tripFormAvailableDirections.map((dir) => (
+                    <div key={dir.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`dir-trip-${dir.id}`}
+                        checked={tripFormDirectionIds.includes(dir.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setTripFormDirectionIds([...tripFormDirectionIds, dir.id]);
+                          } else {
+                            setTripFormDirectionIds(tripFormDirectionIds.filter(id => id !== dir.id));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`dir-trip-${dir.id}`} className="text-sm font-normal cursor-pointer">
+                        {dir.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground border rounded-lg p-3">
+                  No hay direcciones disponibles para esta ruta.
+                </div>
+              )}
+              {tripFormDirectionIds.length > 0 && (
+                <div className="text-sm text-blue-600">
+                  {tripFormDirectionIds.length} dirección(es) seleccionada(s)
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </FormDialog>
 
