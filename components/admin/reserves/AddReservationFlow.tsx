@@ -160,10 +160,10 @@ export function AddReservationFlow({
     const fetchTripDetails = async () => {
       if (!initialTrip?.TripId) return;
 
-      console.log('[AddReservationFlow] Fetching trip details for TripId:', initialTrip.TripId);
+      console.log('[AddReservationFlow] Fetching trip details for TripId:', initialTrip.TripId, 'ReserveId:', initialTrip.ReserveId);
       setIsTripLoading(true);
       try {
-        const data = await getTripById(initialTrip.TripId);
+        const data = await getTripById(initialTrip.TripId, initialTrip.ReserveId);
         console.log('[AddReservationFlow] Trip data received:', data);
         setTripData(data);
 
@@ -270,26 +270,45 @@ export function AddReservationFlow({
       // Use direction if selected, otherwise use city ID as fallback
       const dropoffLocationId = data.DropoffLocationId || selectedDropoffCityId;
 
+      // Get the outbound ReserveId from initialTrip
+      const outboundReserveId = initialTrip!.ReserveId;
+
       const reserveData: PassengerReserveCreate = {
         ...data,
-        ReserveId: initialTrip!.ReserveId,
+        ReserveId: outboundReserveId,
         CustomerId: selectedPassenger!.CustomerId,
         DropoffLocationId: dropoffLocationId,
         Price: getSelectedDropoffPrice(),
       };
 
+      console.log('[handleSubmitDetails] Outbound ReserveId:', outboundReserveId);
       console.log('[handleSubmitDetails] Reserve data:', reserveData);
 
       if (data.ReserveTypeId === 2) {
         // Round trip - create both reserves
         reserveForm.setField('IsPayment', true);
 
+        // Get the return ReserveId from returnTrip
+        const returnReserveId = returnTrip!.ReserveId;
+
+        console.log('[handleSubmitDetails] Return ReserveId:', returnReserveId);
+
+        if (outboundReserveId === returnReserveId) {
+          console.warn('[handleSubmitDetails] Outbound and Return ReserveId are the same - blocking submission');
+          toast({
+            title: 'Error',
+            description: 'El viaje de ida y vuelta no pueden ser el mismo. Por favor selecciona un viaje de vuelta diferente.',
+            variant: 'destructive'
+          });
+          return;
+        }
+
         // Both items use the same price (IdaVuelta price from selected dropoff city)
         const idaVueltaPrice = getSelectedDropoffPrice();
 
         const returnReserveData: PassengerReserveCreate = {
           ...data,
-          ReserveId: returnTrip!.ReserveId,
+          ReserveId: returnReserveId,
           CustomerId: selectedPassenger!.CustomerId,
           PickupLocationId: dropoffLocationId, // Pickup en vuelta = dropoff de ida
           DropoffLocationId: data.PickupLocationId, // Dropoff en vuelta = pickup de ida
@@ -572,24 +591,25 @@ export function AddReservationFlow({
                       Viajes para {format(returnDate, "d 'de' MMMM", { locale: es })}
                     </Label>
                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
-                      {dataReturnReserves?.Items?.map((trip) => (
-                        <button
-                          key={trip.ReserveId}
-                          type="button"
-                          className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${
-                            returnTrip?.ReserveId === trip.ReserveId
+                      {dataReturnReserves?.Items
+                        ?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId)
+                        .map((trip) => (
+                          <button
+                            key={trip.ReserveId}
+                            type="button"
+                            className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId
                               ? 'border-blue-500 bg-blue-50'
                               : 'hover:bg-gray-50'
-                          }`}
-                          onClick={() => setReturnTrip(trip)}
-                        >
-                          <span className="font-medium">{trip.DepartureHour}</span>
-                          <span className="text-gray-600">
-                            {trip.OriginName} → {trip.DestinationName}
-                          </span>
-                        </button>
-                      ))}
-                      {dataReturnReserves?.Items?.length === 0 && (
+                              }`}
+                            onClick={() => setReturnTrip(trip)}
+                          >
+                            <span className="font-medium">{trip.DepartureHour}</span>
+                            <span className="text-gray-600">
+                              {trip.OriginName} → {trip.DestinationName}
+                            </span>
+                          </button>
+                        ))}
+                      {dataReturnReserves?.Items?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId).length === 0 && (
                         <p className="text-center text-sm text-gray-500 p-4">No hay viajes disponibles.</p>
                       )}
                     </div>

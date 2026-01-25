@@ -10,9 +10,10 @@ export async function getTrips(params: Partial<PaginationParams>): Promise<Paged
   return await get<any, PagedResponse<Trip>>('/trip-report', finalParams);
 }
 
-export async function getTripById(tripId: number): Promise<Trip> {
-  console.log('[getTripById] Fetching tripId:', tripId);
-  return await getPure<Trip>(`/trip/${tripId}`);
+export async function getTripById(tripId: number, reserveId?: number): Promise<Trip> {
+  console.log('[getTripById] Fetching tripId:', tripId, 'reserveId:', reserveId);
+  const queryParams = reserveId ? `?reserveId=${reserveId}` : '';
+  return await getPure<Trip>(`/trip/${tripId}${queryParams}`);
 }
 
 export async function getTripsForSelect(params?: Partial<PaginationParams>): Promise<PagedResponse<Trip>> {
