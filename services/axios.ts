@@ -63,29 +63,36 @@ export async function getServerAxios(options?: { skipAuth?: boolean }) {
     withCredentials: true,
   });
 
-  // Obtener sesión y cookies una vez
-  const session = !options?.skipAuth ? await getServerSession(nextAuthOptions) : null;
-  const cookieHeader = await getCookieHeader();
+  const isPublicRequest = options?.skipAuth === true;
+
+  // Obtener sesión y cookies una vez (solo si no es público)
+  const session = !isPublicRequest ? await getServerSession(nextAuthOptions) : null;
+  const cookieHeader = !isPublicRequest ? await getCookieHeader() : '';
 
   // Variable para almacenar el token actual (puede actualizarse si se renueva)
   let currentToken = session?.accessToken || null;
 
-  // Interceptor de request: agregar Authorization header
+  // Interceptor de request: agregar Authorization header (solo si no es público)
   instance.interceptors.request.use((config) => {
-    if (currentToken) {
+    if (!isPublicRequest && currentToken) {
       config.headers.Authorization = `Bearer ${currentToken}`;
     }
-    // Agregar cookies al request
-    if (cookieHeader) {
+    // Agregar cookies al request (solo si no es público)
+    if (!isPublicRequest && cookieHeader) {
       config.headers.Cookie = cookieHeader;
     }
     return config;
   });
 
-  // Interceptor de response: manejar 401 con retry automático
+  // Interceptor de response: manejar 401 con retry automático (solo si no es público)
   instance.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
+      // Para endpoints públicos, no manejar errores de auth
+      if (isPublicRequest) {
+        throw error;
+      }
+
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
       // Si es 401 y no es un retry, intentar renovar el token
@@ -115,3 +122,4 @@ export async function getServerAxios(options?: { skipAuth?: boolean }) {
 
   return instance;
 }
+

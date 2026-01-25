@@ -1,7 +1,9 @@
 export interface ReservePrice {
     ReservePriceId: number;
-    ServiceId: number;
-    ServiceName: string;
+    OriginId: number;
+    OriginName: string;
+    DestinationId: number;
+    DestinationName: string;
     Price: number;
     ReserveTypeId: number;
     Status: string;

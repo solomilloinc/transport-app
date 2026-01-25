@@ -25,7 +25,7 @@ export interface PassengerReserveCreate extends Omit<PassengerReserve, 'Customer
     Price: number
 }
 
-export const emptyPassengerCreate: Omit<PassengerReserveCreate, 'PaidAmount' | 'PaymentMethods' | 'HasTraveled' | 'Price'> = {
+export const emptyPassengerCreate: Omit<PassengerReserveCreate, 'PaidAmount' | 'PaymentMethods' | 'HasTraveled'> = {
     PassengerId: 0,
     ReserveId: 0,
     CustomerId: 0,
@@ -35,6 +35,7 @@ export const emptyPassengerCreate: Omit<PassengerReserveCreate, 'PaidAmount' | '
     StatusPaymentId: 1, // Assuming 1 means paid
     PaymentMethod: 1, // Assuming 1 is cash
     ReserveTypeId: 1,
+    Price: 0,
 }
 
 export interface PassengerReserveReport extends PassengerReserve {

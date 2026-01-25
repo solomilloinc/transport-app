@@ -1,6 +1,6 @@
+import { TripPrice, CityDirectionsDto } from "./trip";
 import { Auditable } from "./auditable";
 import { PassengerReserve } from "./passengerReserve";
-import { ReservePrice } from "./reservePrice";
 
 export enum ReserveStatusEnum {
     Available = 0,
@@ -12,21 +12,19 @@ export enum ReserveStatusEnum {
 }
 
 export interface Reserve extends Auditable {
-    ReserveId: number;
-    ReserveDate: string;
-    VehicleId: number;
-    DriverId: number;
-    ServiceId: number;
-    UserId: number;
-    Status: string;
+    // ... (lines 15-22 unchanged)
     PassengersReserve: PassengerReserve[];
 
 }
 
 export interface ReserveReport {
     ReserveId: number;
+    TripId: number;
+    ServiceId: number;
     ReserveDate: string;
+    OriginCityId: number;
     OriginName: string;
+    DestinationCityId: number;
     DestinationName: string;
     DepartureHour: string;
     VehicleId: number;
@@ -35,7 +33,8 @@ export interface ReserveReport {
     DriverName: string;
     AvailableQuantity: number;
     ReservedQuantity: number;
-    Prices: ReservePrice[];
+    Prices: TripPrice[];
+    RelevantCities: CityDirectionsDto[];
     Status: number;
 }
 
@@ -47,6 +46,7 @@ export const emptyEditReserve = {
 
 export interface ReserveSummaryItem {
     ReserveId: number;
+    TripId: number;
     OriginName: string;
     DestinationName: string;
     DepartureHour: string;

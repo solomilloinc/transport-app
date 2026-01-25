@@ -72,12 +72,19 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground font-sans;
   }
+
   html {
     scroll-behavior: smooth;
   }
+
+  body {
+    overflow-x: hidden;
+  }
+
   h1,
   h2,
   h3,

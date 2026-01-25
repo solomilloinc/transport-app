@@ -1,8 +1,6 @@
 export const revalidate = 86400; // Revalidate every 24 hours
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { get } from '@/services/api';
-import { City } from '@/interfaces/city';
 import { SelectOption } from '@/components/dashboard/select';
 
 import { Input } from '@/components/ui/input';
@@ -13,39 +11,43 @@ import { AnimatedSection } from '@/components/animated-section';
 import { HeroSection } from '@/components/hero-section';
 import Link from 'next/link';
 import Navbar from '@/components/navbar';
-import { PagedResponse } from '@/services/types';
-async function loadCities(): Promise<SelectOption[]> {
+import { getPublicTrips, PublicTripDto } from '@/services/trip';
+
+// Extended SelectOption to include trip data
+export interface TripSelectOption extends SelectOption {
+  originCityId: number;
+  originCityName: string;
+  destinationCityId: number;
+  destinationCityName: string;
+  priceFrom: number | null;
+}
+
+async function loadTrips(): Promise<TripSelectOption[]> {
   try {
-    // Usamos skipAuth: true asumiendo que esta data es pública.
-    const response = await get<any, PagedResponse<City>>(
-      '/city-report',
-      {
-        pageNumber: 1,
-        pageSize: 100,
-        sortBy: 'Name',
-        sortDescending: false,
-        filters: {},
-      },
-      { skipAuth: true }, // Mark this request as public
-    );
+    const response = await getPublicTrips(1, 100);
 
     if (response && response.Items) {
-      const formattedCities: SelectOption[] = response.Items.map((city) => ({
-        id: city.Id,
-        value: city.Name,
-        label: city.Name,
+      const formattedTrips: TripSelectOption[] = response.Items.map((trip) => ({
+        id: trip.TripId,
+        value: trip.TripId.toString(),
+        label: `${trip.OriginCityName} → ${trip.DestinationCityName}`,
+        originCityId: trip.OriginCityId,
+        originCityName: trip.OriginCityName,
+        destinationCityId: trip.DestinationCityId,
+        destinationCityName: trip.DestinationCityName,
+        priceFrom: trip.PriceFrom,
       }));
-      const uniqueCities = Array.from(new Map(formattedCities.map((item) => [item.label, item])).values());
-      return uniqueCities;
+      return formattedTrips;
     }
   } catch (error) {
-    console.error('Failed to load cities for landing page:', error);
+    console.error('Failed to load trips for landing page:', error);
     return [];
   }
   return [];
 }
+
 export default async function Home() {
-  const cities = await loadCities();
+  const trips = await loadTrips();
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar
@@ -67,8 +69,9 @@ export default async function Home() {
         }
       />
       <main className="flex-1">
-        {/* Hero Section - Replace with the new component */}
-        <HeroSection cities={cities} />
+        {/* Hero Section - Now uses trips instead of cities */}
+        <HeroSection trips={trips} />
+
 
         {/* About Us Section */}
         <AnimatedSection id="about" className="py-16 md:py-24 bg-blue-50" animation="fade-up">

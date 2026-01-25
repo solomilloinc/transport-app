@@ -140,7 +140,7 @@ export function PassengerListTable({
                 />
               </td>
               <td className="py-3 pr-4 text-center">{passenger.PaymentMethods}</td>
-              <td className="py-3 pr-4 text-center font-mono font-medium">
+              <td className="py-3 pr-4 text-center font-medium">
                 ${(passenger.PaidAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               <td className="py-3 pl-4 text-right">

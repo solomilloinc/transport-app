@@ -13,46 +13,48 @@ import { CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { SelectOption } from './dashboard/select';
+import { TripSelectOption } from '@/app/page';
 
-export function HeroSection({ cities }: { cities: SelectOption[] }) {
+export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const router = useRouter();
   const [tripType, setTripType] = useState('OneWay');
   const [departureDate, setDepartureDate] = useState<Date>();
   const [returnDate, setReturnDate] = useState<Date>();
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
+  const [selectedTripId, setSelectedTripId] = useState('');
   const [passengers, setPassengers] = useState('1');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Cuando el origen cambia, si es igual al destino, reseteamos el destino.
-  useEffect(() => {
-    if (destination && destination === origin) {
-      setDestination('');
-    }
-  }, [origin, destination]);
+  // Get the selected trip details
+  const selectedTrip = useMemo(() => {
+    return trips.find((trip) => trip.value === selectedTripId);
+  }, [trips, selectedTripId]);
 
-  // Filtramos las ciudades de destino para que no incluyan el origen seleccionado.
-  const destinationOptions = useMemo(() => {
-    return cities.filter((city) => city.value !== origin);
-  }, [cities, origin]);
+  // For round trip, find the return trip (inverse route)
+  const returnTrip = useMemo(() => {
+    if (!selectedTrip) return null;
+    return trips.find(
+      (trip) =>
+        trip.originCityId === selectedTrip.destinationCityId &&
+        trip.destinationCityId === selectedTrip.originCityId
+    );
+  }, [trips, selectedTrip]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: Record<string, string> = {};
-    if (!origin) {
-      newErrors.origin = 'El origen es requerido.';
-    }
-    if (!destination) {
-      newErrors.destination = 'El destino es requerido.';
+    if (!selectedTripId) {
+      newErrors.trip = 'Debes seleccionar una ruta.';
     }
     if (!departureDate) {
       newErrors.departureDate = 'La fecha de ida es requerida.';
     }
     if (tripType === 'RoundTrip' && !returnDate) {
       newErrors.returnDate = 'La fecha de vuelta es requerida.';
+    }
+    if (tripType === 'RoundTrip' && !returnTrip) {
+      newErrors.trip = 'No hay ruta de vuelta disponible para esta selección.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -61,32 +63,29 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
     }
     setErrors({});
 
-    const originCity = cities.find((city) => city.value === origin);
-    const destinationCity = cities.find((city) => city.value === destination);
-
-    if (!originCity || !destinationCity) {
-      console.error('No se pudieron encontrar los detalles de la ciudad para la búsqueda.');
-      // Opcionalmente, mostrar un error al usuario
+    if (!selectedTrip) {
+      console.error('No se pudo encontrar el viaje seleccionado.');
       return;
     }
 
     // Build query parameters
     const params = new URLSearchParams();
-    params.append('originId', originCity.id.toString());
-    params.append('originName', originCity.label);
-    params.append('destinationId', destinationCity.id.toString());
-    params.append('destinationName', destinationCity.label);
+    params.append('tripId', selectedTrip.id.toString());
+    params.append('originName', selectedTrip.originCityName);
+    params.append('destinationName', selectedTrip.destinationCityName);
     params.append('tripType', tripType);
     params.append('passengers', passengers);
     if (departureDate) {
       params.append('departureDate', format(departureDate, 'yyyy-MM-dd'));
     }
-    if (tripType === 'RoundTrip' && returnDate) {
+    if (tripType === 'RoundTrip' && returnDate && returnTrip) {
       params.append('returnDate', format(returnDate, 'yyyy-MM-dd'));
+      params.append('returnTripId', returnTrip.id.toString());
     }
     // Navigate to results page with query parameters
     router.push(`/results?${params.toString()}`);
   };
+
   return (
     <section className="relative">
       <div className="absolute inset-0 z-0">
@@ -142,39 +141,37 @@ export function HeroSection({ cities }: { cities: SelectOption[] }) {
                       </RadioGroup>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">Desde</label>
-                        <Select value={origin} onValueChange={setOrigin}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Origen" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {cities.map((city) => (
-                              <SelectItem key={city.id} value={city.value}>
-                                {city.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {errors.origin && <p className="text-xs text-red-500 mt-1">{errors.origin}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">Hasta</label>
-                        <Select value={destination} onValueChange={setDestination} disabled={!origin}>
-                          <SelectTrigger>
-                            <SelectValue placeholder={'Destino'} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {destinationOptions.map((city) => (
-                              <SelectItem key={city.id} value={city.value}>
-                                {city.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {errors.destination && <p className="text-xs text-red-500 mt-1">{errors.destination}</p>}
-                      </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-blue-900">Ruta</label>
+                      <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona tu ruta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {trips.map((trip) => (
+                            <SelectItem key={trip.id} value={trip.value}>
+                              {trip.label}
+                              {trip.priceFrom && (
+                                <span className="text-muted-foreground ml-2">
+                                  (desde ${trip.priceFrom.toLocaleString()})
+                                </span>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.trip && <p className="text-xs text-red-500 mt-1">{errors.trip}</p>}
+
+                      {/* Show return trip info if round trip is selected */}
+                      {tripType === 'RoundTrip' && selectedTrip && (
+                        <div className="text-xs text-blue-600 mt-1">
+                          {returnTrip ? (
+                            <>Vuelta: {returnTrip.label}</>
+                          ) : (
+                            <span className="text-amber-600">⚠️ No hay ruta de vuelta disponible</span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

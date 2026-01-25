@@ -25,6 +25,7 @@ import { Direction } from '@/interfaces/direction';
 import { useApi } from '@/hooks/use-api';
 import { getPassengerReserves, getReserves } from '@/services/reserves';
 import { PaymentMethod } from '@/interfaces/payment';
+import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
 import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFlow';
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
@@ -108,8 +109,49 @@ export default function ReservationsPage() {
     setSelectedTrip(null);
   }, [selectedDate]);
 
+  const fetchFullTripDetails = async (tripId: number) => {
+    try {
+      console.log('Fetching trip details for ID:', tripId);
+      const tripData = await getTripById(tripId);
+      console.log('Trip data received:', tripData);
+
+      if (tripData) {
+        setSelectedTrip((prev) => {
+          if (!prev) return prev;
+
+          // Use either TripId or ServiceId for matching
+          const currentId = prev.TripId || (prev as any).ServiceId;
+          if (currentId && Number(currentId) !== tripId) return prev;
+
+          // Map properties defensively (handle PascalCase and camelCase)
+          return {
+            ...prev,
+            TripId: tripId,
+            Prices: tripData.Prices || (tripData as any).prices || [],
+            RelevantCities: tripData.RelevantCities || (tripData as any).relevantCities || [],
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching full trip details:', error);
+    }
+  };
+
   useEffect(() => {
     if (!selectedTrip) return;
+
+    // Log the selected trip to verify available IDs
+    console.log('Selected Trip:', selectedTrip);
+
+    // Try to get tripId from available fields (case insensitive check for common variants)
+    const rawTripId = selectedTrip.TripId || (selectedTrip as any).ServiceId || (selectedTrip as any).tripId;
+    const tripId = rawTripId ? Number(rawTripId) : null;
+
+    // Fetch detailed trip info if we have an ID and missing data (RelevantCities)
+    if (tripId && !selectedTrip.RelevantCities) {
+      fetchFullTripDetails(tripId);
+    }
+
     fetchPassengerReserves(selectedTrip.ReserveId);
     loadAllOptions();
     loadPaymentMethod();
@@ -388,6 +430,7 @@ export default function ReservationsPage() {
         passengerReserve={selectedPassengerReserve}
         onSuccess={() => fetchPassengerReserves(selectedTrip!.ReserveId)}
         directions={directions}
+        relevantCities={selectedTrip?.RelevantCities || []}
         isLoadingDirections={isOptionsLoading}
       />
       <AddPaymentDialog

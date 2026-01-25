@@ -12,15 +12,8 @@ export const reserveValidationSchema: FormValidationConfig = {
       },
     ],
   },
-  DropoffLocationId: {
-    required: { message: 'La dirección de bajada es obligatoria' },
-    rules: [
-      {
-        validate: (value) => value !== 0,
-        message: 'Debe seleccionar una dirección de bajada',
-      },
-    ],
-  },
+  // DropoffLocationId is now optional - city selection is tracked separately
+  // Direction within city is optional when available
   
   PickupLocationReturnId: {
     rules: [

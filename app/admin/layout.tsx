@@ -10,6 +10,7 @@ import {
   CreditCard,
   LogOut,
   MapPin,
+  Route,
   Settings,
   User,
   UserCheck,
@@ -120,6 +121,17 @@ const MENU_CONFIG: {
       submenu: [
         { name: 'Coches', path: '/admin/vehicles', roles: ['admin'] },
         { name: 'Tipos', path: '/admin/vehicles/types', roles: ['admin'] },
+      ],
+    },
+    {
+      name: 'Rutas',
+      icon: Route,
+      path: '/admin/trips',
+      key: 'trips',
+      roles: ['admin'],
+      submenu: [
+        { name: 'Gestión', path: '/admin/trips', roles: ['admin'] },
+        { name: 'Precios Masivos', path: '/admin/trips/prices/bulk-update', roles: ['admin'] },
       ],
     },
     {

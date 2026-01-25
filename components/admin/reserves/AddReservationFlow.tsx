@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlusCircleIcon, TrashIcon } from 'lucide-react';
@@ -22,6 +22,7 @@ import { ReserveReport } from '@/interfaces/reserve';
 import { Passenger } from '@/interfaces/passengers';
 import { emptyPassengerCreate, PassengerReserveCreate } from '@/interfaces/passengerReserve';
 import { Payment } from '@/interfaces/payment';
+import { Trip } from '@/interfaces/trip';
 
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useApi } from '@/hooks/use-api';
@@ -29,15 +30,16 @@ import { useToast } from '@/hooks/use-toast';
 
 import { getPassengers } from '@/services/passenger';
 import { getReserves } from '@/services/reserves';
+import { getTripById } from '@/services/trip';
 import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 import { PaginationParams } from '@/services/types';
 
 enum FlowStep {
   SELECT_PASSENGER,
   ADD_DETAILS,
-  SELECT_RETURN_TRIP,
   CONFIRM_PAYMENT,
 }
+
 
 interface AddReservationFlowProps {
   open: boolean;
@@ -78,6 +80,69 @@ export function AddReservationFlow({
   const [passengerReserves, setPassengerReserves] = useState<PassengerReserveCreate[]>([]);
   const [reservationPayments, setReservationPayments] = useState<Payment[]>([]);
 
+  // Trip data state - enriched with pickup/dropoff options from API
+  const [tripData, setTripData] = useState<Trip | null>(null);
+  const [isTripLoading, setIsTripLoading] = useState(false);
+
+  // Selected dropoff city (to show directions if available)
+  const [selectedDropoffCityId, setSelectedDropoffCityId] = useState<number | null>(null);
+
+  // Pickup options from Trip API (ready to use)
+  const pickupOptions = useMemo(() => {
+    const options = tripData?.PickupOptions || (tripData as any)?.pickupOptions || [];
+    return options
+      .filter((opt: any) => opt && (opt.directionId != null || opt.DirectionId != null))
+      .map((opt: any) => ({
+        id: String(opt.directionId || opt.DirectionId),
+        value: String(opt.directionId || opt.DirectionId),
+        label: opt.displayName || opt.DisplayName || 'Sin nombre'
+      }));
+  }, [tripData]);
+
+  // Dropoff CITY options based on reserve type
+  // Ida = DropoffOptionsIda, IdaVuelta = DropoffOptionsIdaVuelta
+  const dropoffCityOptions = useMemo(() => {
+    const isRoundTrip = reserveForm.data.ReserveTypeId === 2;
+    const options = isRoundTrip
+      ? (tripData?.DropoffOptionsIdaVuelta || (tripData as any)?.dropoffOptionsIdaVuelta || [])
+      : (tripData?.DropoffOptionsIda || (tripData as any)?.dropoffOptionsIda || []);
+    return options
+      .filter((opt: any) => opt && (opt.cityId != null || opt.CityId != null))
+      .map((opt: any) => ({
+        id: String(opt.cityId || opt.CityId),
+        value: String(opt.cityId || opt.CityId),
+        label: `${opt.cityName || opt.CityName || 'Sin nombre'} - $${(opt.price ?? opt.Price ?? 0).toLocaleString()}`,
+        price: opt.price ?? opt.Price ?? 0,
+        isMainDestination: opt.isMainDestination ?? opt.IsMainDestination,
+        directions: opt.directions || opt.Directions || []
+      }));
+  }, [tripData, reserveForm.data.ReserveTypeId]);
+
+  // Get directions for selected dropoff city
+  const dropoffDirectionOptions = useMemo(() => {
+    if (!selectedDropoffCityId) return [];
+    const city = dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId));
+    if (!city?.directions?.length) return [];
+    return city.directions
+      .filter((dir: any) => dir && (dir.directionId != null || dir.DirectionId != null))
+      .map((dir: any) => ({
+        id: String(dir.directionId || dir.DirectionId),
+        value: String(dir.directionId || dir.DirectionId),
+        label: dir.displayName || dir.DisplayName || 'Sin nombre'
+      }));
+  }, [selectedDropoffCityId, dropoffCityOptions]);
+
+  // Get price for selected dropoff city
+  const getSelectedDropoffPrice = () => {
+    if (!selectedDropoffCityId) {
+      // Return main destination price if nothing selected
+      const mainDest = dropoffCityOptions.find((opt: any) => opt.isMainDestination);
+      return mainDest?.price || 0;
+    }
+    const selected = dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId));
+    return selected?.price || 0;
+  };
+
   // Payment form state
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
@@ -90,11 +155,43 @@ export function AddReservationFlow({
   } = useApi<Passenger, PaginationParams>(getPassengers, { autoFetch: false });
   const { data: dataReturnReserves, fetch: fetchReturnReserves } = useApi<ReserveReport, string>(getReserves, { autoFetch: false });
 
-  // Effect to start and reset the flow
+  // Effect to fetch trip details when dialog opens
+  useEffect(() => {
+    const fetchTripDetails = async () => {
+      if (!initialTrip?.TripId) return;
+
+      console.log('[AddReservationFlow] Fetching trip details for TripId:', initialTrip.TripId, 'ReserveId:', initialTrip.ReserveId);
+      setIsTripLoading(true);
+      try {
+        const data = await getTripById(initialTrip.TripId, initialTrip.ReserveId);
+        console.log('[AddReservationFlow] Trip data received:', data);
+        setTripData(data);
+
+        // Auto-select main destination price
+        const dropoffIda = data?.DropoffOptionsIda || [];
+        const mainDest = dropoffIda.find((opt: any) => opt.IsMainDestination);
+        if (mainDest) {
+          reserveForm.setField('DropoffLocationId', mainDest.TripPriceId);
+          reserveForm.setField('Price', mainDest.Price);
+        }
+      } catch (error) {
+        console.error('[AddReservationFlow] Error fetching trip details:', error);
+        toast({ title: 'Error', description: 'Error al cargar los precios del viaje', variant: 'destructive' });
+      } finally {
+        setIsTripLoading(false);
+      }
+    };
+
+    if (open && initialTrip) {
+      fetchTripDetails();
+    }
+  }, [open, initialTrip?.TripId]);
+
+  // Effect to start the flow
   useEffect(() => {
     if (open && initialTrip) {
       setStep(FlowStep.SELECT_PASSENGER);
-    } else {
+    } else if (!open) {
       resetFlow();
     }
   }, [open, initialTrip]);
@@ -132,6 +229,8 @@ export function AddReservationFlow({
     setReturnTrip(null);
     setPassengerReserves([]);
     setReservationPayments([]);
+    setTripData(null);
+    setSelectedDropoffCityId(null);
     onOpenChange(false);
   };
 
@@ -150,50 +249,80 @@ export function AddReservationFlow({
 
   const handleSubmitDetails = () => {
     reserveForm.handleSubmit(async (data) => {
-      const reserveData: PassengerReserveCreate = {
-        ...data,
-        ReserveId: initialTrip!.ReserveId,
-        CustomerId: selectedPassenger!.CustomerId,
-        Price: initialTrip!.Prices.find((price) => price.ReserveTypeId === data.ReserveTypeId)?.Price || 0,
-      };
-
-      console.log(initialTrip)
-      setPassengerReserves([reserveData]);
-
-      if (data.ReserveTypeId === 2) {
-        // Round trip - usar la fecha del viaje de ida como fecha inicial de vuelta
-        reserveForm.setField('IsPayment', true);
-        const tripDate = new Date(initialTrip!.ReserveDate);
-        setReturnDate(tripDate);
-        setMonth(tripDate);
-        setStep(FlowStep.SELECT_RETURN_TRIP);
-      } else {
-        // One way
-        setStep(FlowStep.CONFIRM_PAYMENT);
+      // Validate pickup location
+      if (!data.PickupLocationId || data.PickupLocationId === 0) {
+        toast({ title: 'Error', description: 'Por favor, selecciona una dirección de subida.', variant: 'destructive' });
+        return;
       }
-    });
-  };
 
-  const handleSubmitReturnTrip = () => {
-    reserveForm.handleSubmit(async (data) => {
-      if (!returnTrip) {
+      // Validate dropoff city is selected
+      if (!selectedDropoffCityId) {
+        toast({ title: 'Error', description: 'Por favor, selecciona una ciudad de bajada.', variant: 'destructive' });
+        return;
+      }
+
+      // Validate return trip if IdaVuelta
+      if (data.ReserveTypeId === 2 && !returnTrip) {
         toast({ title: 'Error', description: 'Por favor, selecciona un viaje de vuelta.', variant: 'destructive' });
         return;
       }
 
-      console.log(returnTrip)
+      // Use direction if selected, otherwise use city ID as fallback
+      const dropoffLocationId = data.DropoffLocationId || selectedDropoffCityId;
 
-      console.log(data)
-      const returnReserveData: PassengerReserveCreate = {
+      // Get the outbound ReserveId from initialTrip
+      const outboundReserveId = initialTrip!.ReserveId;
+
+      const reserveData: PassengerReserveCreate = {
         ...data,
-        ReserveId: returnTrip.ReserveId,
+        ReserveId: outboundReserveId,
         CustomerId: selectedPassenger!.CustomerId,
-        PickupLocationId: Number(reserveForm.data.PickupLocationReturnId),
-        DropoffLocationId: Number(reserveForm.data.DropoffLocationReturnId),
-        Price: returnTrip.Prices.find((p) => p.ReserveTypeId === data.ReserveTypeId)?.Price || 0,
+        DropoffLocationId: dropoffLocationId,
+        Price: getSelectedDropoffPrice(),
       };
 
-      setPassengerReserves((prev) => [...prev, returnReserveData]);
+      console.log('[handleSubmitDetails] Outbound ReserveId:', outboundReserveId);
+      console.log('[handleSubmitDetails] Reserve data:', reserveData);
+
+      if (data.ReserveTypeId === 2) {
+        // Round trip - create both reserves
+        reserveForm.setField('IsPayment', true);
+
+        // Get the return ReserveId from returnTrip
+        const returnReserveId = returnTrip!.ReserveId;
+
+        console.log('[handleSubmitDetails] Return ReserveId:', returnReserveId);
+
+        if (outboundReserveId === returnReserveId) {
+          console.warn('[handleSubmitDetails] Outbound and Return ReserveId are the same - blocking submission');
+          toast({
+            title: 'Error',
+            description: 'El viaje de ida y vuelta no pueden ser el mismo. Por favor selecciona un viaje de vuelta diferente.',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // Both items use the same price (IdaVuelta price from selected dropoff city)
+        const idaVueltaPrice = getSelectedDropoffPrice();
+
+        const returnReserveData: PassengerReserveCreate = {
+          ...data,
+          ReserveId: returnReserveId,
+          CustomerId: selectedPassenger!.CustomerId,
+          PickupLocationId: dropoffLocationId, // Pickup en vuelta = dropoff de ida
+          DropoffLocationId: data.PickupLocationId, // Dropoff en vuelta = pickup de ida
+          Price: idaVueltaPrice, // Same price as outbound
+        };
+
+        console.log('[handleSubmitDetails] Return reserve data:', returnReserveData);
+        setPassengerReserves([reserveData, returnReserveData]);
+      } else {
+        // One way
+        setPassengerReserves([reserveData]);
+      }
+
+      // Go directly to payment
       setStep(FlowStep.CONFIRM_PAYMENT);
     });
   };
@@ -229,8 +358,10 @@ export function AddReservationFlow({
   };
 
   const getTotalReserveAmount = () => {
-    // El precio de la primera reserva ya representa el total para el tipo de reserva seleccionado
-    return passengerReserves.length > 0 ? passengerReserves[0].Price : 0;
+    // Para IdaVuelta, el precio ya incluye ambos viajes (no sumar)
+    // Solo tomar el precio del primer item
+    if (passengerReserves.length === 0) return 0;
+    return passengerReserves[0].Price;
   };
 
   const getRemainingBalance = () => {
@@ -348,110 +479,160 @@ export function AddReservationFlow({
         onSubmit={handleSubmitDetails}
         submitText="Siguiente"
         isLoading={reserveForm.isSubmitting}
+        className={reserveForm.data.ReserveTypeId === 2 ? "sm:max-w-3xl" : ""}
       >
         <FormField label="Dirección de subida" required error={reserveForm.errors.PickupLocationId}>
           <ApiSelect
-            value={String(reserveForm.data.PickupLocationId)}
+            value={String(reserveForm.data.PickupLocationId || '')}
             onValueChange={(v) => reserveForm.setField('PickupLocationId', Number(v))}
             placeholder="Seleccionar..."
-            options={directions}
-            loading={isLoadingOptions}
-            error={optionsError}
+            options={pickupOptions}
+            loading={isTripLoading}
+            loadingMessage="Cargando opciones..."
           />
         </FormField>
-        <FormField label="Dirección de Bajada" required error={reserveForm.errors.DropoffLocationId}>
+
+        <FormField label="Ciudad de bajada" required>
           <ApiSelect
-            value={String(reserveForm.data.DropoffLocationId)}
-            onValueChange={(v) => reserveForm.setField('DropoffLocationId', Number(v))}
-            placeholder="Seleccionar..."
-            options={directions}
-            loading={isLoadingOptions}
-            error={optionsError}
+            value={selectedDropoffCityId ? String(selectedDropoffCityId) : ''}
+            onValueChange={(v) => {
+              const cityId = Number(v);
+              setSelectedDropoffCityId(cityId);
+              // Reset direction when city changes
+              reserveForm.setField('DropoffLocationId', 0);
+              // Update price from selected city
+              const selected = dropoffCityOptions.find((opt: any) => opt.id === v);
+              if (selected) {
+                reserveForm.setField('Price', selected.price);
+              }
+            }}
+            placeholder="Seleccionar ciudad..."
+            options={dropoffCityOptions}
+            loading={isTripLoading}
+            loadingMessage="Cargando ciudades..."
           />
         </FormField>
+
+        {dropoffDirectionOptions.length > 0 && (
+          <FormField label="Parada específica (opcional)">
+            <ApiSelect
+              value={String(reserveForm.data.DropoffLocationId || '')}
+              onValueChange={(v) => reserveForm.setField('DropoffLocationId', Number(v))}
+              placeholder="Seleccionar parada..."
+              options={dropoffDirectionOptions}
+            />
+          </FormField>
+        )}
+
+        {/* Helper to show current price - only show for Ida (one-way) */}
+        {reserveForm.data.ReserveTypeId === 1 && (
+          <div className="text-right text-sm font-medium text-blue-600">
+            Precio: ${getSelectedDropoffPrice().toLocaleString()}
+          </div>
+        )}
+
         <FormField label="Ida y Vuelta">
           <Checkbox
             id="round-trip"
             checked={reserveForm.data.ReserveTypeId === 2}
-            onCheckedChange={(c) => reserveForm.setField('ReserveTypeId', c ? 2 : 1)}
+            onCheckedChange={(c) => {
+              const newType = c ? 2 : 1;
+              reserveForm.setField('ReserveTypeId', newType);
+              // Reset dropoff selections when type changes
+              setSelectedDropoffCityId(null);
+              reserveForm.setField('DropoffLocationId', 0);
+              // Reset return trip selection
+              setReturnTrip(null);
+              setReturnDate(undefined);
+
+              // Auto-select city if IdaVuelta has only one option
+              if (newType === 2) {
+                const idaVueltaOptions = tripData?.DropoffOptionsIdaVuelta || (tripData as any)?.dropoffOptionsIdaVuelta || [];
+                if (idaVueltaOptions.length === 1) {
+                  const opt = idaVueltaOptions[0];
+                  const cityId = opt.cityId || opt.CityId;
+                  setSelectedDropoffCityId(cityId);
+                  reserveForm.setField('Price', opt.price ?? opt.Price ?? 0);
+                }
+                // Set initial return date to trip date
+                const tripDate = new Date(initialTrip!.ReserveDate);
+                setReturnDate(tripDate);
+                setMonth(tripDate);
+              }
+            }}
           />
           <Label htmlFor="round-trip" className="ml-2 text-sm font-normal">
             Reservar viaje de ida y vuelta
           </Label>
         </FormField>
-      </FormDialog>
 
-      {/* Step 3: Select Return Trip */}
-      <FormDialog
-        open={step === FlowStep.SELECT_RETURN_TRIP}
-        onOpenChange={(isOpen) => !isOpen && resetFlow()}
-        title="Seleccionar Viaje de Vuelta"
-        description={`Para ${selectedPassenger?.FirstName}`}
-        onSubmit={handleSubmitReturnTrip}
-        submitText="Siguiente"
-        isLoading={reserveForm.isSubmitting}
-        className="sm:max-w-3xl"
-      >
-        <div className="grid md:grid-cols-2 gap-6 py-4">
-          <div>
-            <Label className="font-medium mb-2 block">Fecha de vuelta</Label>
-            <Calendar
-              mode="single"
-              selected={returnDate}
-              onSelect={setReturnDate}
-              month={month}
-              onMonthChange={setMonth}
-              locale={es}
-              fromMonth={new Date()}
-            />
-          </div>
-          <div className="space-y-4">
-            {returnDate && (
+        {/* Return trip selection - shown when IdaVuelta is checked */}
+        {reserveForm.data.ReserveTypeId === 2 && (
+          <div className="mt-4 pt-4 border-t space-y-4">
+            <h4 className="font-medium text-blue-600">Viaje de Vuelta</h4>
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label className="font-medium mb-2 block">Viajes para {format(returnDate, 'd MMM', { locale: es })}</Label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
-                  {dataReturnReserves?.Items?.map((trip) => (
-                    <button
-                      key={trip.ReserveId}
-                      className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                        }`}
-                      onClick={() => setReturnTrip(trip)}
-                    >
-                      <span>{trip.DepartureHour}</span>
-                      <span>
-                        {trip.OriginName} → {trip.DestinationName}
-                      </span>
-                    </button>
-                  ))}
-                  {dataReturnReserves?.Items?.length === 0 && <p className="text-center text-sm text-gray-500 p-4">No hay viajes.</p>}
-                </div>
+                <Label className="font-medium mb-2 block text-sm">Fecha de vuelta</Label>
+                <Calendar
+                  mode="single"
+                  selected={returnDate}
+                  onSelect={setReturnDate}
+                  month={month}
+                  onMonthChange={setMonth}
+                  locale={es}
+                  fromMonth={new Date()}
+                  className="rounded-md border"
+                />
               </div>
-            )}
-            <FormField label="Dirección de subida (Vuelta)" error={reserveForm.errors.PickupLocationReturnId}>
-              <ApiSelect
-                value={String(reserveForm.data.PickupLocationReturnId)}
-                onValueChange={(v) => reserveForm.setField('PickupLocationReturnId', v)}
-                placeholder="Seleccionar..."
-                options={directions}
-                loading={isLoadingOptions}
-                error={optionsError}
-              />
-            </FormField>
-            <FormField label="Dirección de bajada (Vuelta)" error={reserveForm.errors.DropoffLocationReturnId}>
-              <ApiSelect
-                value={String(reserveForm.data.DropoffLocationReturnId)}
-                onValueChange={(v) => reserveForm.setField('DropoffLocationReturnId', v)}
-                placeholder="Seleccionar..."
-                options={directions}
-                loading={isLoadingOptions}
-                error={optionsError}
-              />
-            </FormField>
+              <div className="space-y-4">
+                {returnDate && (
+                  <div>
+                    <Label className="font-medium mb-2 block text-sm">
+                      Viajes para {format(returnDate, "d 'de' MMMM", { locale: es })}
+                    </Label>
+                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
+                      {dataReturnReserves?.Items
+                        ?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId)
+                        .map((trip) => (
+                          <button
+                            key={trip.ReserveId}
+                            type="button"
+                            className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'hover:bg-gray-50'
+                              }`}
+                            onClick={() => setReturnTrip(trip)}
+                          >
+                            <span className="font-medium">{trip.DepartureHour}</span>
+                            <span className="text-gray-600">
+                              {trip.OriginName} → {trip.DestinationName}
+                            </span>
+                          </button>
+                        ))}
+                      {dataReturnReserves?.Items?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId).length === 0 && (
+                        <p className="text-center text-sm text-gray-500 p-4">No hay viajes disponibles.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {returnTrip && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm font-medium text-green-800">
+                      Vuelta seleccionada: {returnTrip.DepartureHour} - {returnTrip.OriginName} → {returnTrip.DestinationName}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Total price for round trip (price already includes both legs) */}
+            <div className="text-right text-lg font-bold text-blue-600 pt-2 border-t">
+              Total Ida y Vuelta: ${getSelectedDropoffPrice().toLocaleString()}
+            </div>
           </div>
-        </div>
+        )}
       </FormDialog>
 
-      {/* Step 4: Confirm and Pay */}
+      {/* Step 3: Confirm and Pay */}
       <FormDialog
         open={step === FlowStep.CONFIRM_PAYMENT}
         onOpenChange={(isOpen) => !isOpen && resetFlow()}
@@ -470,21 +651,31 @@ export function AddReservationFlow({
             </p>
             {passengerReserves.map((r, i) => {
               const trip = i === 0 ? initialTrip : returnTrip;
-              const pickupAddress = directions.find((d) => d.id === r.PickupLocationId)?.label;
-              const dropoffAddress = directions.find((d) => d.id === r.DropoffLocationId)?.label;
+
+              // For outbound: pickup from options, dropoff from city/direction
+              // For return: pickup = outbound dropoff, dropoff = outbound pickup (swapped)
+              const pickupLabel = i === 0
+                ? pickupOptions.find((opt: any) => opt.id === String(r.PickupLocationId))?.label
+                : dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId))?.label?.split(' - ')[0];
+
+              const dropoffLabel = i === 0
+                ? dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId))?.label?.split(' - ')[0]
+                : pickupOptions.find((opt: any) => opt.id === String(r.DropoffLocationId))?.label;
 
               return (
                 <div key={i} className="text-sm pt-2 mt-2 border-t first:border-t-0 first:pt-0 first:mt-0">
                   <p className="font-medium mb-1">{i === 0 ? 'Viaje de Ida' : 'Viaje de Vuelta'}</p>
-                  {/* <p>{format(new Date(trip!.Date), "EEEE, d 'de' MMMM", { locale: es })}</p> */}
                   <p>
                     <strong>Ruta:</strong> {trip?.DepartureHour} - {trip?.OriginName} → {trip?.DestinationName}
                   </p>
                   <p>
-                    <strong>Subida:</strong> {pickupAddress || 'No especificada'}
+                    <strong>Subida:</strong> {pickupLabel || 'No especificada'}
                   </p>
                   <p>
-                    <strong>Bajada:</strong> {dropoffAddress || 'No especificada'}
+                    <strong>Bajada:</strong> {dropoffLabel || 'No especificada'}
+                  </p>
+                  <p>
+                    <strong>Precio:</strong> ${r.Price?.toLocaleString() || 0}
                   </p>
                 </div>
               );
@@ -532,7 +723,7 @@ export function AddReservationFlow({
                       {reservationPayments.map((payment, index) => (
                         <div key={index} className="flex items-center justify-between p-1 bg-white rounded">
                           <span className="text-sm">
-                            {paymentMethods.find((pm) => pm.id === payment.PaymentMethod)?.label}: ${payment.TransactionAmount.toLocaleString()}
+                            {paymentMethods.find((pm) => String(pm.id) === String(payment.PaymentMethod))?.label || 'Pago'}: ${payment.TransactionAmount.toLocaleString()}
                           </span>
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => handleRemovePayment(index)}>
                             <TrashIcon className="h-3 w-3" />
@@ -545,11 +736,11 @@ export function AddReservationFlow({
                 <div className="space-y-1 pt-2 border-t">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">Monto total de reserva:</span>
-                    <span className="font-medium font-mono">${getTotalReserveAmount().toLocaleString()}</span>
+                    <span className="font-medium">${getTotalReserveAmount().toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
                     <span className="font-bold text-lg">Total a pagar:</span>
-                    <span className="font-bold text-xl font-mono">${getTotalPaymentAmount().toLocaleString()}</span>
+                    <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
                   </div>
                 </div>
               </>
