@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
-  ChevronLeft, ArrowRight, Calendar, Clock, Bus, Users, CreditCard, Shield,
+  ChevronLeft, ArrowRight, Calendar, Clock, Bus, Users, CreditCard, Shield, MapPin,
 } from 'lucide-react';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
@@ -19,6 +19,7 @@ import CardPaymentForm from '@/components/card-payment-form';
 import WalletPaymentForm from '@/components/wallet-payment-form';
 import { post } from '@/services/api';
 import { CreateReserveExternalResult } from '@/interfaces/reserve';
+import { LocationSelector, LocationSelectionData } from '@/components/checkout/LocationSelector';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -43,6 +44,23 @@ export default function CheckoutPage() {
   const [formattedDepartureDate, setFormattedDepartureDate] = useState('');
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
 
+  // Location selection state
+  const [outboundLocation, setOutboundLocation] = useState<LocationSelectionData>({
+    pickupDirectionId: null,
+    dropoffCityId: null,
+    dropoffDirectionId: null,
+    dropoffPrice: 0,
+  });
+  const [returnLocation, setReturnLocation] = useState<LocationSelectionData>({
+    pickupDirectionId: null,
+    dropoffCityId: null,
+    dropoffDirectionId: null,
+    dropoffPrice: 0,
+  });
+
+  // Check if it's a round trip
+  const isRoundTrip = !!checkout.returnTrip;
+
 
 
   useEffect(() => {
@@ -54,11 +72,16 @@ export default function CheckoutPage() {
     }
   }, [checkout.outboundTrip, checkout.returnTrip]);
 
-  const outboundPrice = checkout.outboundTrip?.Price || 0;
-  const returnPrice  = checkout.returnTrip?.Price  || 0;
-  const totalPrice   = (outboundPrice + returnPrice) * checkout.passengers;
-  const serviceFee   = 0;
-  const finalTotal   = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
+  // Use dynamic dropoff price if selected, otherwise use default trip price
+  const outboundPrice = outboundLocation.dropoffPrice > 0
+    ? outboundLocation.dropoffPrice
+    : (checkout.outboundTrip?.Price || 0);
+  const returnPrice = returnLocation.dropoffPrice > 0
+    ? returnLocation.dropoffPrice
+    : (checkout.returnTrip?.Price || 0);
+  const totalPrice = (outboundPrice + returnPrice) * checkout.passengers;
+  const serviceFee = 0;
+  const finalTotal = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
 
   const handlePassengerDataChange = (data: Record<string, any>[]) => {
     if (JSON.stringify(data) !== JSON.stringify(passengerData)) {
@@ -69,13 +92,14 @@ export default function CheckoutPage() {
   const createWalletPayload = useMemo(() => {
     const items = passengerData.map((p) => ({
       reserveId: checkout.outboundTrip?.ReserveId ?? 0,
-      reserveTypeId: 1,
+      reserveTypeId: isRoundTrip ? 2 : 1, // 1 = Ida, 2 = IdaVuelta
       customerId: null,
       isPayment: true,
-      pickupLocationId: null,
-      dropoffLocationId: null,
+      pickupLocationId: outboundLocation.pickupDirectionId,
+      dropoffLocationId: outboundLocation.dropoffDirectionId,
+      dropoffCityId: outboundLocation.dropoffCityId,
       hasTraveled: false,
-      price: Number(finalTotal.toFixed(2)),
+      price: Number(outboundPrice.toFixed(2)),
       firstName: p.firstName,
       lastName: p.lastName,
       email: p.email || '',
@@ -87,13 +111,14 @@ export default function CheckoutPage() {
       items.push(
         ...passengerData.map((p) => ({
           reserveId: checkout.returnTrip?.ReserveId ?? 0,
-          reserveTypeId: 2,
+          reserveTypeId: 2, // Vuelta siempre es tipo 2
           customerId: null,
           isPayment: true,
-          pickupLocationId: null,
-          dropoffLocationId: null,
+          pickupLocationId: returnLocation.pickupDirectionId,
+          dropoffLocationId: returnLocation.dropoffDirectionId,
+          dropoffCityId: returnLocation.dropoffCityId,
           hasTraveled: false,
-          price: Number(finalTotal.toFixed(2)),
+          price: Number(returnPrice.toFixed(2)),
           firstName: p.firstName,
           lastName: p.lastName,
           email: p.email || '',
@@ -150,12 +175,12 @@ export default function CheckoutPage() {
       }
     }
   };
-  
+
   const goToPreviousStep = () => {
     if (currentStep === 'review') setCurrentStep('passengers');
     else if (currentStep === 'payment') setCurrentStep('review');
   };
-  
+
   const isCurrentStepComplete = () => {
     if (currentStep === 'passengers') {
       return (
@@ -222,13 +247,14 @@ export default function CheckoutPage() {
 
       const items = passengerData.map((p) => ({
         reserveId: checkout.outboundTrip?.ReserveId ?? 0,
-        reserveTypeId: 1,
+        reserveTypeId: isRoundTrip ? 2 : 1, // 1 = Ida, 2 = IdaVuelta
         customerId: null,
         isPayment: true,
-        pickupLocationId: null,
-        dropoffLocationId: null,
+        pickupLocationId: outboundLocation.pickupDirectionId,
+        dropoffLocationId: outboundLocation.dropoffDirectionId,
+        dropoffCityId: outboundLocation.dropoffCityId,
         hasTraveled: false,
-        price: Number(finalTotal.toFixed(2)),
+        price: Number(outboundPrice.toFixed(2)),
         firstName: p.firstName,
         lastName: p.lastName,
         email: p.email,
@@ -240,18 +266,19 @@ export default function CheckoutPage() {
         items.push(
           ...passengerData.map((p) => ({
             reserveId: checkout.returnTrip?.ReserveId ?? 0,
-            reserveTypeId: 2,
+            reserveTypeId: 2, // Vuelta siempre es tipo 2
             customerId: null,
             isPayment: true,
-            pickupLocationId: null,
-            dropoffLocationId: null,
+            pickupLocationId: returnLocation.pickupDirectionId,
+            dropoffLocationId: returnLocation.dropoffDirectionId,
+            dropoffCityId: returnLocation.dropoffCityId,
             hasTraveled: false,
-            price: Number(finalTotal.toFixed(2)),
-firstName: p.firstName,
-        lastName: p.lastName,
-        email: p.email,
-        phone1: p.phone,
-        documentNumber: p.documentNumber,
+            price: Number(returnPrice.toFixed(2)),
+            firstName: p.firstName,
+            lastName: p.lastName,
+            email: p.email,
+            phone1: p.phone,
+            documentNumber: p.documentNumber,
           })),
         );
       }
@@ -347,11 +374,10 @@ firstName: p.firstName,
               <div className="mb-8">
                 <div className="flex items-center justify-between">
                   <div className={`flex flex-col items-center ${currentStep === 'passengers' ? 'text-blue-600' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                      currentStep === 'passengers' ? 'bg-blue-600 text-white'
-                        : currentStep === 'payment' || currentStep === 'review' ? 'bg-green-500 text-white'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'passengers' ? 'bg-blue-600 text-white'
+                      : currentStep === 'payment' || currentStep === 'review' ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-500'
-                    }`}>
+                      }`}>
                       <Users className="h-4 w-4" />
                     </div>
                     <span className="text-xs">Pasajeros</span>
@@ -362,11 +388,10 @@ firstName: p.firstName,
                   </div>
 
                   <div className={`flex flex-col items-center ${currentStep === 'review' ? 'text-blue-600' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                      currentStep === 'review' ? 'bg-blue-600 text-white'
-                        : currentStep === 'payment' ? 'bg-green-500 text-white'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'review' ? 'bg-blue-600 text-white'
+                      : currentStep === 'payment' ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-500'
-                    }`}>
+                      }`}>
                       <CreditCard className="h-4 w-4" />
                     </div>
                     <span className="text-xs">Revisar</span>
@@ -377,9 +402,8 @@ firstName: p.firstName,
                   </div>
 
                   <div className={`flex flex-col items-center ${currentStep === 'payment' ? 'text-blue-600' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                      currentStep === 'payment' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                    }`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'payment' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                      }`}>
                       <Shield className="h-4 w-4" />
                     </div>
                     <span className="text-xs">Pago</span>
@@ -390,14 +414,57 @@ firstName: p.firstName,
               {/* Contenido */}
               <div>
                 {currentStep === 'passengers' && (
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Información de los Pasajeros</h2>
-                    <p className="text-gray-600 mb-6 text-sm sm:text-base">Por favor ingrese los detalles de cada pasajero.</p>
-                    <PassengerForm
-                      passengerCount={checkout.passengers}
-                      onDataChange={handlePassengerDataChange}
-                      initialData={passengerData}
-                    />
+                  <div className="space-y-8">
+                    {/* Passenger Information */}
+                    <div>
+                      <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Información de los Pasajeros</h2>
+                      <p className="text-gray-600 mb-6 text-sm sm:text-base">Por favor ingrese los detalles de cada pasajero.</p>
+                      <PassengerForm
+                        passengerCount={checkout.passengers}
+                        onDataChange={handlePassengerDataChange}
+                        initialData={passengerData}
+                      />
+                    </div>
+
+                    {/* Location Selection - Outbound */}
+                    {checkout.outboundTrip?.TripId && (
+                      <div className="border-t pt-6">
+                        <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4 flex items-center gap-2">
+                          <MapPin className="h-5 w-5" />
+                          Puntos de Subida y Bajada - Ida
+                        </h2>
+                        <p className="text-gray-600 mb-4 text-sm sm:text-base">
+                          Seleccione dónde desea subir y bajar del vehículo.
+                        </p>
+                        <LocationSelector
+                          tripId={checkout.outboundTrip.TripId}
+                          reserveId={checkout.outboundTrip.ReserveId}
+                          isRoundTrip={isRoundTrip}
+                          onSelectionChange={setOutboundLocation}
+                          initialData={outboundLocation}
+                        />
+                      </div>
+                    )}
+
+                    {/* Location Selection - Return (only for round trips) */}
+                    {isRoundTrip && checkout.returnTrip?.TripId && (
+                      <div className="border-t pt-6">
+                        <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4 flex items-center gap-2">
+                          <MapPin className="h-5 w-5" />
+                          Puntos de Subida y Bajada - Vuelta
+                        </h2>
+                        <p className="text-gray-600 mb-4 text-sm sm:text-base">
+                          Seleccione dónde desea subir y bajar en el viaje de vuelta.
+                        </p>
+                        <LocationSelector
+                          tripId={checkout.returnTrip.TripId}
+                          reserveId={checkout.returnTrip.ReserveId}
+                          isRoundTrip={isRoundTrip}
+                          onSelectionChange={setReturnLocation}
+                          initialData={returnLocation}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -513,11 +580,10 @@ firstName: p.firstName,
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('card')}
-                          className={`p-4 border rounded-lg text-left transition-colors ${
-                            paymentMethod === 'card'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                          className={`p-4 border rounded-lg text-left transition-colors ${paymentMethod === 'card'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                            }`}
                           disabled={isSubmitting}
                         >
                           <div className="flex items-center">
@@ -530,11 +596,10 @@ firstName: p.firstName,
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('wallet')}
-                          className={`p-4 border rounded-lg text-left transition-colors ${
-                            paymentMethod === 'wallet'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                          className={`p-4 border rounded-lg text-left transition-colors ${paymentMethod === 'wallet'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                            }`}
                           disabled={isSubmitting}
                         >
                           <div className="flex items-center">
@@ -553,7 +618,7 @@ firstName: p.firstName,
                           amount={finalTotal}
                           maxInstallments={1}
                           onSubmit={handleCardSubmit}
-                          onError={() => {}}
+                          onError={() => { }}
                           onPayingChange={(p) => setIsSubmitting(p)}
                           defaultEmail={passengerData?.[0]?.email}
                           isSubmitting={isSubmitting}
@@ -636,7 +701,7 @@ firstName: p.firstName,
                   </div>
                   <div className="flex items-center gap-2">
                     <Bus className="h-4 w-4 text-blue-600" />
-                     <span>{checkout.outboundTrip?.VehicleName}</span>
+                    <span>{checkout.outboundTrip?.VehicleName}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-blue-600" />
@@ -672,7 +737,7 @@ firstName: p.firstName,
                       </div>
                       <div className="flex items-center gap-2">
                         <Bus className="h-4 w-4 text-blue-600" />
-                                             <span>{checkout.returnTrip?.VehicleName}</span>
+                        <span>{checkout.returnTrip?.VehicleName}</span>
 
                       </div>
                     </div>

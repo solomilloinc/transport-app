@@ -46,6 +46,7 @@ export const emptyEditReserve = {
 
 export interface ReserveSummaryItem {
     ReserveId: number;
+    TripId: number;
     OriginName: string;
     DestinationName: string;
     DepartureHour: string;

@@ -20,9 +20,9 @@ import { useCheckout } from '@/contexts/CheckoutContext';
 interface ResultsClientProps {
   initialReserves: PagedReserveResponse<ReserveSummaryItem>;
   searchParams: {
-    originId?: string;
+    tripId?: string;
+    returnTripId?: string;
     originName?: string;
-    destinationId?: string;
     destinationName?: string;
     tripType?: string;
     departureDate?: string;
@@ -33,23 +33,18 @@ interface ResultsClientProps {
 
 export default function ResultsClient({ initialReserves, searchParams }: ResultsClientProps) {
   const router = useRouter();
-  const searchParamsHook = useSearchParams(); // Hook para obtener la cadena de query actual
-  // 2. Inicializar el estado con los datos recibidos como props.
+  const searchParamsHook = useSearchParams();
   const [reserves, setReserves] = useState<PagedReserveResponse<ReserveSummaryItem>>(initialReserves);
-  const [loading, setLoading] = useState(false); // Inicia en false porque los datos iniciales ya están cargados.
+  const [loading, setLoading] = useState(false);
 
-  // Este efecto se encarga de sincronizar el estado del componente con las props
-  // que llegan del servidor. Cuando initialReserves cambia, actualizamos el estado
-  // local y desactivamos el indicador de carga.
   useEffect(() => {
     setReserves(initialReserves);
-    debugger
-    console.log(initialReserves)
     setLoading(false);
   }, [initialReserves]);
 
-  // Leer los parámetros de búsqueda desde las props (para la UI inicial)
+  // Leer los parámetros de búsqueda desde las props
   const {
+    tripId = '',
     originName = 'Origen',
     destinationName = 'Destino',
     tripType = 'OneWay',
@@ -66,14 +61,11 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
   const [activeTab, setActiveTab] = useState('outbound');
   const [selectedOutboundTrip, setSelectedOutboundTrip] = useState<ReserveSummaryItem | null>(null);
 
-  // 3. Lógica de cliente para manejar interacciones.
   const handleDateSelect = (date: string) => {
-    setLoading(true); // Mostrar estado de carga mientras la página nueva carga.
+    setLoading(true);
     const params = new URLSearchParams(searchParamsHook.toString());
     params.set('departureDate', date);
     router.push(`/results?${params.toString()}`);
-    // No es necesario llamar a fetchReserves aquí. La navegación recargará la página
-    // y el Server Component se encargará de obtener los nuevos datos.
   };
 
   const handleSelectOutbound = (trip: ReserveSummaryItem) => {
@@ -93,18 +85,14 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     handleCheckout(selectedOutboundTrip, returnTrip);
   };
 
-  const { setCheckout, clearCheckout } = useCheckout();
-
-  // useEffect(() => {
-  //   clearCheckout();
-  // }, [clearCheckout]);
+  const { setCheckout } = useCheckout();
 
   const handleCheckout = (outboundTrip: ReserveSummaryItem, returnTrip?: ReserveSummaryItem) => {
-        setCheckout({
-    outboundTrip,
-    returnTrip: returnTrip || null,
-    passengers: Number(passengers),
-  });
+    setCheckout({
+      outboundTrip,
+      returnTrip: returnTrip || null,
+      passengers: Number(passengers),
+    });
     router.push(`/checkout`);
   };
 
@@ -131,7 +119,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                 <span>{formatLocation(destinationName)}</span>
               </h1>
             </div>
-            
+
             {/* Info badges */}
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600">
               <div className="flex items-center gap-1">
@@ -198,7 +186,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                   <div className="divide-y">
                     {reserves.Outbound.Items.map((trip) => (
                       <div key={trip.ReserveId} className={cn('p-4 hover:bg-gray-50 transition-colors', selectedOutboundTrip?.ReserveId === trip.ReserveId && 'bg-blue-50')}>
-                        {/* Aquí va el JSX de cada item de viaje, como lo tenías antes */}
                         <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
                           <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
                           <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
@@ -260,43 +247,44 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
           )}
         </Tabs>
       </div>
-       {/* Información de la reserva */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-bold text-blue-800 font-display mb-4">
-              Información de la Reserva
-            </h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-medium text-blue-800 mb-2">
-                  Métodos de Pago
-                </h3>
-                <div className="flex items-center gap-2 text-gray-600 mb-1">
-                  <CreditCard className="h-4 w-4" />
-                  <span>Tarjetas de Crédito/Débito</span>
-                </div>
-                <p className="text-sm text-gray-500">
-                  Aceptamos Visa, Mastercard, American Express y Discover.
-                </p>
+
+      {/* Información de la reserva */}
+      <Card className="mb-8">
+        <CardContent className="p-6">
+          <h2 className="text-xl font-bold text-blue-800 font-display mb-4">
+            Información de la Reserva
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-medium text-blue-800 mb-2">
+                Métodos de Pago
+              </h3>
+              <div className="flex items-center gap-2 text-gray-600 mb-1">
+                <CreditCard className="h-4 w-4" />
+                <span>Tarjetas de Crédito/Débito</span>
               </div>
-              <div>
-                <h3 className="font-medium text-blue-800 mb-2">
-                  Política de Cancelación
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Cancelación gratuita hasta 24 horas antes de la salida. Se aplica una tarifa del 50% para cancelaciones realizadas con menos de 24 horas de antelación.
-                </p>
-              </div>
+              <p className="text-sm text-gray-500">
+                Aceptamos Visa, Mastercard, American Express y Discover.
+              </p>
             </div>
-          </CardContent>
-          <CardFooter className="bg-gray-50 px-6 py-4 border-t">
-            <div className="text-sm text-gray-600">
-              ¿Necesitas ayuda? Llámanos al{" "}
-              <span className="font-medium">(555) 123-4567</span> o envíanos un correo electrónico a{" "}
-              <span className="font-medium">bookings@familytransit.com</span>
+            <div>
+              <h3 className="font-medium text-blue-800 mb-2">
+                Política de Cancelación
+              </h3>
+              <p className="text-sm text-gray-600">
+                Cancelación gratuita hasta 24 horas antes de la salida. Se aplica una tarifa del 50% para cancelaciones realizadas con menos de 24 horas de antelación.
+              </p>
             </div>
-          </CardFooter>
-        </Card>
+          </div>
+        </CardContent>
+        <CardFooter className="bg-gray-50 px-6 py-4 border-t">
+          <div className="text-sm text-gray-600">
+            ¿Necesitas ayuda? Llámanos al{" "}
+            <span className="font-medium">(555) 123-4567</span> o envíanos un correo electrónico a{" "}
+            <span className="font-medium">bookings@familytransit.com</span>
+          </div>
+        </CardFooter>
+      </Card>
     </>
   );
 }

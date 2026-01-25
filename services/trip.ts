@@ -20,3 +20,24 @@ export async function getTripsForSelect(params?: Partial<PaginationParams>): Pro
   const finalParams = withDefaultPagination({ pageSize: 100, ...params });
   return await get<any, PagedResponse<Trip>>('/trip-report', finalParams);
 }
+
+// Public Trip DTO for landing page
+export interface PublicTripDto {
+  TripId: number;
+  Description: string;
+  OriginCityId: number;
+  OriginCityName: string;
+  DestinationCityId: number;
+  DestinationCityName: string;
+  PriceFrom: number | null;
+  EstimatedDuration: string | null;
+}
+
+// Get public trips for landing page (no auth required)
+export async function getPublicTrips(pageNumber = 1, pageSize = 100): Promise<PagedResponse<PublicTripDto>> {
+  return await getPure<PagedResponse<PublicTripDto>>(
+    '/public/trips',
+    { pageNumber, pageSize },
+    { skipAuth: true }
+  );
+}
