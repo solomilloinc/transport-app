@@ -10,6 +10,7 @@ import { Trip, PickupOption, DropoffCityOption, DropoffDirectionOption } from '@
 export interface LocationSelectionData {
     pickupDirectionId: number | null;
     dropoffCityId: number | null;
+    dropoffCityName: string | null;
     dropoffDirectionId: number | null;
     dropoffPrice: number;
 }
@@ -51,44 +52,75 @@ export function LocationSelector({
 
     // Get the selected city's directions
     const selectedCity = dropoffOptions.find(
-        (city) => city.cityId.toString() === selectedDropoffCityId
+        (city) => city.CityId?.toString() === selectedDropoffCityId
     );
-    const dropoffDirections = selectedCity?.directions || [];
+
+    // Get directions from DropoffOptions first, fallback to RelevantCities
+    const getDropoffDirections = () => {
+        if (selectedCity?.Directions && selectedCity.Directions.length > 0) {
+            return selectedCity.Directions;
+        }
+        // Fallback: get directions from RelevantCities
+        if (selectedDropoffCityId && tripData?.RelevantCities) {
+            const relevantCity = tripData.RelevantCities.find(
+                (city) => city.CityId?.toString() === selectedDropoffCityId
+            );
+            if (relevantCity?.Directions) {
+                // Map to expected format
+                return relevantCity.Directions.map((dir) => ({
+                    DirectionId: dir.DirectionId,
+                    DisplayName: dir.Name,
+                }));
+            }
+        }
+        return [];
+    };
+    const dropoffDirections = getDropoffDirections();
 
     // Load trip data
     useEffect(() => {
         async function loadTripData() {
+            console.log('[LocationSelector] Loading trip data for tripId:', tripId, 'reserveId:', reserveId);
             try {
                 setLoading(true);
                 setError(null);
                 const data = await getTripById(tripId, reserveId);
+                console.log('[LocationSelector] Trip data received:', data);
+                console.log('[LocationSelector] PickupOptions:', data?.PickupOptions);
+                console.log('[LocationSelector] DropoffOptionsIda:', data?.DropoffOptionsIda);
+                console.log('[LocationSelector] DropoffOptionsIdaVuelta:', data?.DropoffOptionsIdaVuelta);
                 setTripData(data);
 
                 // If round trip, auto-select the only dropoff option (main destination)
                 if (isRoundTrip && data.DropoffOptionsIdaVuelta?.length === 1) {
                     const mainDest = data.DropoffOptionsIdaVuelta[0];
-                    setSelectedDropoffCityId(mainDest.cityId.toString());
+                    setSelectedDropoffCityId(mainDest.CityId.toString());
                 }
             } catch (err) {
-                console.error('Error loading trip data:', err);
+                console.error('[LocationSelector] Error loading trip data:', err);
                 setError('Error al cargar las opciones de ubicación');
             } finally {
                 setLoading(false);
             }
         }
 
+        console.log('[LocationSelector] useEffect triggered - tripId:', tripId, 'reserveId:', reserveId);
         if (tripId && reserveId) {
             loadTripData();
+        } else {
+            console.warn('[LocationSelector] Missing tripId or reserveId, skipping load');
         }
     }, [tripId, reserveId, isRoundTrip]);
 
     // Notify parent when selection changes
     useEffect(() => {
-        const dropoffPrice = selectedCity?.price || 0;
+        const dropoffPrice = selectedCity?.Price || 0;
+        const dropoffCityName = selectedCity?.CityName || null;
 
         onSelectionChange({
             pickupDirectionId: selectedPickupId ? Number(selectedPickupId) : null,
             dropoffCityId: selectedDropoffCityId ? Number(selectedDropoffCityId) : null,
+            dropoffCityName,
             dropoffDirectionId: selectedDropoffDirectionId ? Number(selectedDropoffDirectionId) : null,
             dropoffPrice,
         });
@@ -125,8 +157,8 @@ export function LocationSelector({
                     </SelectTrigger>
                     <SelectContent>
                         {tripData?.PickupOptions?.map((option) => (
-                            <SelectItem key={option.directionId} value={option.directionId.toString()}>
-                                {option.displayName}
+                            <SelectItem key={option.DirectionId} value={option.DirectionId.toString()}>
+                                {option.DisplayName}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -157,11 +189,11 @@ export function LocationSelector({
                     </SelectTrigger>
                     <SelectContent>
                         {dropoffOptions.map((city) => (
-                            <SelectItem key={city.cityId} value={city.cityId.toString()}>
+                            <SelectItem key={city.CityId} value={city.CityId.toString()}>
                                 <div className="flex justify-between items-center w-full">
-                                    <span>{city.cityName}</span>
+                                    <span>{city.CityName}</span>
                                     <span className="text-blue-600 font-medium ml-4">
-                                        ${city.price.toLocaleString('es-AR')}
+                                        ${city.Price.toLocaleString('es-AR')}
                                     </span>
                                 </div>
                             </SelectItem>
@@ -170,7 +202,7 @@ export function LocationSelector({
                 </Select>
                 {selectedCity && (
                     <p className="text-xs text-gray-500">
-                        Precio por persona: <span className="font-medium text-blue-600">${selectedCity.price.toLocaleString('es-AR')}</span>
+                        Precio por persona: <span className="font-medium text-blue-600">${selectedCity.Price.toLocaleString('es-AR')}</span>
                     </p>
                 )}
             </div>
@@ -180,17 +212,16 @@ export function LocationSelector({
                 <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-blue-800">
                         <MapPin className="h-4 w-4" />
-                        Punto de Bajada (opcional)
+                        Punto de Bajada
                     </Label>
                     <Select value={selectedDropoffDirectionId} onValueChange={setSelectedDropoffDirectionId}>
                         <SelectTrigger>
                             <SelectValue placeholder="Selecciona punto específico (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">Sin especificar</SelectItem>
                             {dropoffDirections.map((dir) => (
-                                <SelectItem key={dir.directionId} value={dir.directionId.toString()}>
-                                    {dir.displayName}
+                                <SelectItem key={dir.DirectionId} value={dir.DirectionId.toString()}>
+                                    {dir.DisplayName}
                                 </SelectItem>
                             ))}
                         </SelectContent>

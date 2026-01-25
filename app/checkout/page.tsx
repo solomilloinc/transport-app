@@ -48,12 +48,14 @@ export default function CheckoutPage() {
   const [outboundLocation, setOutboundLocation] = useState<LocationSelectionData>({
     pickupDirectionId: null,
     dropoffCityId: null,
+    dropoffCityName: null,
     dropoffDirectionId: null,
     dropoffPrice: 0,
   });
   const [returnLocation, setReturnLocation] = useState<LocationSelectionData>({
     pickupDirectionId: null,
     dropoffCityId: null,
+    dropoffCityName: null,
     dropoffDirectionId: null,
     dropoffPrice: 0,
   });
@@ -427,7 +429,9 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Location Selection - Outbound */}
-                    {checkout.outboundTrip?.TripId && (
+                    {/* Debug log */}
+                    {console.log('[Checkout] outboundTrip:', checkout.outboundTrip, 'TripId:', checkout.outboundTrip?.TripId, 'ReserveId:', checkout.outboundTrip?.ReserveId)}
+                    {checkout.outboundTrip?.TripId && checkout.outboundTrip?.ReserveId && (
                       <div className="border-t pt-6">
                         <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4 flex items-center gap-2">
                           <MapPin className="h-5 w-5" />
@@ -486,6 +490,13 @@ export default function CheckoutPage() {
                             <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
                             {checkout.outboundTrip?.DestinationName}
                           </div>
+                          {!isRoundTrip && outboundLocation.dropoffCityName &&
+                           outboundLocation.dropoffCityName !== checkout.outboundTrip?.DestinationName && (
+                            <>
+                              <div className="text-gray-600">Bajada:</div>
+                              <div className="font-medium text-amber-600">{outboundLocation.dropoffCityName}</div>
+                            </>
+                          )}
                           <div className="text-gray-600">Fecha:</div>
                           <div className="font-medium">{formattedDepartureDate}</div>
                           <div className="text-gray-600">Hora de Salida:</div>
@@ -709,6 +720,14 @@ export default function CheckoutPage() {
                       {checkout.passengers} Pasajero{checkout.passengers > 1 ? 's' : ''}
                     </span>
                   </div>
+                  {/* Show dropoff city if different from destination (only for one-way trips) */}
+                  {!isRoundTrip && outboundLocation.dropoffCityName &&
+                   outboundLocation.dropoffCityName !== checkout.outboundTrip?.DestinationName && (
+                    <div className="flex items-center gap-2 text-amber-600">
+                      <MapPin className="h-4 w-4" />
+                      <span>Bajada: {outboundLocation.dropoffCityName}</span>
+                    </div>
+                  )}
                 </div>
 
                 {checkout.returnTrip && (

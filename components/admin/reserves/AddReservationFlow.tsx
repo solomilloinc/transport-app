@@ -168,11 +168,11 @@ export function AddReservationFlow({
         setTripData(data);
 
         // Auto-select main destination price
-        const dropoffIda = data?.DropoffOptionsIda || (data as any)?.dropoffOptionsIda || [];
-        const mainDest = dropoffIda.find((opt: any) => opt.isMainDestination);
+        const dropoffIda = data?.DropoffOptionsIda || [];
+        const mainDest = dropoffIda.find((opt: any) => opt.IsMainDestination);
         if (mainDest) {
-          reserveForm.setField('DropoffLocationId', mainDest.tripPriceId);
-          reserveForm.setField('Price', mainDest.price);
+          reserveForm.setField('DropoffLocationId', mainDest.TripPriceId);
+          reserveForm.setField('Price', mainDest.Price);
         }
       } catch (error) {
         console.error('[AddReservationFlow] Error fetching trip details:', error);

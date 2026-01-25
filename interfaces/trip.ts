@@ -23,23 +23,23 @@ export interface CityDirectionsDto {
   Directions: CityDirectionItem[];
 }
 
-// New simplified interfaces for combo options
+// New simplified interfaces for combo options (PascalCase to match backend)
 export interface PickupOption {
-  directionId: number;
-  displayName: string;
+  DirectionId: number;
+  DisplayName: string;
 }
 
 export interface DropoffDirectionOption {
-  directionId: number;
-  displayName: string;
+  DirectionId: number;
+  DisplayName: string;
 }
 
 export interface DropoffCityOption {
-  cityId: number;
-  cityName: string;
-  price: number;
-  isMainDestination?: boolean;
-  directions?: DropoffDirectionOption[];
+  CityId: number;
+  CityName: string;
+  Price: number;
+  IsMainDestination?: boolean;
+  Directions?: DropoffDirectionOption[];
 }
 
 export interface Trip {
