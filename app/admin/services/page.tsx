@@ -494,8 +494,9 @@ export default function ServiceManagement() {
     console.log('Formatted schedulers:', formattedSchedulers);
     setEditSchedules(formattedSchedulers);
 
-    // Load directions for editing
-    setEditSelectedDirectionIds(service.AllowedDirectionIds || []);
+    // Load directions for editing - extract IDs from AllowedDirections
+    const existingDirectionIds = (service.AllowedDirections || []).map(d => d.DirectionId);
+    setEditSelectedDirectionIds(existingDirectionIds);
     loadTripDirections(service.TripId);
 
     setIsEditModalOpen(true);
@@ -521,9 +522,27 @@ export default function ServiceManagement() {
 
   const columns = [
     { header: 'Nombre', accessor: 'Name', width: '25%' },
-    { header: 'Ruta Comercial', accessor: 'TripName', width: '25%' },
+    {
+      header: 'Ruta Comercial',
+      accessor: 'TripName',
+      width: '25%',
+      cell: (service: Service) => service.TripName || '-',
+    },
     { header: 'Duración Estimada', accessor: 'EstimatedDuration', width: '20%' },
-    { header: 'Hora de partida', accessor: 'DepartureHour', width: '20%' },
+    {
+      header: 'Hora de partida',
+      accessor: 'DepartureHour',
+      width: '20%',
+      cell: (service: Service) => {
+        const firstSchedule = service.Schedulers?.[0];
+        if (firstSchedule?.DepartureHour) {
+          // Format HH:MM:SS to HH:MM
+          const parts = firstSchedule.DepartureHour.split(':');
+          return `${parts[0]}:${parts[1]}`;
+        }
+        return '-';
+      },
+    },
     {
       header: 'Estado',
       accessor: 'status',
@@ -646,8 +665,9 @@ export default function ServiceManagement() {
               subtitle={service.ServiceId.toString()}
               badge={<StatusBadge status={service.Status ? 'Activo' : 'Inactivo'} />}
               fields={[
-                { label: 'Ruta Comercial', value: service.TripName || '' },
+                { label: 'Ruta Comercial', value: service.TripName || '-' },
                 { label: 'Duración Estimada', value: service.EstimatedDuration },
+                { label: 'Hora de partida', value: service.Schedulers?.[0]?.DepartureHour?.split(':').slice(0, 2).join(':') || '-' },
               ]}
               onEdit={() => handleEditService(service)}
               onDelete={() => handleDeleteService(service.ServiceId)}

@@ -1,7 +1,14 @@
 import { emptyServiceSchedule, ServiceSchedule } from "./serviceSchedule";
 import { Vehicle } from "./vehicle";
 
-// Define the Vehicle interface
+// Direction allowed for a service
+export interface ServiceDirection {
+  DirectionId: number;
+  Name: string;
+  CityId: number;
+}
+
+// Define the Service interface
 export interface Service {
   ServiceId: number;
   Name: string;
@@ -14,7 +21,8 @@ export interface Service {
   Schedulers: ServiceSchedule[]; // From API response
   Vehicle: Vehicle
   Status: string;
-  AllowedDirectionIds?: number[]; // Whitelist of allowed directions
+  AllowedDirections: ServiceDirection[]; // Allowed directions from API
+  AllowedDirectionIds?: number[]; // For form submission
 }
 
 export const emptyService = {
@@ -27,5 +35,6 @@ export const emptyService = {
   Schedules: [emptyServiceSchedule], // For form usage
   Schedulers: [emptyServiceSchedule], // For API response
   Status: 'Activo',
-  AllowedDirectionIds: [] as number[], // Whitelist of allowed directions
+  AllowedDirections: [] as ServiceDirection[], // Allowed directions from API
+  AllowedDirectionIds: [] as number[], // For form submission
 }
