@@ -20,6 +20,7 @@ import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CheckboxGroup } from '@/components/ui/checkbox-group';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
 import { PagedResponse, PaginationParams } from '@/services/types';
@@ -28,6 +29,8 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 import { useApi } from '@/hooks/use-api';
 import { usePaginationParams } from '@/utils/pagination';
 import { getPassengers } from '@/services/passenger';
+import { getServicesList } from '@/services/serviceList';
+import { ServiceIdNameDto } from '@/interfaces/serviceList';
 import { validationConfigPassenger } from '@/validations/passengerSchema';
 
 export default function PassengersManagement() {
@@ -43,20 +46,40 @@ export default function PassengersManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentPassengersId, setCurrentPassengersId] = useState<number | null>(null);
 
+  // Services state for multiselect
+  const [services, setServices] = useState<ServiceIdNameDto[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+
   const addForm = useFormValidation(emptyPassenger, validationConfigPassenger);
 
   // Form state for editing a vehicle
   const editForm = useFormValidation(emptyPassenger, validationConfigPassenger);
 
   const params = usePaginationParams({
-      pageNumber: currentPage,
-      filters: { search: searchQuery },
+    pageNumber: currentPage,
+    filters: { search: searchQuery },
   });
-  
+
   const { data, loading, error, fetch } = useApi<Passenger, PaginationParams>(getPassengers, {
-      autoFetch: true,
-      params: params,
+    autoFetch: true,
+    params: params,
   });
+
+  // Fetch services on mount
+  useEffect(() => {
+    const fetchServices = async () => {
+      setServicesLoading(true);
+      try {
+        const servicesList = await getServicesList();
+        setServices(servicesList);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+    fetchServices();
+  }, []);
 
   const submitAddPassenger = async () => {
     addForm.handleSubmit(async (data) => {
@@ -98,7 +121,7 @@ export default function PassengersManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-         fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -126,16 +149,17 @@ export default function PassengersManagement() {
     setCurrentPassengersId(passenger.CustomerId);
     editForm.resetForm();
     const fields = {
-      firstName: passenger.FirstName,
-      lastName: passenger.LastName,
-      email: passenger.Email,
-      documentNumber: passenger.DocumentNumber,
-      phone1: passenger.Phone1,
-      phone2: passenger.Phone2,
+      FirstName: passenger.FirstName,
+      LastName: passenger.LastName,
+      Email: passenger.Email,
+      DocumentNumber: passenger.DocumentNumber,
+      Phone1: passenger.Phone1,
+      Phone2: passenger.Phone2,
+      ServiceIds: passenger.Services?.map(s => s.ServiceId) || [],
     };
 
     Object.entries(fields).forEach(([key, value]) => {
-      editForm.setField(key, value || '');
+      editForm.setField(key, value || (key === 'ServiceIds' ? [] : ''));
     });
 
     setIsEditModalOpen(true);
@@ -159,15 +183,36 @@ export default function PassengersManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'FirstName', width: '20%' },
-    { header: 'Apellido', accessor: 'LastName', width: '20%' },
-    { header: 'Número de documento', accessor: 'DocumentNumber', width: '15%' },
-    { header: 'Teléfono', accessor: 'Phone1', width: '15%' },
+    { header: 'Nombre', accessor: 'FirstName', width: '15%' },
+    { header: 'Apellido', accessor: 'LastName', width: '15%' },
+    { header: 'Documento', accessor: 'DocumentNumber', width: '12%' },
+    { header: 'Teléfono', accessor: 'Phone1', width: '12%' },
+    {
+      header: 'Servicios',
+      accessor: 'services',
+      width: '20%',
+      cell: (passenger: Passenger) => (
+        <div className="flex flex-wrap gap-1">
+          {passenger.Services && passenger.Services.length > 0 ? (
+            passenger.Services.map((s) => (
+              <span
+                key={s.ServiceId}
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+              >
+                {s.ServiceName}
+              </span>
+            ))
+          ) : (
+            <span className="text-muted-foreground text-xs">Sin servicios</span>
+          )}
+        </div>
+      ),
+    },
     {
       header: 'Estado',
       accessor: 'status',
       className: 'text-center',
-      width: '15%',
+      width: '10%',
       cell: (passenger: Passenger) => <StatusBadge status={passenger.Status} />,
     },
     {
@@ -331,6 +376,14 @@ export default function PassengersManagement() {
         <FormField label="Teléfono 2">
           <Input id="phone2" value={addForm.data.Phone2} onChange={(e) => addForm.setField('Phone2', e.target.value)} />
         </FormField>
+        <FormField label="Servicios asociados">
+          <CheckboxGroup
+            options={services.map(s => ({ value: s.ServiceId, label: s.Name }))}
+            selected={addForm.data.ServiceIds || []}
+            onChange={(selected) => addForm.setField('ServiceIds', selected)}
+            disabled={servicesLoading}
+          />
+        </FormField>
       </FormDialog>
 
       {/* Edit Customer Modal */}
@@ -387,6 +440,14 @@ export default function PassengersManagement() {
             id="phone2"
             value={editForm.data.Phone2}
             onChange={(e) => editForm.setField('Phone2', e.target.value)}
+          />
+        </FormField>
+        <FormField label="Servicios asociados">
+          <CheckboxGroup
+            options={services.map(s => ({ value: s.ServiceId, label: s.Name }))}
+            selected={editForm.data.ServiceIds || []}
+            onChange={(selected) => editForm.setField('ServiceIds', selected)}
+            disabled={servicesLoading}
           />
         </FormField>
       </FormDialog>
