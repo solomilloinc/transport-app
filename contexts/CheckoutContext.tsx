@@ -1,7 +1,7 @@
-'use client';
-
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { ReserveSummaryItem } from '@/interfaces/reserve';
+
+const STORAGE_KEY = 'transport-checkout-state';
 
 export interface LockState {
   lockToken: string;
@@ -23,21 +23,54 @@ interface CheckoutContextProps {
   clearCheckout: () => void;
   isLockValid: () => boolean;
   getTimeRemaining: () => number;
+  isHydrated: boolean;
 }
 
+const defaultState: CheckoutState = { outboundTrip: null, returnTrip: null, passengers: 1 };
+
 const CheckoutContext = createContext<CheckoutContextProps>({
-  checkout: { outboundTrip: null, passengers: 1 },
+  checkout: defaultState,
   setCheckout: () => {},
   setLockState: () => {},
   clearCheckout: () => {},
   isLockValid: () => false,
   getTimeRemaining: () => 0,
+  isHydrated: false,
 });
-
-const defaultState: CheckoutState = { outboundTrip: null, returnTrip: null, passengers: 1 };
 
 export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
   const [checkout, setCheckoutState] = useState<CheckoutState>(defaultState);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Validar si el lock no ha expirado hace demasiado tiempo (ej: 1 hora)
+        if (parsed.lockState?.expiresAt) {
+          const expiryDate = new Date(parsed.lockState.expiresAt);
+          const now = new Date();
+          // Si expiró hace más de 1 hora, mejor no cargar el lock
+          if (now.getTime() - expiryDate.getTime() > 3600000) {
+            delete parsed.lockState;
+          }
+        }
+        setCheckoutState(parsed);
+      } catch (e) {
+        console.error('Error loading checkout state', e);
+      }
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Save to localStorage when state changes
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(checkout));
+    }
+  }, [checkout, isHydrated]);
 
   const setCheckout = (state: CheckoutState) => setCheckoutState(state);
 
@@ -45,7 +78,10 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
     setCheckoutState(prev => ({ ...prev, lockState }));
   };
 
-  const clearCheckout = () => setCheckoutState(defaultState);
+  const clearCheckout = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setCheckoutState(defaultState);
+  };
 
   const isLockValid = () => {
     if (!checkout.lockState) return false;
@@ -66,7 +102,8 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
       setLockState,
       clearCheckout,
       isLockValid,
-      getTimeRemaining
+      getTimeRemaining,
+      isHydrated
     }}>
       {children}
     </CheckoutContext.Provider>

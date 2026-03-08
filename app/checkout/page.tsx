@@ -22,28 +22,32 @@ import { CreateReserveExternalResult } from '@/interfaces/reserve';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { checkout, setLockState, isLockValid, clearCheckout } = useCheckout();
+  const { checkout, setLockState, isLockValid, clearCheckout, isHydrated } = useCheckout();
 
   // If there's no outbound trip, there's nothing to check out. Redirect to home.
   useEffect(() => {
-    if (!checkout.outboundTrip) {
+    if (isHydrated && !checkout.outboundTrip) {
       router.replace('/');
     }
-  }, [checkout.outboundTrip, router]);
+  }, [isHydrated, checkout.outboundTrip, router]);
 
   const [currentStep, setCurrentStep] =
     useState<'passengers' | 'payment' | 'review'>('passengers');
-  const [passengerData, setPassengerData] = useState<Record<string, any>[]>(() =>
-    Array(checkout.passengers || 1).fill(0).map(() => ({})),
-  );
+  const [passengerData, setPassengerData] = useState<Record<string, any>[]>([]);
+
+  // Initialize passenger data from checkout or default
+  useEffect(() => {
+    if (isHydrated && checkout.passengers) {
+      setPassengerData(Array(checkout.passengers).fill(0).map(() => ({})));
+    }
+  }, [isHydrated, checkout.passengers]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'wallet'>('card');
   const [lockError, setLockError] = useState<string | null>(null);
 
   const [formattedDepartureDate, setFormattedDepartureDate] = useState('');
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
-
-
 
   useEffect(() => {
     if (checkout.outboundTrip) {
@@ -58,7 +62,10 @@ export default function CheckoutPage() {
   const returnPrice  = checkout.returnTrip?.Price  || 0;
   const totalPrice   = (outboundPrice + returnPrice) * checkout.passengers;
   const serviceFee   = 0;
-  const finalTotal   = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
+  const finalTotal   = useMemo(() => {
+    const total = totalPrice + serviceFee;
+    return isNaN(total) ? 0 : total;
+  }, [totalPrice, serviceFee]);
 
   const handlePassengerDataChange = (data: Record<string, any>[]) => {
     if (JSON.stringify(data) !== JSON.stringify(passengerData)) {
@@ -178,7 +185,7 @@ export default function CheckoutPage() {
     }
 
     if (!checkout.lockState?.lockToken || !isLockValid()) {
-      throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
+      throw new Error('No hay una reserva válida o expiró. Por favor, inicie el proceso nuevamente.');
     }
 
     const payloadWithLock = {
@@ -195,9 +202,13 @@ export default function CheckoutPage() {
       throw new Error('No se recibió PreferenceId del servidor');
     }
 
+    // Limpiar checkout después del éxito (MP redirigirá)
+    // Nota: MP redirige fuera de la app, el clear aquí está bien.
+    clearCheckout();
+
     // Devolver el PreferenceId para que MP abra el wallet
     return responseData.PreferenceId;
-  }, [finalTotal, createWalletPayload]);
+  }, [finalTotal, createWalletPayload, checkout.lockState, isLockValid, clearCheckout]);
 
   // Procesar el pago con tarjeta (el Brick llama esto y espera una Promise)
   const handleCardSubmit = async (data: {
@@ -215,7 +226,7 @@ export default function CheckoutPage() {
       }
 
       if (!checkout.lockState?.lockToken || !isLockValid()) {
-        throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
+        throw new Error('No hay una reserva válida o expiró. Por favor, inicie el proceso nuevamente.');
       }
 
       const compraDescripcion = checkout.returnTrip ? 'Pasaje ida y vuelta' : 'Pasaje de ida';
@@ -277,6 +288,7 @@ firstName: p.firstName,
 
       if (responseData.Status === 'approved') {
         const reserveId = checkout.outboundTrip?.ReserveId;
+        clearCheckout();
         router.push(`/booking-confirmation?success=true&reserveId=${reserveId}`);
       } else {
         router.push(`/booking-confirmation?status=${encodeURIComponent(responseData.Status || 'unknown')}`);
@@ -286,9 +298,18 @@ firstName: p.firstName,
     }
   };
 
-  // If there's no trip, don't render the checkout form to prevent errors while redirecting
+  // If there's no trip and not hydrated, show loader
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // If there's no trip after hydration, redirect (useEffect handled it)
   if (!checkout.outboundTrip) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (

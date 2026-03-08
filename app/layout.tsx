@@ -7,6 +7,7 @@ import CheckoutProviderWrapper from '@/contexts/CheckoutProviderWrapper';
 import { ThemeProvider } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 import { CheckoutProvider } from '@/contexts/CheckoutContext';
+import MercadoPagoInitializer from '@/components/mercadopago-initializer';
 
 export const metadata: Metadata = {
   title: 'Zeros Tour - Reserva de Pasajes',
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           disableTransitionOnChange
         >
           <CheckoutProvider>
+            <MercadoPagoInitializer />
             <AuthProvider>
               {children}
             </AuthProvider>

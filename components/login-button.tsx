@@ -35,7 +35,7 @@ export default function LoginButton() {
         <Button
           variant="outline"
           className="border-blue-600 text-blue-600 hover:bg-blue-50"
-          onClick={() => router.push('/admin/services')}
+          onClick={() => router.push('/admin/reserves')}
         >
           Mi cuenta
         </Button>

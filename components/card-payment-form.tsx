@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CardPayment, initMercadoPago } from '@mercadopago/sdk-react';
+import { CardPayment } from '@mercadopago/sdk-react';
 import type {
   ICardPaymentFormData,
   ICardPaymentBrickPayer,
@@ -35,41 +35,34 @@ export default function CardPaymentForm({
   defaultEmail,
   isSubmitting = false,
 }: Props) {
-  const [mpReady, setMpReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // En dev subimos mínimo a 1000 para que habilite métodos de test.
   const effectiveAmount = useMemo(
-    () => (process.env.NODE_ENV !== 'production' ? Math.max(Number(amount || 0), 1000) : amount),
+    () => {
+      const val = process.env.NODE_ENV !== 'production' ? Math.max(Number(amount || 0), 1000) : amount;
+      return isNaN(val) ? 1000 : val;
+    },
     [amount]
   );
 
-  useEffect(() => {
-    const key =
-      process.env.NEXT_PUBLIC_MP_PUBLIC_KEY
-
-    if (!key) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('[MP] Falta NEXT_PUBLIC_MP_PUBLIC_KEY en .env.local');
-      }
-      return;
-    }
-    initMercadoPago(key, { locale: 'es-AR' });
-    setMpReady(true);
-  }, []);
-
   const handleSubmit = async (data: ICardPaymentFormData<ICardPaymentBrickPayer>) => {
+    if (isProcessing || isSubmitting) return;
+    
     setIsProcessing(true);
     onPayingChange?.(true);
     try {
       await onSubmit({
         amount: effectiveAmount,
-        email: data?.payer?.email ?? '',
+        email: data?.payer?.email ?? defaultEmail ?? '',
         installments: data?.installments,
         token: data?.token,
         identification: data?.payer?.identification,
         paymentMethodId: data.payment_method_id
       });
+    } catch (err) {
+      console.error('[CardPayment] Submit error:', err);
+      onError?.(err);
     } finally {
       setIsProcessing(false);
       onPayingChange?.(false);
@@ -96,7 +89,7 @@ export default function CardPaymentForm({
     }
   };
 
-  if (!mpReady) return null;
+  if (!effectiveAmount || effectiveAmount <= 0) return null;
 
   return (
     <>
@@ -120,10 +113,11 @@ export default function CardPaymentForm({
       <div className="space-y-4">
         <div id="cardPaymentBrick_container">
           <CardPayment
+            key={`mp-brick-${effectiveAmount}`} // Force re-render if amount changes to avoid internal SDK issues
             initialization={{
               amount: effectiveAmount,
               payer: {
-                email:  '',
+                email: defaultEmail || '',
               },
             }}
             customization={{

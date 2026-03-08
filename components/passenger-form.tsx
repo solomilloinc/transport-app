@@ -21,9 +21,12 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
 
   // Initialize passenger data
   useEffect(() => {
+    // Only set if we don't have data yet or length changed
     if (initialData.length === passengerCount) {
-      setPassengers(initialData)
-    } else {
+      if (passengers.length !== passengerCount) {
+        setPassengers(initialData);
+      }
+    } else if (passengers.length !== passengerCount) {
       const initialPassengers = Array(passengerCount)
         .fill(0)
         .map((_, i) => ({
@@ -36,7 +39,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
         }))
       setPassengers(initialPassengers)
     }
-  }, [passengerCount, initialData])
+  }, [passengerCount, initialData, passengers.length])
 
   // Update parent component when passenger data changes
   useEffect(() => {
@@ -99,7 +102,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                         id={`firstName-${index}`}
                         value={passengers[index]?.firstName || ""}
                         onChange={(e) => handleInputChange(index, "firstName", e.target.value)}
-                        placeholder="Enter first name"
+                        placeholder="Ingresar nombre"
                         required
                       />
                     </div>
@@ -109,7 +112,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                         id={`lastName-${index}`}
                         value={passengers[index]?.lastName || ""}
                         onChange={(e) => handleInputChange(index, "lastName", e.target.value)}
-                        placeholder="Enter last name"
+                        placeholder="Ingresar apellido"
                         required
                       />
                     </div>
@@ -120,7 +123,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                         type="email"
                         value={passengers[index]?.email || ""}
                         onChange={(e) => handleInputChange(index, "email", e.target.value)}
-                        placeholder="Enter email address"
+                        placeholder="Ingresar correo electrónico"
                       />
                     </div>
                     <div className="space-y-2">
@@ -130,7 +133,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                         type="tel"
                         value={passengers[index]?.phone || ""}
                         onChange={(e) => handleInputChange(index, "phone", e.target.value)}
-                        placeholder="Enter phone number"
+                        placeholder="Ingresar número de teléfono"
                       />
                     </div>
                     <div className="space-y-2">
@@ -142,23 +145,6 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                         placeholder="DNI, Cédula, Pasaporte"
                         required
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`passengerType-${index}`}>Tipo de pasajero</Label>
-                      <Select
-                        value={passengers[index]?.passengerType || "adult"}
-                        onValueChange={(value) => handleInputChange(index, "passengerType", value)}
-                      >
-                        <SelectTrigger id={`passengerType-${index}`}>
-                          <SelectValue placeholder="Select passenger type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="adult">Adult</SelectItem>
-                          <SelectItem value="child">Child (2-12 years)</SelectItem>
-                          <SelectItem value="infant">Infant (under 2 years)</SelectItem>
-                          <SelectItem value="senior">Senior (65+ years)</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
 

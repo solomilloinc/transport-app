@@ -2,14 +2,13 @@
 
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
-import { type HTMLAttributes, forwardRef } from "react";
-import { JSX } from "react";
+import { type HTMLAttributes, forwardRef, useRef, useImperativeHandle, useCallback, useMemo } from "react";
 
 interface AnimatedSectionProps extends HTMLAttributes<HTMLElement> {
   animation?: "fade-up" | "fade-in" | "slide-in-right" | "slide-in-left";
   delay?: number;
   threshold?: number;
-  as?: keyof JSX.IntrinsicElements;
+  as?: React.ElementType;
 }
 
 export const AnimatedSection = forwardRef<HTMLElement, AnimatedSectionProps>(
@@ -18,25 +17,34 @@ export const AnimatedSection = forwardRef<HTMLElement, AnimatedSectionProps>(
       animation = "fade-up",
       delay = 0,
       threshold = 0.1,
-      as = "section",
+      as: Component = "section",
       className,
       children,
       ...props
     },
     forwardedRef
   ) => {
-    const { ref, isIntersecting } = useIntersectionObserver({ threshold });
+    const { ref: observerRef, isIntersecting } = useIntersectionObserver({ threshold });
+    const localRef = useRef<HTMLElement>(null);
 
-    const Component = as as any;
+    // Merge observer ref and forwarded ref
+    const setRefs = useCallback((node: HTMLElement | null) => {
+      // @ts-ignore
+      localRef.current = node;
+      observerRef(node);
+      
+      if (typeof forwardedRef === "function") {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        (forwardedRef as React.MutableRefObject<HTMLElement | null>).current = node;
+      }
+    }, [observerRef, forwardedRef]);
 
     const animationClasses = {
-      "fade-up":
-        "opacity-0 translate-y-10 transition-all duration-700 ease-out",
+      "fade-up": "opacity-0 translate-y-10 transition-all duration-700 ease-out",
       "fade-in": "opacity-0 transition-opacity duration-700 ease-out",
-      "slide-in-right":
-        "opacity-0 translate-x-10 transition-all duration-700 ease-out",
-      "slide-in-left":
-        "opacity-0 -translate-x-10 transition-all duration-700 ease-out",
+      "slide-in-right": "opacity-0 translate-x-10 transition-all duration-700 ease-out",
+      "slide-in-left": "opacity-0 -translate-x-10 transition-all duration-700 ease-out",
     };
 
     const activeClasses = {
@@ -48,14 +56,7 @@ export const AnimatedSection = forwardRef<HTMLElement, AnimatedSectionProps>(
 
     return (
       <Component
-        ref={(node: HTMLElement) => {
-          ref.current = node;
-          if (typeof forwardedRef === "function") {
-            forwardedRef(node);
-          } else if (forwardedRef) {
-            forwardedRef.current = node;
-          }
-        }}
+        ref={setRefs}
         className={cn(
           animationClasses[animation],
           isIntersecting && activeClasses[animation],
