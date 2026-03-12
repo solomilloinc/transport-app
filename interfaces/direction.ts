@@ -2,6 +2,7 @@
 export interface Direction {
     DirectionId: number;
     CityId: number;
+    CityName?: string;
     Name: string;
   }
 

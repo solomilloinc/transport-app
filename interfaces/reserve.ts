@@ -44,6 +44,13 @@ export const emptyEditReserve = {
     DepartureHour: ''
 }
 
+export interface ReserveStopScheduleDto {
+    DirectionId: number;
+    DirectionName: string;
+    Order: number;
+    PickupTime: string;
+}
+
 export interface ReserveSummaryItem {
     ReserveId: number;
     TripId: number;
@@ -56,6 +63,7 @@ export interface ReserveSummaryItem {
     VehicleName: string;
     EstimatedDuration: string;
     ArrivalHour: string;
+    StopSchedules: ReserveStopScheduleDto[] | null;
 }
 
 export interface CreateReserveExternalResult {

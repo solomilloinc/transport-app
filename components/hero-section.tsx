@@ -14,6 +14,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { TripSelectOption } from '@/app/page';
+import { MapPin } from 'lucide-react';
 
 export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const [departureDate, setDepartureDate] = useState<Date>();
   const [returnDate, setReturnDate] = useState<Date>();
   const [selectedTripId, setSelectedTripId] = useState('');
+  const [selectedPickupDirectionId, setSelectedPickupDirectionId] = useState('');
   const [passengers, setPassengers] = useState('1');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -29,6 +31,11 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const selectedTrip = useMemo(() => {
     return trips.find((trip) => trip.value === selectedTripId);
   }, [trips, selectedTripId]);
+
+  // Reset pickup direction when trip changes
+  useEffect(() => {
+    setSelectedPickupDirectionId('');
+  }, [selectedTripId]);
 
   // For round trip, find the return trip (inverse route)
   const returnTrip = useMemo(() => {
@@ -81,6 +88,9 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
     if (tripType === 'RoundTrip' && returnDate && returnTrip) {
       params.append('returnDate', format(returnDate, 'yyyy-MM-dd'));
       params.append('returnTripId', returnTrip.id.toString());
+    }
+    if (selectedPickupDirectionId) {
+      params.append('pickupDirectionId', selectedPickupDirectionId);
     }
     // Navigate to results page with query parameters
     router.push(`/results?${params.toString()}`);
@@ -173,6 +183,28 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                         </div>
                       )}
                     </div>
+
+                    {/* Pickup Direction - only show when a trip is selected and has stop schedules */}
+                    {selectedTrip && selectedTrip.stopSchedules.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-blue-900 flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          Punto de Subida
+                        </label>
+                        <Select value={selectedPickupDirectionId} onValueChange={setSelectedPickupDirectionId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona dónde subir (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedTrip.stopSchedules.map((stop) => (
+                              <SelectItem key={stop.DirectionId} value={stop.DirectionId.toString()}>
+                                {stop.DirectionName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-2">

@@ -21,6 +21,14 @@ interface LocationSelectorProps {
     isRoundTrip: boolean;
     onSelectionChange: (data: LocationSelectionData) => void;
     initialData?: LocationSelectionData;
+    departureHour?: string;
+}
+
+function addTimeOffset(departureHour: string, offset: string): string {
+    const [dh, dm] = departureHour.split(':').map(Number);
+    const [oh, om] = offset.split(':').map(Number);
+    let totalMinutes = dh * 60 + dm + oh * 60 + om;
+    return `${String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
 }
 
 export function LocationSelector({
@@ -29,6 +37,7 @@ export function LocationSelector({
     isRoundTrip,
     onSelectionChange,
     initialData,
+    departureHour,
 }: LocationSelectorProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -159,10 +168,25 @@ export function LocationSelector({
                         {tripData?.PickupOptions?.map((option) => (
                             <SelectItem key={option.DirectionId} value={option.DirectionId.toString()}>
                                 {option.DisplayName}
+                                {option.PickupTimeOffset ? ` (+${option.PickupTimeOffset.substring(0, 5)})` : ''}
                             </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
+                {selectedPickupId && departureHour && (() => {
+                    const selectedOption = tripData?.PickupOptions?.find(
+                        (o) => o.DirectionId.toString() === selectedPickupId
+                    );
+                    if (selectedOption?.PickupTimeOffset) {
+                        const estimatedTime = addTimeOffset(departureHour, selectedOption.PickupTimeOffset);
+                        return (
+                            <p className="text-xs text-gray-500">
+                                Hora estimada de subida: <span className="font-medium text-blue-600">{estimatedTime}</span>
+                            </p>
+                        );
+                    }
+                    return null;
+                })()}
             </div>
 
             {/* Dropoff City */}

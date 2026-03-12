@@ -23,10 +23,41 @@ export interface CityDirectionsDto {
   Directions: CityDirectionItem[];
 }
 
+export interface TripPickupStopReportDto {
+  TripPickupStopId: number;
+  DirectionId: number;
+  DirectionName: string;
+  CityId: number;
+  CityName: string;
+  Order: number;
+  PickupTimeOffset: string;
+}
+
+export interface TripPickupStopCreateDto {
+  tripId: number;
+  directionId: number;
+  order: number;
+  pickupTimeOffset: string;
+}
+
+export interface TripPickupStopUpdateDto {
+  directionId: number;
+  order: number;
+  pickupTimeOffset: string;
+}
+
+export const emptyTripPickupStopForm = {
+  tripId: 0,
+  directionId: 0,
+  order: 1,
+  pickupTimeOffset: '',
+};
+
 // New simplified interfaces for combo options (PascalCase to match backend)
 export interface PickupOption {
   DirectionId: number;
   DisplayName: string;
+  PickupTimeOffset: string | null;
 }
 
 export interface DropoffDirectionOption {
@@ -52,6 +83,7 @@ export interface Trip {
   Status: string;
   Prices: TripPrice[];
   RelevantCities: CityDirectionsDto[];
+  StopSchedules?: TripPickupStopReportDto[] | null;
   // New combo-ready fields
   PickupOptions?: PickupOption[];
   DropoffOptionsIda?: DropoffCityOption[];
