@@ -110,8 +110,9 @@ export default function TripPricesManagement() {
         get<any, PagedResponse<Direction>>('/direction-report', {
           pageNumber: 1,
           pageSize: 100,
-          sortBy: 'name',
-          sortDescending: false,
+          sortBy: 'fecha',
+          sortDescending: true,
+          filters: {},
         }),
       ]);
 

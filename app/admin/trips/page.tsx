@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit, Plus, Trash, Route, DollarSign } from 'lucide-react';
+import { Edit, Plus, Trash, Route, DollarSign, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -204,6 +204,10 @@ export default function TripManagement() {
     router.push(`/admin/trips/${tripId}/prices`);
   };
 
+  const handleManageStops = (tripId: number) => {
+    router.push(`/admin/trips/${tripId}/stops`);
+  };
+
   const confirmDelete = async () => {
     await deleteLogic(`/trip-delete/${currentTripId}`);
     setIsDeleteModalOpen(false);
@@ -248,6 +252,15 @@ export default function TripManagement() {
             title="Gestionar Precios"
           >
             <DollarSign className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-orange-600 border-orange-200 hover:bg-orange-50"
+            onClick={() => handleManageStops(trip.TripId)}
+            title="Gestionar Paradas"
+          >
+            <MapPin className="h-4 w-4" />
           </Button>
           <Button
             size="sm"

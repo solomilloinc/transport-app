@@ -11,7 +11,8 @@ import { AnimatedSection } from '@/components/animated-section';
 import { HeroSection } from '@/components/hero-section';
 import Link from 'next/link';
 import Navbar from '@/components/navbar';
-import { getPublicTrips, PublicTripDto } from '@/services/trip';
+import { getPublicTrips, getTripById, PublicTripDto } from '@/services/trip';
+import { TripPickupStopReportDto } from '@/interfaces/trip';
 
 // Extended SelectOption to include trip data
 export interface TripSelectOption extends SelectOption {
@@ -20,6 +21,7 @@ export interface TripSelectOption extends SelectOption {
   destinationCityId: number;
   destinationCityName: string;
   priceFrom: number | null;
+  stopSchedules: TripPickupStopReportDto[];
 }
 
 async function loadTrips(): Promise<TripSelectOption[]> {
@@ -27,7 +29,19 @@ async function loadTrips(): Promise<TripSelectOption[]> {
     const response = await getPublicTrips(1, 100);
 
     if (response && response.Items) {
-      const formattedTrips: TripSelectOption[] = response.Items.map((trip) => ({
+      // Load full trip data in parallel to get StopSchedules
+      const fullTrips = await Promise.all(
+        response.Items.map(async (trip) => {
+          try {
+            const fullTrip = await getTripById(trip.TripId);
+            return { ...trip, stopSchedules: fullTrip.StopSchedules || [] };
+          } catch {
+            return { ...trip, stopSchedules: [] as TripPickupStopReportDto[] };
+          }
+        })
+      );
+
+      return fullTrips.map((trip) => ({
         id: trip.TripId,
         value: trip.TripId.toString(),
         label: `${trip.OriginCityName} → ${trip.DestinationCityName}`,
@@ -36,8 +50,8 @@ async function loadTrips(): Promise<TripSelectOption[]> {
         destinationCityId: trip.DestinationCityId,
         destinationCityName: trip.DestinationCityName,
         priceFrom: trip.PriceFrom,
+        stopSchedules: trip.stopSchedules,
       }));
-      return formattedTrips;
     }
   } catch (error) {
     console.error('Failed to load trips for landing page:', error);

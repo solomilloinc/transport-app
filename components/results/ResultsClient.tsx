@@ -28,6 +28,7 @@ interface ResultsClientProps {
     departureDate?: string;
     returnDate?: string;
     passengers?: string;
+    pickupDirectionId?: string;
   };
 }
 
@@ -193,6 +194,17 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                           <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
                           <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectOutbound(trip)}>Reservar</Button>
                         </div>
+                        {trip.StopSchedules && trip.StopSchedules.length > 0 && (
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                            <MapPin className="h-3 w-3" />
+                            {trip.StopSchedules.map((stop, idx) => (
+                              <span key={stop.DirectionId}>
+                                {stop.DirectionName}: {stop.PickupTime}
+                                {idx < trip.StopSchedules!.length - 1 && ' |'}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -236,6 +248,17 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                               <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
                               <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectReturn(trip)}>Seleccionar Vuelta</Button>
                             </div>
+                            {trip.StopSchedules && trip.StopSchedules.length > 0 && (
+                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                                <MapPin className="h-3 w-3" />
+                                {trip.StopSchedules.map((stop, idx) => (
+                                  <span key={stop.DirectionId}>
+                                    {stop.DirectionName}: {stop.PickupTime}
+                                    {idx < trip.StopSchedules!.length - 1 && ' |'}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

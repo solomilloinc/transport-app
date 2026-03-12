@@ -446,6 +446,7 @@ export default function CheckoutPage() {
                           isRoundTrip={isRoundTrip}
                           onSelectionChange={setOutboundLocation}
                           initialData={outboundLocation}
+                          departureHour={checkout.outboundTrip.DepartureHour}
                         />
                       </div>
                     )}
@@ -466,6 +467,7 @@ export default function CheckoutPage() {
                           isRoundTrip={isRoundTrip}
                           onSelectionChange={setReturnLocation}
                           initialData={returnLocation}
+                          departureHour={checkout.returnTrip?.DepartureHour}
                         />
                       </div>
                     )}

@@ -17,6 +17,7 @@ interface ResultsSearchParams {
   departureDate?: string;
   returnDate?: string;
   passengers?: string;
+  pickupDirectionId?: string;
 }
 
 // 2. Creamos una respuesta vacía para usar en caso de error o parámetros faltantes.
@@ -32,6 +33,7 @@ async function getReserves(searchParams: ResultsSearchParams): Promise<PagedRese
   const departureDate = searchParams.departureDate || format(new Date(), 'yyyy-MM-dd');
   const returnDate = searchParams.returnDate || '';
   const passengers = searchParams.passengers || '1';
+  const pickupDirectionId = searchParams.pickupDirectionId;
 
   if (!tripId) {
     console.error('Error: Falta tripId para la búsqueda de reservas.');
@@ -50,6 +52,7 @@ async function getReserves(searchParams: ResultsSearchParams): Promise<PagedRese
           departureDate: departureDate,
           passengers: Number(passengers),
           returnDate: returnDate || null,
+          ...(pickupDirectionId ? { pickupDirectionId: Number(pickupDirectionId) } : {}),
         },
       },
       { skipAuth: true }
@@ -77,6 +80,7 @@ export default async function ResultsPage({ searchParams }: {
     departureDate: resolvedSearchParams.departureDate,
     returnDate: resolvedSearchParams.returnDate,
     passengers: resolvedSearchParams.passengers,
+    pickupDirectionId: resolvedSearchParams.pickupDirectionId,
   };
 
   return (

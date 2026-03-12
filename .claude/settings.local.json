@@ -4,7 +4,13 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(find /c/Users/x/Desktop/transport-app -type f -name \"*.tsx\" -o -name \"*.ts\" | xargs grep -l \"GET /trip\\\\|post.*trip\\\\|put.*trip\" 2>/dev/null | head -10)",
+      "Bash(grep -r \"GET /trip\\\\|POST /trip\\\\|PUT /trip\\\\|/trip-\\\\|TripDirection\\\\|DirectionId.*trip\" /c/Users/x/Desktop/transport-app/app /c/Users/x/Desktop/transport-app/services /c/Users/x/Desktop/transport-app/interfaces --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | grep -v node_modules | sort | uniq)",
+      "Bash(ls C:/Users/x/Desktop/transport-app/app/admin/trips/\\\\[id\\\\]/)",
+      "Bash(cd C:/Users/x/Desktop/transport-app && node ./node_modules/.bin/tsc --noEmit 2>&1 | head -60)",
+      "Bash(which node:*)",
+      "Bash(cmd //c \"where node\" 2>&1)"
     ]
   }
 }
