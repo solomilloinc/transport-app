@@ -22,6 +22,7 @@ import { ReserveReport } from '@/interfaces/reserve';
 import { Passenger } from '@/interfaces/passengers';
 import { emptyPassengerCreate, PassengerReserveCreate } from '@/interfaces/passengerReserve';
 import { Payment } from '@/interfaces/payment';
+import { getApiErrorCode } from '@/utils/api-errors';
 import { Trip } from '@/interfaces/trip';
 
 import { useFormValidation } from '@/hooks/use-form-validation';
@@ -121,16 +122,42 @@ export function AddReservationFlow({
   // Get directions for selected dropoff city
   const dropoffDirectionOptions = useMemo(() => {
     if (!selectedDropoffCityId) return [];
+
+    // First: try nested directions from the selected DropoffCityOption
     const city = dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId));
-    if (!city?.directions?.length) return [];
-    return city.directions
-      .filter((dir: any) => dir && (dir.directionId != null || dir.DirectionId != null))
-      .map((dir: any) => ({
-        id: String(dir.directionId || dir.DirectionId),
-        value: String(dir.directionId || dir.DirectionId),
-        label: dir.displayName || dir.DisplayName || 'Sin nombre'
-      }));
-  }, [selectedDropoffCityId, dropoffCityOptions]);
+    if (city?.directions?.length) {
+      return city.directions
+        .filter((dir: any) => dir && (dir.directionId != null || dir.DirectionId != null))
+        .map((dir: any) => ({
+          id: String(dir.directionId || dir.DirectionId),
+          value: String(dir.directionId || dir.DirectionId),
+          label: dir.displayName || dir.DisplayName || 'Sin nombre'
+        }));
+    }
+
+    // Fallback: get directions from tripData.RelevantCities
+    if (tripData?.RelevantCities) {
+      const relevantCity = tripData.RelevantCities.find(
+        (c) => c.CityId?.toString() === String(selectedDropoffCityId)
+      );
+      if (relevantCity?.Directions?.length) {
+        return relevantCity.Directions.map((dir) => ({
+          id: String(dir.DirectionId),
+          value: String(dir.DirectionId),
+          label: dir.Name || 'Sin nombre'
+        }));
+      }
+    }
+
+    return [];
+  }, [selectedDropoffCityId, dropoffCityOptions, tripData]);
+
+  // Auto-select first dropoff direction when options are available and none is selected
+  useEffect(() => {
+    if (dropoffDirectionOptions.length > 0 && !reserveForm.data.DropoffLocationId) {
+      reserveForm.setField('DropoffLocationId', Number(dropoffDirectionOptions[0].id));
+    }
+  }, [dropoffDirectionOptions]);
 
   // Get price for selected dropoff city
   const getSelectedDropoffPrice = () => {
@@ -286,7 +313,6 @@ export function AddReservationFlow({
 
       if (data.ReserveTypeId === 2) {
         // Round trip - create both reserves
-        reserveForm.setField('IsPayment', true);
 
         // Get the return ReserveId from returnTrip
         const returnReserveId = returnTrip!.ReserveId;
@@ -341,8 +367,17 @@ export function AddReservationFlow({
         return;
       }
 
-      const newPayment = { PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: amount };
-      console.log('➕ Agregando pago:', newPayment);
+      const methodId = Number(selectedPaymentMethod);
+      if (reservationPayments.some((p) => p.PaymentMethod === methodId)) {
+        toast({
+          title: 'Método duplicado',
+          description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const newPayment = { PaymentMethod: methodId, TransactionAmount: amount };
       setReservationPayments((prev) => [...prev, newPayment]);
       setSelectedPaymentMethod('1');
       setPaymentAmount('');
@@ -371,36 +406,24 @@ export function AddReservationFlow({
   const finalizeReservation = async () => {
     reserveForm.setIsSubmitting(true);
 
-    console.log('🏁 Finalizando reserva...');
-    console.log('📦 Reservas de pasajeros:', passengerReserves);
-    console.log('💰 Pagos existentes:', reservationPayments);
-    console.log('✅ Tiene pago habilitado:', reserveForm.data.IsPayment);
-
     let paymentsToSend: Payment[] = [];
 
-    if (reserveForm.data.IsPayment) {
-      const totalReserveAmount = getTotalReserveAmount();
+    if (reservationPayments.length > 0) {
       const totalPaymentAmount = getTotalPaymentAmount();
+      const totalReserveAmount = getTotalReserveAmount();
 
-      // Si hay pagos cargados manualmente, deben coincidir con el total
-      if (reservationPayments.length > 0) {
-        if (totalPaymentAmount !== totalReserveAmount) {
-          toast({
-            title: 'Error en el pago',
-            description: `El total de los pagos ($${totalPaymentAmount.toLocaleString()}) debe coincidir exactamente con el total de la reserva ($${totalReserveAmount.toLocaleString()}).`,
-            variant: 'destructive',
-          });
-          reserveForm.setIsSubmitting(false);
-          return;
-        }
-        paymentsToSend = reservationPayments;
-        console.log('👤 Usando pagos manuales:', paymentsToSend);
-      } else {
-        // Auto-crear pago con el total si no hay pagos agregados
-        paymentsToSend = [{ PaymentMethod: Number(selectedPaymentMethod), TransactionAmount: totalReserveAmount }];
-        console.log('🤖 Auto-creando pago con total:', paymentsToSend[0]);
+      if (totalPaymentAmount > totalReserveAmount) {
+        toast({
+          title: 'Monto excedido',
+          description: `El total de los pagos ($${totalPaymentAmount.toLocaleString()}) supera el total de la reserva ($${totalReserveAmount.toLocaleString()}).`,
+          variant: 'destructive',
+        });
+        reserveForm.setIsSubmitting(false);
+        return;
       }
+      paymentsToSend = reservationPayments;
     }
+    // payments vacio = PendingPayment en backend
 
     try {
       const response = await post('/passenger-reserves-create', { items: passengerReserves, payments: paymentsToSend });
@@ -412,7 +435,11 @@ export function AddReservationFlow({
         toast({ title: 'Error', description: 'Error al crear la reserva.', variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Ocurrió un error al crear la reserva.', variant: 'destructive' });
+      const code = getApiErrorCode(error);
+      const msgs: Record<string, string> = {
+        'Reserve.OverPaymentNotAllowed': 'El monto pagado supera el total de la reserva.',
+      };
+      toast({ title: 'Error', description: msgs[code] || 'Ocurrió un error al crear la reserva.', variant: 'destructive' });
     } finally {
       reserveForm.setIsSubmitting(false);
     }
@@ -641,7 +668,7 @@ export function AddReservationFlow({
         onSubmit={finalizeReservation}
         submitText="Confirmar Reserva"
         isLoading={reserveForm.isSubmitting}
-        disabled={reserveForm.data.IsPayment && Math.abs(getTotalPaymentAmount() - getTotalReserveAmount()) > 1}
+        disabled={getTotalPaymentAmount() > getTotalReserveAmount()}
       >
         <div className="space-y-6 py-4">
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
@@ -682,69 +709,79 @@ export function AddReservationFlow({
             })}
           </div>
           <div className="rounded-lg border p-4 space-y-4">
-            <FormField>
-              <Checkbox
-                id="payment-enabled"
-                checked={reserveForm.data.IsPayment}
-                onCheckedChange={(c) => reserveForm.setField('IsPayment', c)}
-                disabled={reserveForm.data.ReserveTypeId === 2}
-              />
-              <Label htmlFor="payment-enabled" className="ml-2 text-sm font-medium">
-                Registrar pago con la reserva {reserveForm.data.ReserveTypeId === 2 && '(Obligatorio para ida y vuelta)'}
-              </Label>
-            </FormField>
-            {reserveForm.data.IsPayment && (
-              <>
-                <div className="flex gap-2 items-end">
-                  <FormField label="Método de Pago" className="flex-1">
-                    <ApiSelect
-                      value={selectedPaymentMethod}
-                      onValueChange={setSelectedPaymentMethod}
-                      placeholder="Seleccionar..."
-                      options={paymentMethods}
-                    />
-                  </FormField>
-                  <FormField label="Monto" className="flex-1">
-                    <Input
-                      type="number"
-                      placeholder={`Saldo: $${getRemainingBalance().toLocaleString()}`}
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                    />
-                  </FormField>
-                  <Button size="icon" onClick={handleAddPayment} disabled={getRemainingBalance() <= 0}>
-                    <PlusCircleIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-                {reservationPayments.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Pagos Agregados:</Label>
-                    <div className="max-h-32 overflow-y-auto border rounded p-2 bg-gray-50 space-y-1">
-                      {reservationPayments.map((payment, index) => (
-                        <div key={index} className="flex items-center justify-between p-1 bg-white rounded">
-                          <span className="text-sm">
-                            {paymentMethods.find((pm) => String(pm.id) === String(payment.PaymentMethod))?.label || 'Pago'}: ${payment.TransactionAmount.toLocaleString()}
-                          </span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => handleRemovePayment(index)}>
-                            <TrashIcon className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+            <h3 className="font-semibold">Pagos</h3>
+            <div className="flex gap-2 items-end">
+              <FormField label="Método de Pago" className="flex-1">
+                <ApiSelect
+                  value={selectedPaymentMethod}
+                  onValueChange={setSelectedPaymentMethod}
+                  placeholder="Seleccionar..."
+                  options={paymentMethods}
+                />
+              </FormField>
+              <FormField label="Monto" className="flex-1">
+                <Input
+                  type="number"
+                  placeholder={`Saldo: $${getRemainingBalance().toLocaleString()}`}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                />
+              </FormField>
+              <Button size="icon" onClick={handleAddPayment} disabled={getRemainingBalance() <= 0}>
+                <PlusCircleIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            {reservationPayments.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Pagos Agregados:</Label>
+                <div className="max-h-32 overflow-y-auto border rounded p-2 bg-gray-50 space-y-1">
+                  {reservationPayments.map((payment, index) => (
+                    <div key={index} className="flex items-center justify-between p-1 bg-white rounded">
+                      <span className="text-sm">
+                        {paymentMethods.find((pm) => String(pm.id) === String(payment.PaymentMethod))?.label || 'Pago'}: ${payment.TransactionAmount.toLocaleString()}
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => handleRemovePayment(index)}>
+                        <TrashIcon className="h-3 w-3" />
+                      </Button>
                     </div>
-                  </div>
-                )}
-                <div className="space-y-1 pt-2 border-t">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Monto total de reserva:</span>
-                    <span className="font-medium">${getTotalReserveAmount().toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
-                    <span className="font-bold text-lg">Total a pagar:</span>
-                    <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
-                  </div>
+                  ))}
                 </div>
-              </>
+              </div>
             )}
+            <div className="space-y-1 pt-2 border-t">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Monto total de reserva:</span>
+                <span className="font-medium">${getTotalReserveAmount().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
+                <span className="font-bold text-lg">Total a pagar:</span>
+                <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
+              </div>
+            </div>
+            {/* Status preview banner */}
+            {(() => {
+              const total = getTotalReserveAmount();
+              const paid = getTotalPaymentAmount();
+              if (paid === 0) {
+                return (
+                  <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm font-medium text-yellow-800">
+                    Pendiente de Pago
+                  </div>
+                );
+              }
+              if (paid < total) {
+                return (
+                  <div className="rounded-md bg-orange-50 border border-orange-200 p-3 text-sm font-medium text-orange-800">
+                    Pago parcial (${paid.toLocaleString()} de ${total.toLocaleString()})
+                  </div>
+                );
+              }
+              return (
+                <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm font-medium text-green-800">
+                  Confirmado
+                </div>
+              );
+            })()}
           </div>
         </div>
       </FormDialog>

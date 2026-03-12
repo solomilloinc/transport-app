@@ -43,3 +43,28 @@ export interface CustomerAccountFilter {
     FromDate?: string
     ToDate?: string
 }
+
+export interface CustomerDebtSettleRequest {
+  customerId: number;
+  reserveIds: number[];
+  payments: { transactionAmount: number; paymentMethod: number }[];
+}
+
+export interface PendingReservePassenger {
+  PassengerId: number;
+  FullName: string;
+  Price: number;
+  Status: number;
+}
+
+export interface PendingReserve {
+  ReserveId: number;
+  ReserveDate: string;
+  OriginName: string;
+  DestinationName: string;
+  DepartureHour: string;
+  TotalPrice: number;
+  TotalPaid: number;
+  PendingDebt: number;
+  Passengers: PendingReservePassenger[];
+}

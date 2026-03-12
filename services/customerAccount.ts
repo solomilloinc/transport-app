@@ -1,5 +1,5 @@
-import { get, postWithResponse } from "./api"
-import { CustomerAccountSummary } from "@/interfaces/customerAccount"
+import { get, getPure, postWithResponse } from "./api"
+import { CustomerAccountSummary, CustomerDebtSettleRequest, PendingReserve } from "@/interfaces/customerAccount"
 import { PagedRequest, PagedResponse, PaginationParams, UseApiCall } from "./types"
 import { withDefaultPagination } from "@/utils/pagination"
 
@@ -17,3 +17,15 @@ export const getCustomerAccountSummary = (customerId: number, params?: Partial<P
         })
     }
 }
+
+export const getCustomerPendingReserves = async (customerId: number) => {
+    return getPure<PendingReserve[]>(
+        `/customer-pending-reserves/${customerId}`
+    );
+};
+
+export const settleCustomerDebt = async (request: CustomerDebtSettleRequest) => {
+    return postWithResponse<CustomerDebtSettleRequest, { isSuccess: boolean; value: boolean }>(
+        '/customer-debt-settle', request
+    );
+};

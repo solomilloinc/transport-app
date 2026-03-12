@@ -40,7 +40,7 @@ import CashBox from '@/interfaces/cash-box';
 const passengerSortFns = {
   name: (a: PassengerReserveReport, b: PassengerReserveReport) => a.FullName.localeCompare(b.FullName),
   pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.PickupLocationName.localeCompare(b.PickupLocationName),
-  paid: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.IsPayment) - Number(b.IsPayment),
+  paid: (a: PassengerReserveReport, b: PassengerReserveReport) => a.StatusPaymentId - b.StatusPaymentId,
   paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.PaymentMethods || '').localeCompare(b.PaymentMethods),
   paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.PaidAmount) - Number(b.PaidAmount),
 };
