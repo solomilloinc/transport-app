@@ -1,6 +1,24 @@
 import { Auditable } from "./auditable"
 import { Payment } from "./payment"
 
+export enum PaymentStatusEnum {
+  PendingPayment = 1,
+  Confirmed = 2,
+  Cancelled = 3,
+  Traveled = 4,
+  NoShow = 5,
+  Refunded = 6
+}
+
+export const PaymentStatusLabels: Record<number, string> = {
+  1: 'Pendiente de pago',
+  2: 'Confirmado',
+  3: 'Cancelado',
+  4: 'Viajó',
+  5: 'No se presentó',
+  6: 'Reembolsado'
+}
+
 export interface PassengerReserve extends Auditable {
     PassengerId: number
     ReserveId: number
@@ -13,7 +31,7 @@ export interface PassengerReserve extends Auditable {
     PickupLocationId: number
     DropoffLocationId: number
     HasTraveled: boolean
-    Status: string
+    Status: number
     IsRoundTrip: boolean
     Payments: Payment[]
     PaidAmount: number

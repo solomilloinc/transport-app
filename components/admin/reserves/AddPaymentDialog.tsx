@@ -14,6 +14,7 @@ import { PlusCircleIcon, TrashIcon } from 'lucide-react';
 import { emptyPaymentCreate, PassengerPaymentCreate, Payment } from '@/interfaces/payment';
 import { validationConfigPayment } from '@/validations/paymentSchema';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
+import { getApiErrorCode } from '@/utils/api-errors';
 
 interface AddPaymentDialogProps {
   open: boolean;
@@ -63,10 +64,20 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   const handleAddPaymentToList = () => {
     // Basic validation before adding to the list
     if (Number(form.data.TransactionAmount) > 0 && form.data.PaymentMethod) {
+      const methodId = Number(form.data.PaymentMethod);
+      if (payments.some((p) => p.PaymentMethod === methodId)) {
+        toast({
+          title: 'Método duplicado',
+          description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setPayments([
         ...payments,
         {
-          PaymentMethod: Number(form.data.PaymentMethod),
+          PaymentMethod: methodId,
           TransactionAmount: Number(form.data.TransactionAmount),
         },
       ]);
@@ -90,11 +101,12 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       return;
     }
 
-    const remaining = getRemainingBalance();
-    if (remaining > 0) {
+    const totalNew = getCurrentAddedAmount();
+    const maxAllowed = getTotalReserveAmount() - getAlreadyPaidAmount();
+    if (totalNew > maxAllowed) {
       toast({
-        title: 'Monto insuficiente',
-        description: `El total de los pagos debe cubrir el saldo restante ($${remaining.toLocaleString()}).`,
+        title: 'Monto excedido',
+        description: 'El monto supera la deuda pendiente.',
         variant: 'destructive',
       });
       return;
@@ -116,7 +128,12 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
         toast({ title: 'Error', description: 'Error al crear el pago', variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Ocurrió un error al crear el pago', variant: 'destructive' });
+      const code = getApiErrorCode(error);
+      const msgs: Record<string, string> = {
+        'Reserve.AlreadyFullyPaid': 'Esta reserva ya esta completamente pagada.',
+        'Reserve.OverPaymentNotAllowed': 'El monto pagado supera la deuda pendiente.',
+      };
+      toast({ title: 'Error', description: msgs[code] || 'Error al crear el pago', variant: 'destructive' });
     } finally {
       form.setIsSubmitting(false);
     }
@@ -129,9 +146,9 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       title="Agregar pago"
       description={`Agrega pago de la reserva de ${passengerReserve?.FullName}`}
       onSubmit={handleSubmit}
-      submitText="Guardar Pagos"
+      submitText={payments.length > 0 && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}
       isLoading={form.isSubmitting}
-      disabled={getRemainingBalance() > 0}
+      disabled={payments.length === 0}
     >
       <div className="flex-1 overflow-y-auto py-4">
         <div className="space-y-6">

@@ -3,15 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  Search, 
-  Calendar as CalendarIcon, 
-  User as UserIcon, 
-  ArrowRight, 
-  Download, 
+import {
+  Search,
+  Calendar as CalendarIcon,
+  User as UserIcon,
+  ArrowRight,
+  Download,
   Wallet,
   ArrowUpRight,
-  ArrowDownLeft
+  ArrowDownLeft,
+  DollarSign
 } from 'lucide-react';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -32,6 +33,9 @@ import { CustomerAccountSummary, Transaction, TransactionTypeLabels, Transaction
 import { PaginationParams } from '@/services/types';
 import { usePaginationParams } from '@/utils/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DebtSettlementDialog } from '@/components/admin/reserves/DebtSettlementDialog';
+import { PaymentMethod } from '@/interfaces/payment';
+import { SelectOption } from '@/components/dashboard/select';
 
 export default function DebtsPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Passenger | null>(null);
@@ -44,6 +48,15 @@ export default function DebtsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const [isDebtSettlementOpen, setIsDebtSettlementOpen] = useState(false);
+
+  const paymentMethodOptions: SelectOption[] = Object.entries(PaymentMethod)
+    .filter(([, value]) => typeof value === 'number')
+    .map(([key, value]) => ({
+      id: value as number,
+      value: (value as number).toString(),
+      label: key,
+    }));
 
   // API Hooks
   const { data: searchResults, loading: searching, fetch: fetchSearch } = useApi<Passenger, PaginationParams>(getPassengers, { autoFetch: false });
@@ -58,10 +71,39 @@ export default function DebtsPage() {
     }
   });
 
-  const { data: summary, loading, fetch: fetchSummary } = useApi<Transaction, PaginationParams, CustomerAccountSummary>(
-    (p) => selectedCustomer ? getCustomerAccountSummary(selectedCustomer.CustomerId, p) : { call: Promise.resolve({ Transactions: { Items: [], TotalRecords: 0, TotalPages: 0, PageNumber: 1, PageSize: 10 } }) } as any,
+  const { data: rawSummary, loading, fetch: fetchSummary } = useApi<any, PaginationParams, any>(
+    (p) => selectedCustomer ? getCustomerAccountSummary(selectedCustomer.CustomerId, p) : { call: Promise.resolve(null) } as any,
     { autoFetch: false }
   );
+
+  const summary = useMemo((): CustomerAccountSummary | null => {
+    if (!rawSummary) return null;
+    // Unwrap { isSuccess, value } wrapper if present
+    const val = rawSummary?.isSuccess !== undefined ? rawSummary.value : rawSummary;
+    if (!val) return null;
+    const txns = val.transactions || val.Transactions;
+    if (!txns) return null;
+    const items = txns.items || txns.Items || [];
+    return {
+      CustomerId: val.customerId ?? val.CustomerId ?? 0,
+      CustomerFullName: val.customerFullName ?? val.CustomerFullName ?? '',
+      CurrentBalance: val.currentBalance ?? val.CurrentBalance ?? 0,
+      Transactions: {
+        Items: items.map((t: any) => ({
+          Id: t.id ?? t.Id,
+          CustomerId: t.customerId ?? t.CustomerId,
+          Description: t.description ?? t.Description ?? '',
+          TransactionType: t.transactionType ?? t.TransactionType ?? '',
+          Amount: t.amount ?? t.Amount ?? 0,
+          Date: t.date ?? t.Date ?? '',
+        })),
+        PageNumber: txns.pageNumber ?? txns.PageNumber ?? 1,
+        PageSize: txns.pageSize ?? txns.PageSize ?? 10,
+        TotalRecords: txns.totalRecords ?? txns.TotalRecords ?? 0,
+        TotalPages: txns.totalPages ?? txns.TotalPages ?? 0,
+      },
+    };
+  }, [rawSummary]);
 
   // Debounced passenger search
   useEffect(() => {
@@ -260,7 +302,18 @@ export default function DebtsPage() {
                 <h3 className="text-3xl font-bold">
                   $ {summary?.CurrentBalance?.toLocaleString() ?? 0}
                 </h3>
-                <p className="mt-2 text-xs text-blue-200">Total acumulado a la fecha</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs text-blue-200">Total acumulado a la fecha</p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!summary || (summary.CurrentBalance ?? 0) <= 0}
+                    onClick={() => setIsDebtSettlementOpen(true)}
+                  >
+                    <DollarSign className="mr-1 h-3.5 w-3.5" />
+                    Saldar Deuda
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -326,6 +379,16 @@ export default function DebtsPage() {
           </CardContent>
         </Card>
       )}
+
+      <DebtSettlementDialog
+        open={isDebtSettlementOpen}
+        onOpenChange={setIsDebtSettlementOpen}
+        customer={selectedCustomer}
+        paymentMethodOptions={paymentMethodOptions}
+        onSuccess={() => {
+          if (selectedCustomer) fetchSummary(params);
+        }}
+      />
     </div>
   );
 }

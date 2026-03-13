@@ -1,10 +1,10 @@
 'use client';
 
-import { ArrowUpDown, ChevronDown, ChevronUp, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronUp, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { PassengerReserveReport } from '@/interfaces/passengerReserve';
+import { PassengerReserveReport, PaymentStatusEnum, PaymentStatusLabels } from '@/interfaces/passengerReserve';
 
 export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
 type SortDirection = 'asc' | 'desc';
@@ -69,12 +69,12 @@ export function PassengerListTable({
                 Subida {renderSortIndicator('pickup')}
               </button>
             </th>
-            <th className="py-3 pr-4 text-center w-[6%]">
+            <th className="py-3 pr-4 text-center w-[10%]">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('paid')}
               >
-                Pagado {renderSortIndicator('paid')}
+                Estado Pago {renderSortIndicator('paid')}
               </button>
             </th>
             <th className="py-3 pr-4 w-[22%] text-center">
@@ -114,11 +114,11 @@ export function PassengerListTable({
                     </label>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>DNI: {passenger.DocumentNumber}</span>
-                      {passenger.DocumentNumber && (passenger.CurrentBalance) !== null && (
-                        <span className={(passenger.CurrentBalance)! < 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
-                          {(passenger.CurrentBalance)! < 0
-                            ? `Debe $${Math.abs((passenger.CurrentBalance)!).toLocaleString()}`
-                            : `A favor $${(passenger.CurrentBalance)!.toLocaleString()}`}
+                      {passenger.DocumentNumber && (passenger.CurrentBalance) !== null && passenger.CurrentBalance !== 0 && (
+                        <span className={(passenger.CurrentBalance) > 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
+                          {(passenger.CurrentBalance) > 0
+                            ? `Debe $${passenger.CurrentBalance.toLocaleString()}`
+                            : `A favor $${Math.abs(passenger.CurrentBalance).toLocaleString()}`}
                         </span>
                       )}
                     </div>
@@ -130,14 +130,35 @@ export function PassengerListTable({
                 {passenger.PickupLocationName}
               </td>
               <td className="py-3 pr-4 text-center">
-                <Checkbox
-                  id={`paid-${passenger.PassengerId}`}
-                  checked={passenger.IsPayment}
-                  className="mx-auto"
-                  onCheckedChange={(checked) => {
-                    if (checked) onAddPayment(passenger);
-                  }}
-                />
+                {(() => {
+                  const status = passenger.Status ?? passenger.StatusPaymentId;
+                  const label = PaymentStatusLabels[status] || 'Desconocido';
+                  let badgeClass = 'bg-gray-100 text-gray-700';
+                  if (status === PaymentStatusEnum.PendingPayment) badgeClass = 'bg-yellow-100 text-yellow-800';
+                  else if (status === PaymentStatusEnum.Confirmed) badgeClass = 'bg-green-100 text-green-700';
+                  else if (status === PaymentStatusEnum.Cancelled) badgeClass = 'bg-red-100 text-red-700';
+                  else if (status === PaymentStatusEnum.Traveled) badgeClass = 'bg-blue-100 text-blue-700';
+                  else if (status === PaymentStatusEnum.NoShow) badgeClass = 'bg-gray-200 text-gray-600';
+                  else if (status === PaymentStatusEnum.Refunded) badgeClass = 'bg-purple-100 text-purple-700';
+                  return (
+                    <div className="flex items-center justify-center gap-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
+                        {label}
+                      </span>
+                      {status === PaymentStatusEnum.PendingPayment && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-yellow-600 hover:bg-yellow-50"
+                          onClick={() => onAddPayment(passenger)}
+                          title="Agregar pago"
+                        >
+                          <DollarSign className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
               </td>
               <td className="py-3 pr-4 text-center">{passenger.PaymentMethods}</td>
               <td className="py-3 pr-4 text-center font-medium">

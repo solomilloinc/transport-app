@@ -10,7 +10,25 @@
       "Bash(ls C:/Users/x/Desktop/transport-app/app/admin/trips/\\\\[id\\\\]/)",
       "Bash(cd C:/Users/x/Desktop/transport-app && node ./node_modules/.bin/tsc --noEmit 2>&1 | head -60)",
       "Bash(which node:*)",
-      "Bash(cmd //c \"where node\" 2>&1)"
+      "Bash(cmd //c \"where node\" 2>&1)",
+      "Bash(find /c/Users/x/Desktop/transport-app/app -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) 2>/dev/null | head -30)",
+      "Bash(find /c/Users/x/Desktop/transport-app -path ./node_modules -prune -o -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -print 2>/dev/null | grep -E \"\\(component|hook|service|interface|util\\)\" | head -40)",
+      "Bash(find /c/Users/x/Desktop/transport-app -maxdepth 1 -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.json\" -o -name \"*.mjs\" \\\\\\) | xargs ls -lh)",
+      "Bash(find /c/Users/x/Desktop/transport-app -path \"./node_modules\" -prune -o -name \"*checkout*\" -o -name \"*context*\" -type f 2>/dev/null | grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(find /c/Users/x/Desktop/transport-app -path \"./node_modules\" -prune -o -name \"*result*\" -o -name \"*hero*\" -type f -print 2>/dev/null | grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(find /c/Users/x/Desktop/transport-app/components -name \"*wallet*\" -o -name \"*payment*\" 2>/dev/null | grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(grep -r \"POST\\\\|GET\\\\|PUT\\\\|DELETE\" /c/Users/x/Desktop/transport-app/services/*.ts 2>/dev/null | grep -E \"\\(post|get|put|delete\\).*\\\\\\(\" | head -40)",
+      "Bash(cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && npx next build 2>&1 | tail -40)",
+      "Bash(cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && node_modules/.bin/next build 2>&1 | tail -50)",
+      "Bash(where node:*)",
+      "Bash(cmd.exe /c \"where node\" 2>&1)",
+      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && node node_modules/.bin/next build 2>&1 | tail -60)",
+      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && node node_modules/.bin/next build 2>&1)",
+      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && node ./node_modules/next/dist/bin/next build 2>&1)",
+      "Bash(git log:*)",
+      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && rm -rf .next && node ./node_modules/next/dist/bin/next build 2>&1)",
+      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && rm -rf .next/cache && node ./node_modules/next/dist/bin/next build 2>&1)",
+      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && node -e \"\nconst { execSync } = require\\('child_process'\\);\ntry {\n  execSync\\('node ./node_modules/next/dist/bin/next build', { \n    timeout: 30000,\n    stdio: 'pipe',\n    env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }\n  }\\);\n} catch\\(e\\) {\n  const out = \\(e.stdout || ''\\).toString\\(\\) + \\(e.stderr || ''\\).toString\\(\\);\n  if \\(out.includes\\('Compiled successfully'\\)\\) {\n    console.log\\('COMPILATION OK'\\);\n  } else {\n    console.log\\(out.slice\\(0, 2000\\)\\);\n  }\n}\n\" 2>&1)"
     ]
   }
 }
