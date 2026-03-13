@@ -71,10 +71,39 @@ export default function DebtsPage() {
     }
   });
 
-  const { data: summary, loading, fetch: fetchSummary } = useApi<Transaction, PaginationParams, CustomerAccountSummary>(
-    (p) => selectedCustomer ? getCustomerAccountSummary(selectedCustomer.CustomerId, p) : { call: Promise.resolve({ Transactions: { Items: [], TotalRecords: 0, TotalPages: 0, PageNumber: 1, PageSize: 10 } }) } as any,
+  const { data: rawSummary, loading, fetch: fetchSummary } = useApi<any, PaginationParams, any>(
+    (p) => selectedCustomer ? getCustomerAccountSummary(selectedCustomer.CustomerId, p) : { call: Promise.resolve(null) } as any,
     { autoFetch: false }
   );
+
+  const summary = useMemo((): CustomerAccountSummary | null => {
+    if (!rawSummary) return null;
+    // Unwrap { isSuccess, value } wrapper if present
+    const val = rawSummary?.isSuccess !== undefined ? rawSummary.value : rawSummary;
+    if (!val) return null;
+    const txns = val.transactions || val.Transactions;
+    if (!txns) return null;
+    const items = txns.items || txns.Items || [];
+    return {
+      CustomerId: val.customerId ?? val.CustomerId ?? 0,
+      CustomerFullName: val.customerFullName ?? val.CustomerFullName ?? '',
+      CurrentBalance: val.currentBalance ?? val.CurrentBalance ?? 0,
+      Transactions: {
+        Items: items.map((t: any) => ({
+          Id: t.id ?? t.Id,
+          CustomerId: t.customerId ?? t.CustomerId,
+          Description: t.description ?? t.Description ?? '',
+          TransactionType: t.transactionType ?? t.TransactionType ?? '',
+          Amount: t.amount ?? t.Amount ?? 0,
+          Date: t.date ?? t.Date ?? '',
+        })),
+        PageNumber: txns.pageNumber ?? txns.PageNumber ?? 1,
+        PageSize: txns.pageSize ?? txns.PageSize ?? 10,
+        TotalRecords: txns.totalRecords ?? txns.TotalRecords ?? 0,
+        TotalPages: txns.totalPages ?? txns.TotalPages ?? 0,
+      },
+    };
+  }, [rawSummary]);
 
   // Debounced passenger search
   useEffect(() => {
