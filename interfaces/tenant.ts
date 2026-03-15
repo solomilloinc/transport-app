@@ -133,6 +133,8 @@ export interface TenantSeo {
 }
 
 export interface TenantConfig {
+  code: string;
+  publicKey: string | null;
   identity: TenantIdentity;
   theme: TenantTheme;
   typography: TenantTypography;

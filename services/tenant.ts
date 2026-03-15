@@ -1,26 +1,19 @@
 'use server';
 
 import { TenantConfig } from '@/interfaces/tenant';
-import { getTenantHeaders } from '@/services/tenant-headers';
+import { resolveTenant } from '@/services/tenant-headers';
 
 /**
- * Fetches tenant configuration from the backend API.
- * Returns null if the API is unavailable or the tenant cannot be resolved.
+ * Gets the full tenant configuration for the current host.
+ * Uses the cached resolve response (single API call per host).
  */
 export async function getTenantConfig(host?: string): Promise<TenantConfig | null> {
-  try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:7215/api';
-    const tenantHeaders = await getTenantHeaders(host);
+  const resolved = await resolveTenant(host);
+  if (!resolved) return null;
 
-    const response = await fetch(`${backendUrl}/tenant/config`, {
-      next: { revalidate: 3600 },
-      headers: tenantHeaders,
-    });
-
-    if (!response.ok) return null;
-
-    return await response.json() as TenantConfig;
-  } catch {
-    return null;
-  }
+  return {
+    code: resolved.code,
+    publicKey: resolved.publicKey,
+    ...resolved.config,
+  };
 }

@@ -1,32 +1,34 @@
+import { TenantConfig } from '@/interfaces/tenant';
+
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:7215/api';
 
-// In-memory cache: host → tenant code
-const tenantCodeCache = new Map<string, string>();
+/** Shape returned by GET /tenant/resolve?host={host} */
+interface TenantResolveResponse {
+  code: string;
+  publicKey: string | null;
+  config: Omit<TenantConfig, 'code' | 'publicKey'>;
+}
+
+// In-memory cache: host → full resolved tenant
+const tenantCache = new Map<string, TenantResolveResponse>();
 
 /**
- * Resolves a hostname to a tenant code.
- * - localhost/127.0.0.1: uses TENANT_SLUG env var (dev convenience)
- * - Any other host: calls GET /tenant/resolve?host={host} and caches the result
+ * Resolves a hostname to the full tenant payload via GET /tenant/resolve?host={host}.
+ * The API matches by the Domain column in the Tenant table.
+ * Called once per host, then cached in-memory.
  */
-export async function resolveTenantCode(host?: string): Promise<string | null> {
-  const isLocalDev = !host || host.startsWith('localhost') || host.startsWith('127.0.0.1');
-
-  if (isLocalDev) {
-    return process.env.TENANT_SLUG || null;
-  }
-
-  if (tenantCodeCache.has(host)) {
-    return tenantCodeCache.get(host)!;
-  }
+export async function resolveTenant(host?: string): Promise<TenantResolveResponse | null> {
+  if (!host) return null;
+  if (tenantCache.has(host)) return tenantCache.get(host)!;
 
   try {
     const res = await fetch(`${BACKEND_URL}/tenant/resolve?host=${encodeURIComponent(host)}`);
     if (!res.ok) return null;
-    const data = await res.json();
-    const code = data.code || data.Code;
-    if (code) {
-      tenantCodeCache.set(host, code);
-      return code;
+
+    const data: TenantResolveResponse = await res.json();
+    if (data.code) {
+      tenantCache.set(host, data);
+      return data;
     }
     return null;
   } catch {
@@ -39,7 +41,7 @@ export async function resolveTenantCode(host?: string): Promise<string | null> {
  * Returns { X-Tenant-Code: <code> } or {} if resolution fails.
  */
 export async function getTenantHeaders(host?: string): Promise<Record<string, string>> {
-  const code = await resolveTenantCode(host);
-  if (!code) return {};
-  return { 'X-Tenant-Code': code };
+  const tenant = await resolveTenant(host);
+  if (!tenant) return {};
+  return { 'X-Tenant-Code': tenant.code };
 }
