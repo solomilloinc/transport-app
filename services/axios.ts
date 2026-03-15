@@ -2,7 +2,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { nextAuthOptions } from '@/auth.config';
 import { getServerSession } from 'next-auth';
-import { cookies } from 'next/headers';
+import { cookies, headers as nextHeaders } from 'next/headers';
+import { getTenantHeaders } from '@/services/tenant-headers';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://api.midominio.com';
 
@@ -72,7 +73,18 @@ export async function getServerAxios(options?: { skipAuth?: boolean }) {
   // Variable para almacenar el token actual (puede actualizarse si se renueva)
   let currentToken = session?.accessToken || null;
 
-  // Interceptor de request: agregar Authorization header (solo si no es público)
+  // Resolver tenant headers desde el host propagado por el middleware de Next.js
+  let tenantHeaders: Record<string, string> = {};
+  try {
+    const headerStore = await nextHeaders();
+    const tenantHost = headerStore.get('x-tenant-host') || undefined;
+    tenantHeaders = await getTenantHeaders(tenantHost);
+  } catch {
+    // headers() not available (e.g. outside of request context) — fall back to env
+    tenantHeaders = await getTenantHeaders();
+  }
+
+  // Interceptor de request: agregar Authorization y tenant headers
   instance.interceptors.request.use((config) => {
     if (!isPublicRequest && currentToken) {
       config.headers.Authorization = `Bearer ${currentToken}`;
@@ -80,6 +92,10 @@ export async function getServerAxios(options?: { skipAuth?: boolean }) {
     // Agregar cookies al request (solo si no es público)
     if (!isPublicRequest && cookieHeader) {
       config.headers.Cookie = cookieHeader;
+    }
+    // Agregar tenant resolution headers a todas las requests
+    for (const [key, value] of Object.entries(tenantHeaders)) {
+      config.headers[key] = value;
     }
     return config;
   });

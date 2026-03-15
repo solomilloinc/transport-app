@@ -28,7 +28,17 @@
       "Bash(git log:*)",
       "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && rm -rf .next && node ./node_modules/next/dist/bin/next build 2>&1)",
       "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && rm -rf .next/cache && node ./node_modules/next/dist/bin/next build 2>&1)",
-      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && node -e \"\nconst { execSync } = require\\('child_process'\\);\ntry {\n  execSync\\('node ./node_modules/next/dist/bin/next build', { \n    timeout: 30000,\n    stdio: 'pipe',\n    env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }\n  }\\);\n} catch\\(e\\) {\n  const out = \\(e.stdout || ''\\).toString\\(\\) + \\(e.stderr || ''\\).toString\\(\\);\n  if \\(out.includes\\('Compiled successfully'\\)\\) {\n    console.log\\('COMPILATION OK'\\);\n  } else {\n    console.log\\(out.slice\\(0, 2000\\)\\);\n  }\n}\n\" 2>&1)"
+      "Bash(export PATH=\"/c/Users/x/AppData/Roaming/nvm/v22.19.0:$PATH\" && cd \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\" && node -e \"\nconst { execSync } = require\\('child_process'\\);\ntry {\n  execSync\\('node ./node_modules/next/dist/bin/next build', { \n    timeout: 30000,\n    stdio: 'pipe',\n    env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' }\n  }\\);\n} catch\\(e\\) {\n  const out = \\(e.stdout || ''\\).toString\\(\\) + \\(e.stderr || ''\\).toString\\(\\);\n  if \\(out.includes\\('Compiled successfully'\\)\\) {\n    console.log\\('COMPILATION OK'\\);\n  } else {\n    console.log\\(out.slice\\(0, 2000\\)\\);\n  }\n}\n\" 2>&1)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(node_modules/.bin/tsc --noEmit 2>&1 | head -60)",
+      "Read(//c/Program Files/nodejs/**)",
+      "Read(//c/Users/x/AppData/Roaming/nvm/**)",
+      "Bash(PATH=\"$PATH:/c/Users/x/AppData/Roaming/nvm/v22.19.0\" && cd C:/Users/x/Desktop/transport-app && node node_modules/.bin/tsc --noEmit 2>&1 | head -80)",
+      "Bash(export:*)",
+      "Bash(npx next:*)",
+      "Bash(node_modules/.bin/next build:*)"
     ]
   }
 }

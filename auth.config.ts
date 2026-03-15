@@ -2,7 +2,8 @@ import { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { jwtDecode } from 'jwt-decode'
-import { cookies } from 'next/headers'
+import { cookies, headers as nextHeaders } from 'next/headers'
+import { getTenantHeaders } from '@/services/tenant-headers'
 
 // Tipado de respuesta de tu API
 interface LoginResponse {
@@ -36,7 +37,7 @@ const REFRESH_THRESHOLD_SECONDS = 5 * 60;
 /**
  * Intenta renovar el accessToken usando el refreshToken de las cookies
  */
-async function refreshAccessToken(cookieHeader: string): Promise<{ token: string; exp: number } | null> {
+async function refreshAccessToken(cookieHeader: string, tenantHost?: string): Promise<{ token: string; exp: number } | null> {
   try {
     const response = await fetch(`${process.env.BACKEND_URL}/renew-token`, {
       method: 'POST',
@@ -44,6 +45,7 @@ async function refreshAccessToken(cookieHeader: string): Promise<{ token: string
       headers: {
         'Content-Type': 'application/json',
         'Cookie': cookieHeader,
+        ...(await getTenantHeaders(tenantHost)),
       },
     });
 
@@ -74,11 +76,16 @@ export const nextAuthOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
+        // Resolve tenant from the request host (x-tenant-host set by Next.js middleware)
+        const reqHeaders = req?.headers as Record<string, string> | undefined;
+        const host = reqHeaders?.['x-tenant-host'] || reqHeaders?.host || undefined;
+        const tenantH = await getTenantHeaders(host);
+
         const res = await fetch(`${process.env.BACKEND_URL}/login`, {
           method: "POST",
-          credentials: 'include', // Necesario para recibir la cookie HttpOnly del refreshToken
-          headers: { "Content-Type": "application/json" },
+          credentials: 'include',
+          headers: { "Content-Type": "application/json", ...tenantH },
           body: JSON.stringify({
             email: credentials?.email,
             password: credentials?.password,
@@ -140,13 +147,19 @@ export const nextAuthOptions: NextAuthOptions = {
 
       if (shouldRefresh && token.accessToken) {
         try {
-          // Obtener las cookies del request actual
+          // Obtener las cookies y headers del request actual
           const cookieStore = await cookies();
           const allCookies = cookieStore.getAll();
           const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
+          let tenantHost: string | undefined;
+          try {
+            const headerStore = await nextHeaders();
+            tenantHost = headerStore.get('x-tenant-host') || undefined;
+          } catch { /* headers not available */ }
+
           if (cookieHeader) {
-            const refreshed = await refreshAccessToken(cookieHeader);
+            const refreshed = await refreshAccessToken(cookieHeader, tenantHost);
             if (refreshed) {
               token.accessToken = refreshed.token;
               token.accessTokenExpires = refreshed.exp * 1000;

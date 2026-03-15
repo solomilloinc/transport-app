@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { TripSelectOption } from '@/app/page';
 import { MapPin } from 'lucide-react';
+import { useTenant } from '@/contexts/TenantContext';
 
 export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const router = useRouter();
@@ -96,26 +97,28 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
     router.push(`/results?${params.toString()}`);
   };
 
+  const { landing, images } = useTenant();
+
   return (
     <section className="relative">
       <div className="absolute inset-0 z-0">
-        <Image src="/background.jpg" alt="Autobús en una ruta pintoresca al atardecer" fill className="object-cover brightness-[0.7]" priority />
+        <Image src={images.heroBackground || '/background.jpg'} alt="Hero background" fill className="object-cover brightness-[0.7]" priority />
       </div>
 
       <div className="container relative z-10 py-10 md:py-16 lg:py-20">
         <div className="grid md:grid-cols-2 gap-8 items-center">
           {/* Left side - Hero text */}
           <div className="text-white">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl font-display">Viajes Seguros con un Toque Familiar</h1>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl font-display">{landing.hero.title}</h1>
             <p className="mt-4 text-lg md:text-xl">
-              Brindando transporte de corta distancia confiable y cómodo por más de 25 años. Donde cada pasajero es tratado como familia.
+              {landing.hero.subtitle}
             </p>
             <div className="mt-6 flex flex-wrap gap-4">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                Reservá tu Viaje
+                {landing.hero.ctaPrimary}
               </Button>
               <Button size="lg" variant="outline" className="bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm">
-                Conocé Más
+                {landing.hero.ctaSecondary}
               </Button>
             </div>
           </div>
