@@ -155,7 +155,7 @@ export const nextAuthOptions: NextAuthOptions = {
           let tenantHost: string | undefined;
           try {
             const headerStore = await nextHeaders();
-            tenantHost = headerStore.get('x-tenant-host') || undefined;
+            tenantHost = headerStore.get('x-tenant-host') || headerStore.get('host') || undefined;
           } catch { /* headers not available */ }
 
           if (cookieHeader) {
