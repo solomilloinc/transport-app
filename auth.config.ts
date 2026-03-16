@@ -2,8 +2,9 @@ import { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { jwtDecode } from 'jwt-decode'
-import { cookies, headers as nextHeaders } from 'next/headers'
+import { cookies } from 'next/headers'
 import { getTenantHeaders } from '@/services/tenant-headers'
+import { getRequestHost } from '@/lib/get-host'
 
 // Tipado de respuesta de tu API
 interface LoginResponse {
@@ -154,8 +155,7 @@ export const nextAuthOptions: NextAuthOptions = {
 
           let tenantHost: string | undefined;
           try {
-            const headerStore = await nextHeaders();
-            tenantHost = headerStore.get('host') || undefined;
+            tenantHost = await getRequestHost();
           } catch { /* headers not available */ }
 
           if (cookieHeader) {

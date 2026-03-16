@@ -38,7 +38,11 @@
       "Bash(PATH=\"$PATH:/c/Users/x/AppData/Roaming/nvm/v22.19.0\" && cd C:/Users/x/Desktop/transport-app && node node_modules/.bin/tsc --noEmit 2>&1 | head -80)",
       "Bash(export:*)",
       "Bash(npx next:*)",
-      "Bash(node_modules/.bin/next build:*)"
+      "Bash(node_modules/.bin/next build:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(node_modules/.bin/tsc --noEmit 2>&1 | head -30)",
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit 2>&1 | head -30)"
     ]
   }
 }
