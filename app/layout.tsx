@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import './globals.css';
 import { Geist } from 'next/font/google';
 import { Toaster } from '@/components/ui/toaster';
@@ -10,6 +9,7 @@ import { CheckoutProvider } from '@/contexts/CheckoutContext';
 import { TenantProvider } from '@/contexts/TenantContext';
 import { TenantStyles } from '@/components/tenant-styles';
 import { getTenantConfig } from '@/services/tenant';
+import { getRequestHost } from '@/lib/get-host';
 
 const geist = Geist({
   subsets: ['latin'],
@@ -17,13 +17,8 @@ const geist = Geist({
   variable: '--font-sans',
 });
 
-async function getTenantHost(): Promise<string | undefined> {
-  const headerStore = await headers();
-  return headerStore.get('host') || undefined;
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const host = await getTenantHost();
+  const host = await getRequestHost();
   const tenant = await getTenantConfig(host);
   if (!tenant) {
     return { title: 'Error - Tenant no disponible' };
@@ -40,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const host = await getTenantHost();
+  const host = await getRequestHost();
   const tenantConfig = await getTenantConfig(host);
 
   if (!tenantConfig) {

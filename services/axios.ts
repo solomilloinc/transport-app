@@ -2,8 +2,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { nextAuthOptions } from '@/auth.config';
 import { getServerSession } from 'next-auth';
-import { cookies, headers as nextHeaders } from 'next/headers';
+import { cookies } from 'next/headers';
 import { getTenantHeaders } from '@/services/tenant-headers';
+import { getRequestHost } from '@/lib/get-host';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://api.midominio.com';
 
@@ -76,8 +77,7 @@ export async function getServerAxios(options?: { skipAuth?: boolean }) {
   // Resolver tenant headers desde el host del request
   let tenantHeaders: Record<string, string> = {};
   try {
-    const headerStore = await nextHeaders();
-    const tenantHost = headerStore.get('host') || undefined;
+    const tenantHost = await getRequestHost();
     tenantHeaders = await getTenantHeaders(tenantHost);
   } catch {
     tenantHeaders = await getTenantHeaders();
