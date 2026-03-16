@@ -78,9 +78,9 @@ export const nextAuthOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        // Resolve tenant from the request host
+        // Resolve tenant from the real public host (Azure SWA replaces `host` with internal hostname)
         const reqHeaders = req?.headers as Record<string, string> | undefined;
-        const host = reqHeaders?.host || undefined;
+        const host = await getRequestHost() || reqHeaders?.host || undefined;
         const tenantH = await getTenantHeaders(host);
 
         const res = await fetch(`${process.env.BACKEND_URL}/login`, {
