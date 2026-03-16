@@ -77,9 +77,9 @@ export const nextAuthOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        // Resolve tenant from the request host (x-tenant-host set by Next.js middleware)
+        // Resolve tenant from the request host
         const reqHeaders = req?.headers as Record<string, string> | undefined;
-        const host = reqHeaders?.['x-tenant-host'] || reqHeaders?.host || undefined;
+        const host = reqHeaders?.host || undefined;
         const tenantH = await getTenantHeaders(host);
 
         const res = await fetch(`${process.env.BACKEND_URL}/login`, {
@@ -155,7 +155,7 @@ export const nextAuthOptions: NextAuthOptions = {
           let tenantHost: string | undefined;
           try {
             const headerStore = await nextHeaders();
-            tenantHost = headerStore.get('x-tenant-host') || headerStore.get('host') || undefined;
+            tenantHost = headerStore.get('host') || undefined;
           } catch { /* headers not available */ }
 
           if (cookieHeader) {
