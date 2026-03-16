@@ -19,7 +19,7 @@ const geist = Geist({
 
 async function getTenantHost(): Promise<string | undefined> {
   const headerStore = await headers();
-  return headerStore.get('x-tenant-host') || undefined;
+  return headerStore.get('x-tenant-host') || headerStore.get('host') || undefined;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
