@@ -73,14 +73,13 @@ export async function getServerAxios(options?: { skipAuth?: boolean }) {
   // Variable para almacenar el token actual (puede actualizarse si se renueva)
   let currentToken = session?.accessToken || null;
 
-  // Resolver tenant headers desde el host propagado por el middleware de Next.js
+  // Resolver tenant headers desde el host del request
   let tenantHeaders: Record<string, string> = {};
   try {
     const headerStore = await nextHeaders();
     const tenantHost = headerStore.get('host') || undefined;
     tenantHeaders = await getTenantHeaders(tenantHost);
   } catch {
-    // headers() not available (e.g. outside of request context) — fall back to env
     tenantHeaders = await getTenantHeaders();
   }
 
