@@ -45,6 +45,8 @@ import { Suspense, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { signOut, useSession } from 'next-auth/react';
 import { logoutFromBackend } from '@/services/auth-client';
+import { useTenant } from '@/contexts/TenantContext';
+import Image from 'next/image';
 
 // Tipo para items del menú
 interface MenuItemType {
@@ -243,6 +245,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { data: session } = useSession();
+  const { identity } = useTenant();
   
   const userRole = (session?.user as any)?.[
     'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
@@ -306,11 +309,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <SidebarHeader className="border-b border-sidebar-border">
             <div className="flex items-center gap-3 px-4 py-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25">
-                <Bus className="h-5 w-5 text-white" />
+                {identity.logoUrl ? (
+                  <Image src={identity.logoUrl} alt={identity.companyName} width={20} height={20} className="h-5 w-5" />
+                ) : (
+                  <Bus className="h-5 w-5 text-white" />
+                )}
               </div>
               <div className="flex flex-col">
                 <Link href="/" className="font-bold text-lg text-foreground hover:text-blue-600 transition-colors">
-                  ZerosTour
+                  {identity.companyNameShort}
                 </Link>
                 <span className="text-xs text-muted-foreground">
                   {isCustomerView ? 'Portal Cliente' : 'Panel Admin'}

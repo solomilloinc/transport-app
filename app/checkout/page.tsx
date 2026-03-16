@@ -20,10 +20,12 @@ import WalletPaymentForm from '@/components/wallet-payment-form';
 import { post } from '@/services/api';
 import { CreateReserveExternalResult } from '@/interfaces/reserve';
 import { LocationSelector, LocationSelectionData } from '@/components/checkout/LocationSelector';
+import { useTenant } from '@/contexts/TenantContext';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { checkout, setLockState, isLockValid, clearCheckout } = useCheckout();
+  const { identity, legal } = useTenant();
 
   // If there's no outbound trip, there's nothing to check out. Redirect to home.
   useEffect(() => {
@@ -549,12 +551,10 @@ export default function CheckoutPage() {
                       <div className="bg-yellow-50 p-4 rounded-lg text-sm">
                         <h3 className="font-medium text-yellow-800 mb-2">Términos y Condiciones</h3>
                         <p className="text-yellow-700 mb-2">
-                          Al completar esta reserva, usted acepta los términos y condiciones de Zeros Tour, incluida
-                          nuestra política de cancelación.
+                          {legal.termsText.replace('los términos y condiciones', `los términos y condiciones de ${identity.companyName}`)}
                         </p>
                         <p className="text-yellow-700">
-                          Cancelación gratuita hasta 24 horas antes de la salida. Se aplica una tarifa del 50% para
-                          cancelaciones realizadas con menos de 24 horas de antelación.
+                          {legal.cancellationPolicy}
                         </p>
                       </div>
                       {/* Resumen de Precio - SOLO MOBILE */}

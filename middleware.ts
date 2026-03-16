@@ -35,12 +35,25 @@ const publicRoutes = ["/", "/login", "/register", "/unauthorized", "/api/auth"]
 // Rutas especiales que requieren autenticación pero tienen lógica de redirección propia
 const redirectRoutes = ["/admin"]
 
+/**
+ * Creates a NextResponse.next() with the x-tenant-host header forwarded
+ * to downstream server components via the request headers.
+ */
+function nextWithTenantHost(request: NextRequest): NextResponse {
+  const host = request.headers.get('host') || '';
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-tenant-host', host);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
+
   // Verificar si la ruta es pública
   if (publicRoutes.includes(pathname)) {
-    return NextResponse.next()
+    return nextWithTenantHost(request)
   }
 
   // Verificar si es una ruta de redirección que necesita autenticación básica
@@ -57,7 +70,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Si hay token, permitir que la página maneje la redirección
-    return NextResponse.next()
+    return nextWithTenantHost(request)
   }
 
   // Verificar si la ruta está en nuestras configuraciones
@@ -67,7 +80,7 @@ export async function middleware(request: NextRequest) {
 
   if (!matchingRoute) {
     // Si la ruta no está en nuestras configuraciones, permitir el acceso
-    return NextResponse.next()
+    return nextWithTenantHost(request)
   }
 
   // Obtener el token de sesión
@@ -84,12 +97,12 @@ export async function middleware(request: NextRequest) {
   }
   // Intentar obtener el rol de diferentes lugares del token
   let userRole: Role | null = null;
-  
+
   // Primero intentar desde token.user.role (NextAuth estándar)
   if (token.user && typeof token.user === 'object' && 'role' in token.user) {
     userRole = (token.user.role as string).toLowerCase() as Role;
   }
-  
+
   // Si no está ahí, intentar desde el claim de Microsoft
   if (!userRole && token.user && typeof token.user === 'object') {
     const msRole = (token.user as Record<string, unknown>)["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
@@ -97,9 +110,9 @@ export async function middleware(request: NextRequest) {
       userRole = msRole.toLowerCase() as Role;
     }
   }
-  
+
   console.log('User role:', userRole, 'Required roles:', routeConfigs[matchingRoute].roles);
-  
+
   if (!userRole || !routeConfigs[matchingRoute].roles.includes(userRole)) {
     // Si el usuario no tiene el rol adecuado, redirigir a la página no autorizada
     const redirectTo = routeConfigs[matchingRoute].redirectTo || "/unauthorized"
@@ -107,7 +120,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Si todo está bien, permitir el acceso
-  return NextResponse.next()
+  return nextWithTenantHost(request)
 }
 
 // Configurar en qué rutas se ejecutará el middleware

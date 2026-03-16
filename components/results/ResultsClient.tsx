@@ -15,6 +15,7 @@ import { PagedReserveResponse } from '@/services/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { useCheckout } from '@/contexts/CheckoutContext';
+import { useTenant } from '@/contexts/TenantContext';
 
 // 1. Definimos las props que el componente de cliente recibirá del Server Component.
 interface ResultsClientProps {
@@ -35,6 +36,7 @@ interface ResultsClientProps {
 export default function ResultsClient({ initialReserves, searchParams }: ResultsClientProps) {
   const router = useRouter();
   const searchParamsHook = useSearchParams();
+  const { contact, legal } = useTenant();
   const [reserves, setReserves] = useState<PagedReserveResponse<ReserveSummaryItem>>(initialReserves);
   const [loading, setLoading] = useState(false);
 
@@ -295,7 +297,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                 Política de Cancelación
               </h3>
               <p className="text-sm text-gray-600">
-                Cancelación gratuita hasta 24 horas antes de la salida. Se aplica una tarifa del 50% para cancelaciones realizadas con menos de 24 horas de antelación.
+                {legal.cancellationPolicy}
               </p>
             </div>
           </div>
@@ -303,8 +305,8 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
         <CardFooter className="bg-gray-50 px-6 py-4 border-t">
           <div className="text-sm text-gray-600">
             ¿Necesitas ayuda? Llámanos al{" "}
-            <span className="font-medium">(555) 123-4567</span> o envíanos un correo electrónico a{" "}
-            <span className="font-medium">bookings@familytransit.com</span>
+            <span className="font-medium">{contact.phone}</span> o envíanos un correo electrónico a{" "}
+            <span className="font-medium">{contact.bookingsEmail}</span>
           </div>
         </CardFooter>
       </Card>

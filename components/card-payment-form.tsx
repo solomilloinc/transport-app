@@ -8,6 +8,7 @@ import type {
 } from '@mercadopago/sdk-react/bricks/cardPayment/type';
 import { Button } from '@/components/ui/button';
 import { CreditCard, Loader2 } from 'lucide-react';
+import { useTenant } from '@/contexts/TenantContext';
 
 type Props = {
   amount: number;
@@ -35,6 +36,7 @@ export default function CardPaymentForm({
   defaultEmail,
   isSubmitting = false,
 }: Props) {
+  const { publicKey } = useTenant();
   const [mpReady, setMpReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -45,18 +47,15 @@ export default function CardPaymentForm({
   );
 
   useEffect(() => {
-    const key =
-      process.env.NEXT_PUBLIC_MP_PUBLIC_KEY
-
-    if (!key) {
+    if (!publicKey) {
       if (process.env.NODE_ENV !== 'production') {
-        console.warn('[MP] Falta NEXT_PUBLIC_MP_PUBLIC_KEY en .env.local');
+        console.warn('[MP] Falta publicKey en la configuración del tenant');
       }
       return;
     }
-    initMercadoPago(key, { locale: 'es-AR' });
+    initMercadoPago(publicKey, { locale: 'es-AR' });
     setMpReady(true);
-  }, []);
+  }, [publicKey]);
 
   const handleSubmit = async (data: ICardPaymentFormData<ICardPaymentBrickPayer>) => {
     setIsProcessing(true);

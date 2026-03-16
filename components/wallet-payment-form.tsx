@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useCallback } from 'react';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface WalletPaymentFormProps {
   amount: number;
@@ -36,13 +37,14 @@ const debugLog = (...args: unknown[]) => {
   }
 };
 
-function WalletPaymentForm({ 
+function WalletPaymentForm({
   amount,
   onSubmit,
-  onError, 
+  onError,
   onReady,
-  disabled = false 
+  disabled = false
 }: WalletPaymentFormProps) {
+  const { publicKey: mpPublicKey } = useTenant();
   // Usar useRef para el ID del contenedor (estable entre renders)
   const containerIdRef = useRef(`walletBrick_${Math.random().toString(36).substr(2, 9)}`);
   const containerId = containerIdRef.current;
@@ -79,7 +81,7 @@ function WalletPaymentForm({
     }
 
     // Verificar public key
-    if (!process.env.NEXT_PUBLIC_MP_PUBLIC_KEY) {
+    if (!mpPublicKey) {
       setError('Clave pública de MercadoPago no configurada');
       setLoading(false);
       return;
@@ -90,8 +92,8 @@ function WalletPaymentForm({
     debugLog('Initializing wallet brick in:', containerId);
 
     try {
-      const mp = new (window as any).MercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY, { 
-        locale: 'es-AR' 
+      const mp = new (window as any).MercadoPago(mpPublicKey, {
+        locale: 'es-AR'
       });
       const bricksBuilder = mp.bricks();
 
@@ -142,7 +144,7 @@ function WalletPaymentForm({
       setLoading(false);
       onError?.(err);
     }
-  }, [containerId, onSubmit, onError, onReady]);
+  }, [containerId, mpPublicKey, onSubmit, onError, onReady]);
 
   useEffect(() => {
     // No hacer nada si está deshabilitado o ya inicializado
