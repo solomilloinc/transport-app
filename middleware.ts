@@ -35,25 +35,12 @@ const publicRoutes = ["/", "/login", "/register", "/unauthorized", "/api/auth"]
 // Rutas especiales que requieren autenticación pero tienen lógica de redirección propia
 const redirectRoutes = ["/admin"]
 
-/**
- * Creates a NextResponse.next() with the x-tenant-host header forwarded
- * to downstream server components via the request headers.
- */
-function nextWithTenantHost(request: NextRequest): NextResponse {
-  const host = request.headers.get('host') || '';
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-tenant-host', host);
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  });
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Verificar si la ruta es pública
   if (publicRoutes.includes(pathname)) {
-    return nextWithTenantHost(request)
+    return NextResponse.next()
   }
 
   // Verificar si es una ruta de redirección que necesita autenticación básica
@@ -70,7 +57,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Si hay token, permitir que la página maneje la redirección
-    return nextWithTenantHost(request)
+    return NextResponse.next()
   }
 
   // Verificar si la ruta está en nuestras configuraciones
@@ -80,7 +67,7 @@ export async function middleware(request: NextRequest) {
 
   if (!matchingRoute) {
     // Si la ruta no está en nuestras configuraciones, permitir el acceso
-    return nextWithTenantHost(request)
+    return NextResponse.next()
   }
 
   // Obtener el token de sesión
@@ -120,7 +107,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Si todo está bien, permitir el acceso
-  return nextWithTenantHost(request)
+  return NextResponse.next()
 }
 
 // Configurar en qué rutas se ejecutará el middleware

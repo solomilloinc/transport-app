@@ -77,7 +77,7 @@ export async function getServerAxios(options?: { skipAuth?: boolean }) {
   let tenantHeaders: Record<string, string> = {};
   try {
     const headerStore = await nextHeaders();
-    const tenantHost = headerStore.get('x-tenant-host') || headerStore.get('host') || undefined;
+    const tenantHost = headerStore.get('host') || undefined;
     tenantHeaders = await getTenantHeaders(tenantHost);
   } catch {
     // headers() not available (e.g. outside of request context) — fall back to env
