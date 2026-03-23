@@ -41,8 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     return nextResponse;
-  } catch (error) {
-    console.error('Error renovando token:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

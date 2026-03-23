@@ -12,17 +12,27 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     switch (status) {
       case 'Confirmada':
       case 'Active':
-        return 'bg-green-100 text-green-800';
+        return 'border border-emerald-200/80 bg-emerald-50 text-emerald-800';
       case 'Pendiente':
       case 'Mantenimiento':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'border border-amber-200/80 bg-amber-50 text-amber-800';
       case 'Cancelada':
       case 'Inactive':
-        return 'bg-red-100 text-red-800';
+        return 'border border-red-200/80 bg-red-50 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'border border-slate-200/80 bg-slate-100 text-slate-700';
     }
   };
 
-  return <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', getStatusStyles(status), className)}>{status}</span>;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]',
+        getStatusStyles(status),
+        className
+      )}
+    >
+      {status}
+    </span>
+  );
 }

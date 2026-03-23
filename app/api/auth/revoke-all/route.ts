@@ -49,8 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     return nextResponse;
-  } catch (error) {
-    console.error('Error revocando sesiones:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

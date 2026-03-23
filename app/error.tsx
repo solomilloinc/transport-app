@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
@@ -12,11 +11,6 @@ interface ErrorProps {
 }
 
 export default function Error({ error, reset }: ErrorProps) {
-  useEffect(() => {
-    // Log the error to an error reporting service
-    console.error('Application error:', error);
-  }, [error]);
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="max-w-md w-full border-red-100 shadow-lg">

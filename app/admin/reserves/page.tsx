@@ -111,9 +111,7 @@ export default function ReservationsPage() {
 
   const fetchFullTripDetails = async (tripId: number) => {
     try {
-      console.log('Fetching trip details for ID:', tripId);
       const tripData = await getTripById(tripId);
-      console.log('Trip data received:', tripData);
 
       if (tripData) {
         setSelectedTrip((prev) => {
@@ -132,16 +130,12 @@ export default function ReservationsPage() {
           };
         });
       }
-    } catch (error) {
-      console.error('Error fetching full trip details:', error);
+    } catch {
     }
   };
 
   useEffect(() => {
     if (!selectedTrip) return;
-
-    // Log the selected trip to verify available IDs
-    console.log('Selected Trip:', selectedTrip);
 
     // Try to get tripId from available fields (case insensitive check for common variants)
     const rawTripId = selectedTrip.TripId || (selectedTrip as any).ServiceId || (selectedTrip as any).tripId;
@@ -330,36 +324,39 @@ export default function ReservationsPage() {
 
   // Format date for display
   const formatSelectedDate = () => {
-    return format(selectedDate as Date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
+    if (!selectedDate) return 'Sin fecha seleccionada';
+
+    const formattedDate = format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
+    return formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Reservas"
-        description="Gestiona y visualiza todas las reservas de clientes"
+        description="Supervisa salidas, pasajeros y cobros del dia desde una misma vista operativa"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" title="Imprimir">
+            <Button variant="outline" size="icon" title="Imprimir" className="rounded-full border-black/10 bg-white/70">
               <PrinterIcon className="h-4 w-4" />
             </Button>
 
             {/* Vehicle selection button */}
-            <Button variant="outline" size="icon" title="Editar reserva" onClick={() => handleEditReserve(selectedTrip ?? undefined)}>
+            <Button variant="outline" size="icon" title="Editar reserva" onClick={() => handleEditReserve(selectedTrip ?? undefined)} className="rounded-full border-black/10 bg-white/70">
               <Edit2 className="h-4 w-4" />
             </Button>
 
-            <Button variant="outline" size="icon" title="Resumen de pagos" onClick={() => setIsPaymentSummaryOpen(true)}>
+            <Button variant="outline" size="icon" title="Resumen de pagos" onClick={() => setIsPaymentSummaryOpen(true)} className="rounded-full border-black/10 bg-white/70">
               <DollarSignIcon className="h-4 w-4" />
             </Button>
-            <Button onClick={handleAddPassenger}>
+            <Button onClick={handleAddPassenger} className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-5 text-white hover:opacity-95">
               <TicketPlus className=" mr-2 h-6 w-6" />
               Agregar
             </Button>
           </div>
         }
       />
-      <div className="grid gap-2 md:grid-cols-[minmax(200px,250px)_1fr] w-full">
+      <div className="grid w-full gap-4 md:grid-cols-[minmax(280px,340px)_1fr]">
         <TripSelectionPanel
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
@@ -371,16 +368,20 @@ export default function ReservationsPage() {
         />
 
         {/* Passengers Card */}
-        <Card className="w-full">
-          <CardContent className="p-6 w-full">
+        <Card className="w-full overflow-hidden rounded-[1.75rem] border border-black/6 bg-white/78 shadow-[0_22px_48px_rgba(22,34,24,0.06)]">
+          <CardContent className="w-full p-6">
             <div className="space-y-4">
-              <div className="flex items-center text-xl font-semibold text-blue-500">
-                <UserPlusIcon className="mr-2 h-5 w-5" />
+              <div className="rounded-[1.25rem] border border-black/6 bg-[linear-gradient(180deg,rgba(245,246,241,0.96),rgba(238,242,234,0.92))] px-4 py-4">
+                <div className="mb-2 text-[11px] uppercase tracking-[0.26em] text-slate-500">manifiesto de pasajeros</div>
+                <div className="flex items-center text-xl font-display text-slate-900">
+                  <UserPlusIcon className="mr-2 h-5 w-5 text-emerald-700" />
                 {selectedDate
                   ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
                   format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
                   : ''}{' '}
                 - {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
+              </div>
+
               </div>
 
               <PassengerListTable

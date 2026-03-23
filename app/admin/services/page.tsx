@@ -225,8 +225,7 @@ export default function ServiceManagement() {
       });
 
       setAvailableDirections(directions);
-    } catch (error) {
-      console.error('Error loading trip directions:', error);
+    } catch {
       setAvailableDirections([]);
     } finally {
       setIsLoadingDirections(false);
@@ -269,8 +268,7 @@ export default function ServiceManagement() {
       });
 
       setTripFormAvailableDirections(directions);
-    } catch (error) {
-      console.error('Error loading trip form directions:', error);
+    } catch {
       setTripFormAvailableDirections([]);
     } finally {
       setIsLoadingTripFormDirections(false);
@@ -330,13 +328,7 @@ export default function ServiceManagement() {
   };
 
   const submitEditService = async () => {
-    console.log('submitEditService called');
-    console.log('editForm.data:', editForm.data);
-    console.log('editForm.errors:', editForm.errors);
-    console.log('currentServiceId:', currentServiceId);
-
     editForm.handleSubmit(async (data) => {
-      console.log('handleSubmit callback called with data:', data);
       try {
         // Transform the data to match the API expectations
         const transformedData = {
@@ -354,7 +346,6 @@ export default function ServiceManagement() {
           })),
           AllowedDirectionIds: editSelectedDirectionIds.length > 0 ? editSelectedDirectionIds : null,
         };
-        console.log('Transformed data for update:', transformedData);
         const response = await put(`/service-update/${currentServiceId}`, transformedData);
         if (response) {
           toast({
@@ -464,9 +455,6 @@ export default function ServiceManagement() {
     const durationParts = service.EstimatedDuration.split(':');
     const formattedDuration = `${durationParts[0]}:${durationParts[1]}`;
 
-    console.log('Service for editing:', service);
-    console.log('Service.Schedulers:', service.Schedulers);
-
     editForm.setField('name', service.Name);
     editForm.setField('tripId', service.TripId);
     editForm.setField('estimatedDuration', formattedDuration);
@@ -474,13 +462,8 @@ export default function ServiceManagement() {
     editForm.setField('endDay', service.EndDay || 5);   // Default to Friday if not provided
     editForm.setField('vehicleId', service.Vehicle.VehicleId);
 
-    console.log('Setting StartDay:', service.StartDay);
-    console.log('Setting EndDay:', service.EndDay);
-    console.log('EditForm data after setting:', editForm.data);
-
     // Convert schedules DepartureHour from TimeSpan (HH:MM:SS) to HH:MM for time inputs
     const schedulers = service.Schedulers || [];
-    console.log('Original schedulers:', schedulers);
 
     const formattedSchedulers = schedulers.length > 0
       ? schedulers.map(scheduler => ({
@@ -491,7 +474,6 @@ export default function ServiceManagement() {
       }))
       : [{ ...emptyServiceSchedule }]; // Si no hay schedulers, crear uno por defecto
 
-    console.log('Formatted schedulers:', formattedSchedulers);
     setEditSchedules(formattedSchedulers);
 
     // Load directions for editing - extract IDs from AllowedDirections
@@ -560,7 +542,7 @@ export default function ServiceManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="h-9 rounded-full border-black/8 bg-white/80 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
             onClick={() => handleEditService(service)}
           >
             <Edit className="h-4 w-4" />
@@ -585,7 +567,7 @@ export default function ServiceManagement() {
         description="Gestiona y visualiza toda la información de los servicios."
         action={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => {
+            <Button variant="outline" className="rounded-full border-black/8 bg-white/80 px-5 text-slate-700 hover:bg-white" onClick={() => {
               tripForm.resetForm();
               setTripFormDirectionIds([]);
               setTripFormAvailableDirections([]);
@@ -595,7 +577,7 @@ export default function ServiceManagement() {
               <TruckIcon className="mr-2 h-4 w-4" />
               Agregar viaje
             </Button>
-            <Button onClick={() => handleAddService()}>
+            <Button onClick={() => handleAddService()} className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-5 text-white hover:opacity-95">
               <Wrench className="mr-2 h-4 w-4" />
               Agregar
             </Button>
@@ -604,7 +586,7 @@ export default function ServiceManagement() {
       />
 
 
-      <Card className="w-full">
+      <Card className="w-full overflow-hidden rounded-[1.75rem] border border-black/6 bg-white/78 shadow-[0_22px_48px_rgba(22,34,24,0.06)]">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
             <FilterBar onReset={resetFilters}>
@@ -621,12 +603,12 @@ export default function ServiceManagement() {
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {(data?.Items?.length ?? 0) > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.TotalPages ?? 0}
+                totalItems={data?.TotalRecords ?? 0}
+                itemsPerPage={data?.PageSize ?? 0}
                 onPageChange={setCurrentPage}
                 itemName="servicios"
               />
@@ -657,7 +639,7 @@ export default function ServiceManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
+        ) : (data?.Items?.length ?? 0) > 0 ? (
           data?.Items?.map((service) => (
             <MobileCard
               key={service.ServiceId}
@@ -870,7 +852,7 @@ export default function ServiceManagement() {
                   </div>
                 )}
                 {selectedDirectionIds.length > 0 && (
-                  <div className="text-sm text-blue-600">
+                  <div className="text-sm text-emerald-700">
                     {selectedDirectionIds.length} dirección(es) seleccionada(s)
                   </div>
                 )}
@@ -1074,7 +1056,7 @@ export default function ServiceManagement() {
                   </div>
                 )}
                 {editSelectedDirectionIds.length > 0 && (
-                  <div className="text-sm text-blue-600">
+                  <div className="text-sm text-emerald-700">
                     {editSelectedDirectionIds.length} dirección(es) seleccionada(s)
                   </div>
                 )}
@@ -1190,7 +1172,7 @@ export default function ServiceManagement() {
                 </div>
               )}
               {tripFormDirectionIds.length > 0 && (
-                <div className="text-sm text-blue-600">
+                <div className="text-sm text-emerald-700">
                   {tripFormDirectionIds.length} dirección(es) seleccionada(s)
                 </div>
               )}

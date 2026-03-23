@@ -1,4 +1,5 @@
 'use client';
+
 import type React from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -9,12 +10,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
+import { ArrowRight, CalendarIcon, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { TripSelectOption } from '@/app/page';
-import { MapPin } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
 
 export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
@@ -25,22 +25,17 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const [selectedTripId, setSelectedTripId] = useState('');
   const [selectedPickupDirectionId, setSelectedPickupDirectionId] = useState('');
   const [passengers, setPassengers] = useState('1');
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Get the selected trip details
-  const selectedTrip = useMemo(() => {
-    return trips.find((trip) => trip.value === selectedTripId);
-  }, [trips, selectedTripId]);
+  const selectedTrip = useMemo(() => trips.find((trip) => trip.value === selectedTripId), [trips, selectedTripId]);
 
-  // Reset pickup direction when trip changes
   useEffect(() => {
     setSelectedPickupDirectionId('');
   }, [selectedTripId]);
 
-  // For round trip, find the return trip (inverse route)
   const returnTrip = useMemo(() => {
     if (!selectedTrip) return null;
+
     return trips.find(
       (trip) =>
         trip.originCityId === selectedTrip.destinationCityId &&
@@ -62,7 +57,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
       newErrors.returnDate = 'La fecha de vuelta es requerida.';
     }
     if (tripType === 'RoundTrip' && !returnTrip) {
-      newErrors.trip = 'No hay ruta de vuelta disponible para esta selección.';
+      newErrors.trip = 'No hay ruta de vuelta disponible para esta seleccion.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -72,82 +67,116 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
     setErrors({});
 
     if (!selectedTrip) {
-      console.error('No se pudo encontrar el viaje seleccionado.');
       return;
     }
 
-    // Build query parameters
     const params = new URLSearchParams();
     params.append('tripId', selectedTrip.id.toString());
     params.append('originName', selectedTrip.originCityName);
     params.append('destinationName', selectedTrip.destinationCityName);
     params.append('tripType', tripType);
     params.append('passengers', passengers);
+
     if (departureDate) {
       params.append('departureDate', format(departureDate, 'yyyy-MM-dd'));
     }
+
     if (tripType === 'RoundTrip' && returnDate && returnTrip) {
       params.append('returnDate', format(returnDate, 'yyyy-MM-dd'));
       params.append('returnTripId', returnTrip.id.toString());
     }
+
     if (selectedPickupDirectionId) {
       params.append('pickupDirectionId', selectedPickupDirectionId);
     }
-    // Navigate to results page with query parameters
+
     router.push(`/results?${params.toString()}`);
   };
 
   const { landing, images } = useTenant();
 
   return (
-    <section className="relative">
-      <div className="absolute inset-0 z-0">
-        <Image src={images.heroBackground || '/background.jpg'} alt="Hero background" fill className="object-cover brightness-[0.7]" priority />
+    <section className="relative overflow-hidden px-3 pb-8 pt-5 sm:px-4 sm:pb-12 sm:pt-8">
+      <div className="absolute inset-0 z-0 rounded-[2rem]">
+        <Image
+          src={images.heroBackground || '/background.jpg'}
+          alt="Hero background"
+          fill
+          className="object-cover brightness-[0.55] saturate-[0.9]"
+          priority
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(8,18,24,0.88),rgba(16,51,61,0.74)_48%,rgba(240,182,71,0.28))]" />
+        <div className="route-grid absolute inset-0 opacity-20 mix-blend-soft-light" />
+        <div className="absolute -left-16 top-16 h-56 w-56 rounded-full bg-amber-300/15 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-sky-300/15 blur-3xl" />
       </div>
 
-      <div className="container relative z-10 py-10 md:py-16 lg:py-20">
-        <div className="grid md:grid-cols-2 gap-8 items-center">
-          {/* Left side - Hero text */}
-          <div className="text-white">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl font-display">{landing.hero.title}</h1>
-            <p className="mt-4 text-lg md:text-xl">
+      <div className="container relative z-10 py-8 md:py-14 lg:py-20">
+        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+          <div className="max-w-2xl text-white">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/80 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              reserva directa y simple
+            </div>
+            <h1 className="mt-6 text-4xl leading-[0.95] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl font-display">
+              {landing.hero.title}
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/80 md:text-xl">
               {landing.hero.subtitle}
             </p>
-            <div className="mt-6 flex flex-wrap gap-4">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Button size="lg" className="rounded-full bg-amber-400 px-7 text-slate-950 hover:bg-amber-300">
                 {landing.hero.ctaPrimary}
               </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm">
+              <Button size="lg" variant="outline" className="rounded-full border-white/25 bg-white/10 px-7 text-white hover:bg-white/15 backdrop-blur-sm">
                 {landing.hero.ctaSecondary}
               </Button>
             </div>
+            <div className="mt-8 grid gap-3 text-sm text-white/80 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur">
+                <div className="text-xs uppercase tracking-[0.22em] text-white/45">salidas</div>
+                <div className="mt-1 font-medium">Rutas activas y claras</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur">
+                <div className="text-xs uppercase tracking-[0.22em] text-white/45">compra</div>
+                <div className="mt-1 font-medium">Pago seguro y directo</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur">
+                <div className="text-xs uppercase tracking-[0.22em] text-white/45">asistencia</div>
+                <div className="mt-1 font-medium">Soporte humano cuando hace falta</div>
+              </div>
+            </div>
           </div>
 
-          {/* Right side - Search form */}
-          <div>
-            <Card className="border-blue-100 shadow-lg bg-white/95 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <h2 className="text-xl font-bold text-blue-800 mb-4 font-display">Busca tu pasaje</h2>
-                <form onSubmit={handleSearch} className="space-y-3">
-                  <div className="space-y-3">
+          <div className="section-shell">
+            <Card className="glass-panel overflow-hidden rounded-[1.75rem] border-0">
+              <CardContent className="p-0">
+                <div className="border-b border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,248,236,0.8))] px-5 py-5 sm:px-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.28em] text-slate-500">planifica tu salida</p>
+                      <h2 className="mt-2 text-2xl text-slate-900 font-display">Busca tu pasaje</h2>
+                    </div>
+                    <div className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 sm:flex sm:items-center sm:gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      pago protegido
+                    </div>
+                  </div>
+                </div>
+                <form onSubmit={handleSearch} className="space-y-4 p-5 sm:p-6">
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-blue-900">Tipo</label>
-                      <RadioGroup defaultValue="OneWay" className="flex gap-4" value={tripType} onValueChange={setTripType}>
-                        <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium text-slate-800">Tipo</label>
+                      <RadioGroup defaultValue="OneWay" className="grid grid-cols-2 gap-3" value={tripType} onValueChange={setTripType}>
+                        <div className="flex items-center space-x-2 rounded-2xl border border-black/5 bg-white/80 px-4 py-3">
                           <RadioGroupItem value="OneWay" id="OneWay" />
-                          <label
-                            htmlFor="OneWay"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
+                          <label htmlFor="OneWay" className="text-sm font-medium leading-none text-slate-700">
                             Ida
                           </label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 rounded-2xl border border-black/5 bg-white/80 px-4 py-3">
                           <RadioGroupItem value="RoundTrip" id="RoundTrip" />
-                          <label
-                            htmlFor="RoundTrip"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
+                          <label htmlFor="RoundTrip" className="text-sm font-medium leading-none text-slate-700">
                             Ida y vuelta
                           </label>
                         </div>
@@ -155,9 +184,9 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-blue-900">Ruta</label>
+                      <label className="text-sm font-medium text-slate-800">Ruta</label>
                       <Select value={selectedTripId} onValueChange={setSelectedTripId}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 rounded-2xl border-black/5 bg-white/80">
                           <SelectValue placeholder="Selecciona tu ruta" />
                         </SelectTrigger>
                         <SelectContent>
@@ -165,7 +194,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                             <SelectItem key={trip.id} value={trip.value}>
                               {trip.label}
                               {trip.priceFrom && (
-                                <span className="text-muted-foreground ml-2">
+                                <span className="ml-2 text-muted-foreground">
                                   (desde ${trip.priceFrom.toLocaleString()})
                                 </span>
                               )}
@@ -173,30 +202,27 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                           ))}
                         </SelectContent>
                       </Select>
-                      {errors.trip && <p className="text-xs text-red-500 mt-1">{errors.trip}</p>}
-
-                      {/* Show return trip info if round trip is selected */}
+                      {errors.trip && <p className="mt-1 text-xs text-red-500">{errors.trip}</p>}
                       {tripType === 'RoundTrip' && selectedTrip && (
-                        <div className="text-xs text-blue-600 mt-1">
+                        <div className="mt-1 text-xs text-slate-600">
                           {returnTrip ? (
-                            <>Vuelta: {returnTrip.label}</>
+                            <>Vuelta disponible: {returnTrip.label}</>
                           ) : (
-                            <span className="text-amber-600">⚠️ No hay ruta de vuelta disponible</span>
+                            <span className="text-amber-700">No hay ruta de vuelta disponible</span>
                           )}
                         </div>
                       )}
                     </div>
 
-                    {/* Pickup Direction - only show when a trip is selected and has stop schedules */}
                     {selectedTrip && selectedTrip.stopSchedules.length > 0 && (
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900 flex items-center gap-1">
+                        <label className="flex items-center gap-1 text-sm font-medium text-slate-800">
                           <MapPin className="h-3.5 w-3.5" />
-                          Punto de Subida
+                          Punto de subida
                         </label>
                         <Select value={selectedPickupDirectionId} onValueChange={setSelectedPickupDirectionId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona dónde subir (opcional)" />
+                          <SelectTrigger className="h-12 rounded-2xl border-black/5 bg-white/80">
+                            <SelectValue placeholder="Selecciona donde subir (opcional)" />
                           </SelectTrigger>
                           <SelectContent>
                             {selectedTrip.stopSchedules.map((stop) => (
@@ -209,12 +235,12 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className={`grid gap-3 ${tripType === 'RoundTrip' ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-blue-900">Fecha Ida</label>
+                        <label className="text-sm font-medium text-slate-800">Fecha ida</label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start text-left font-normal border-input">
+                            <Button variant="outline" className="h-12 w-full justify-start rounded-2xl border-black/5 bg-white/80 text-left font-normal">
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {departureDate ? format(departureDate, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
                             </Button>
@@ -230,15 +256,15 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                             />
                           </PopoverContent>
                         </Popover>
-                        {errors.departureDate && <p className="text-xs text-red-500 mt-1">{errors.departureDate}</p>}
+                        {errors.departureDate && <p className="mt-1 text-xs text-red-500">{errors.departureDate}</p>}
                       </div>
 
                       {tripType === 'RoundTrip' && (
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-blue-900">Fecha Vuelta</label>
+                          <label className="text-sm font-medium text-slate-800">Fecha vuelta</label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start text-left font-normal border-input">
+                              <Button variant="outline" className="h-12 w-full justify-start rounded-2xl border-black/5 bg-white/80 text-left font-normal">
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {returnDate ? format(returnDate, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
                               </Button>
@@ -256,15 +282,15 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                               />
                             </PopoverContent>
                           </Popover>
-                          {errors.returnDate && <p className="text-xs text-red-500 mt-1">{errors.returnDate}</p>}
+                          {errors.returnDate && <p className="mt-1 text-xs text-red-500">{errors.returnDate}</p>}
                         </div>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-blue-900">Pasajeros</label>
+                      <label className="text-sm font-medium text-slate-800">Pasajeros</label>
                       <Select value={passengers} onValueChange={setPassengers}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 rounded-2xl border-black/5 bg-white/80">
                           <SelectValue placeholder="Cantidad de pasajeros" />
                         </SelectTrigger>
                         <SelectContent>
@@ -276,8 +302,10 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                       </Select>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                    Buscar
+
+                  <Button type="submit" className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#12353d,#255d6a)] text-white hover:opacity-95">
+                    Buscar disponibilidad
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </form>
               </CardContent>

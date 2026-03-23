@@ -8,8 +8,10 @@ export interface ServiceSchedule {
 }
 
 export const emptyServiceSchedule = {
+    ServiceScheduleId: 0,
     ServiceId: 0,
     IsHoliday: false,
-    DepartureHour: "10:00"
+    DepartureHour: "10:00",
+    Status: "Activo",
 }
 

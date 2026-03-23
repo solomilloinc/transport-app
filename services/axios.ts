@@ -34,14 +34,12 @@ async function tryRenewToken(cookieHeader: string): Promise<string | null> {
     });
 
     if (!response.ok) {
-      console.error('Token renewal failed:', response.status);
       return null;
     }
 
     const data = await response.json();
     return data.token || null;
-  } catch (error) {
-    console.error('Error en tryRenewToken:', error);
+  } catch {
     return null;
   }
 }

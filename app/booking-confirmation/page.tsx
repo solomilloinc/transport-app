@@ -3,12 +3,7 @@
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  CheckCircle,
-  XCircle,
-  Download,
-  ChevronLeft,
-} from "lucide-react";
+import { CheckCircle, XCircle, Download, ChevronLeft, Clock3 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCheckout } from "@/contexts/CheckoutContext";
@@ -19,121 +14,163 @@ export default function BookingConfirmationPage() {
   const status = searchParams.get("status");
   const success = searchParams.get("success") === "true";
   const reserveId = searchParams.get("reserveId");
-  const isApproved = success || status === "approved";
+  const isConfirmed = success && !!reserveId;
+  const isPendingVerification =
+    !isConfirmed && (status === "approved" || status === "pending" || status === "in_process");
   const { clearCheckout } = useCheckout();
 
-  // Clear checkout data when confirmation page loads successfully
   useEffect(() => {
-    if (isApproved) {
+    if (isConfirmed) {
       clearCheckout();
     }
-  }, [isApproved, clearCheckout]);
+  }, [isConfirmed, clearCheckout]);
 
-  if (!isApproved) {
+  if (isPendingVerification) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <div className="text-red-500 mb-4">
-              <XCircle className="mx-auto h-16 w-16" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Pago Fallido
-            </h1>
-            <p className="text-gray-600 mb-6">
-              Hubo un problema al procesar tu pago. Por favor, inténtalo de nuevo o
-              contacta a soporte. El estado de la transacción es: <span className="font-semibold">{status || 'desconocido'}</span>.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Link href="/">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                  Volver al Inicio
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen">
+        <Navbar />
+        <main className="container py-12">
+          <div className="mx-auto max-w-4xl">
+            <Card className="glass-panel overflow-hidden rounded-[2rem] border-0">
+              <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(250,204,21,0.22),rgba(255,255,255,0.55))] p-8 text-center">
+                <Clock3 className="mx-auto mb-4 h-16 w-16 text-amber-600" />
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">estado del pago</p>
+                <h1 className="mt-3 text-3xl text-slate-900 font-display md:text-4xl">
+                  Pago recibido, reserva en validacion
+                </h1>
+                <p className="mx-auto mt-4 max-w-2xl text-slate-600">
+                  Estamos terminando de validar tu pago. La confirmacion final puede demorar unos instantes
+                  segun el medio elegido.
+                </p>
+              </div>
+              <CardContent className="p-8">
+                <div className="rounded-[1.25rem] border border-black/5 bg-white/80 p-5 text-sm text-slate-700">
+                  Estado informado por Mercado Pago: <span className="font-semibold text-slate-900">{status || 'pendiente'}</span>.
+                </div>
+                <div className="mt-6 flex flex-col gap-3 md:flex-row">
+                  <Link href="/" className="w-full">
+                    <Button className="h-12 w-full rounded-full bg-[linear-gradient(135deg,#12353d,#255d6a)] text-white hover:opacity-95">
+                      Volver al inicio
+                    </Button>
+                  </Link>
+                  <Link href="/checkout" className="w-full">
+                    <Button variant="outline" className="h-12 w-full rounded-full">
+                      Volver al checkout
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!isConfirmed) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <main className="container py-12">
+          <div className="mx-auto max-w-3xl">
+            <Card className="glass-panel overflow-hidden rounded-[2rem] border-0">
+              <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(239,68,68,0.14),rgba(255,255,255,0.55))] p-8 text-center">
+                <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500" />
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">pago rechazado</p>
+                <h1 className="mt-3 text-3xl text-slate-900 font-display">No pudimos confirmar tu pago</h1>
+                <p className="mx-auto mt-4 max-w-xl text-slate-600">
+                  Hubo un problema al procesar la transaccion. Puedes volver a intentarlo o contactar al equipo de soporte.
+                </p>
+              </div>
+              <CardContent className="p-8">
+                <div className="rounded-[1.25rem] border border-red-100 bg-red-50/80 p-5 text-sm text-red-700">
+                  Estado informado: <span className="font-semibold">{status || 'desconocido'}</span>.
+                </div>
+                <div className="mt-6">
+                  <Link href="/" className="w-full">
+                    <Button className="h-12 w-full rounded-full bg-[linear-gradient(135deg,#12353d,#255d6a)] text-white hover:opacity-95">
+                      Volver al inicio
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Navbar />
       <main className="container py-12">
-        <div className="max-w-3xl mx-auto">
+        <div className="mx-auto max-w-4xl">
           <Link href="/">
             <Button
               variant="link"
-              className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6 p-0"
+              className="mb-6 inline-flex items-center p-0 text-slate-600 hover:text-slate-900"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Volver al Inicio
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Volver al inicio
             </Button>
           </Link>
 
-          <Card className="border-green-100 shadow-lg overflow-hidden">
-            <div className="bg-green-50 p-6 border-b border-green-100 text-center">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h1 className="text-2xl md:text-3xl font-bold text-green-800 font-display">
-                ¡Reserva Confirmada!
+          <Card className="glass-panel overflow-hidden rounded-[2rem] border-0">
+            <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(255,255,255,0.55))] p-8 text-center">
+              <CheckCircle className="mx-auto mb-4 h-16 w-16 text-emerald-500" />
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">reserva confirmada</p>
+              <h1 className="mt-3 text-3xl text-slate-900 font-display md:text-4xl">
+                Tu viaje ya esta listo
               </h1>
-              <p className="text-green-700 mt-2">
-                Tu viaje ha sido reservado con éxito. Hemos enviado un correo
-                de confirmación con todos los detalles.
+              <p className="mx-auto mt-4 max-w-2xl text-slate-600">
+                La compra se registro correctamente y tu reserva quedo confirmada. Te enviaremos el detalle por correo.
               </p>
             </div>
-            <CardContent className="p-6">
-              <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <CardContent className="p-8">
+              <div className="mb-6 rounded-[1.4rem] border border-black/5 bg-[linear-gradient(180deg,rgba(255,248,239,0.88),rgba(255,255,255,0.92))] p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <div className="text-sm text-blue-600 font-medium">
-                      Referencia de la Reserva
+                    <div className="text-xs uppercase tracking-[0.28em] text-slate-500">
+                      Referencia de la reserva
                     </div>
-                    <div className="text-xl font-bold text-blue-800">
+                    <div className="mt-2 text-2xl font-display text-slate-900">
                       ID-{reserveId || 'N/A'}
                     </div>
                   </div>
                   <Button
                     variant="outline"
-                    className="border-blue-200 text-blue-600 hover:bg-blue-100"
+                    className="rounded-full border-black/10 bg-white/80 text-slate-700 hover:bg-white"
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Descargar Ticket
+                    <Download className="mr-2 h-4 w-4" />
+                    Descargar ticket
                   </Button>
                 </div>
               </div>
 
-              <div>
-                  <h2 className="text-lg font-bold text-gray-900 mb-3">
-                    Información Importante
-                  </h2>
-                  <div className="bg-yellow-50 p-4 rounded-lg text-sm space-y-2 text-yellow-800">
-                    <p>
-                      <span className="font-medium">Check-in:</span> Por favor,
-                      llegue al menos 15 minutos antes de la salida.
-                    </p>
-                    <p>
-                      <span className="font-medium">Equipaje:</span> Cada
-                      pasajero puede llevar una pieza de equipaje (máx. 20 kg) y
-                      un artículo de mano.
-                    </p>
-                  </div>
+              <div className="rounded-[1.25rem] border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-900">
+                <h2 className="mb-3 text-lg font-display text-slate-900">Informacion importante</h2>
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-medium">Check-in:</span> llega al menos 15 minutos antes de la salida.
+                  </p>
+                  <p>
+                    <span className="font-medium">Equipaje:</span> cada pasajero puede llevar una valija de hasta 20 kg y un articulo de mano.
+                  </p>
                 </div>
+              </div>
             </CardContent>
           </Card>
 
           <div className="mt-8 text-center">
-            <h2 className="text-lg font-bold text-gray-900 mb-2">
-              ¿Necesitas Ayuda?
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Nuestro equipo de atención al cliente está disponible para ayudarte.
+            <h2 className="text-lg font-display text-slate-900">¿Necesitas ayuda?</h2>
+            <p className="mt-2 text-slate-600">
+              Si algo no coincide con tu compra, nuestro equipo puede ayudarte a resolverlo.
             </p>
-            <div className="flex flex-col md:flex-row justify-center gap-4">
+            <div className="mt-4 flex flex-col justify-center gap-4 md:flex-row">
               <Link href="/">
-                <Button variant="outline" className="border-blue-200">
-                  Reservar Otro Viaje
+                <Button variant="outline" className="rounded-full border-black/10 bg-white/75 px-6">
+                  Reservar otro viaje
                 </Button>
               </Link>
             </div>

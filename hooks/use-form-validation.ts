@@ -108,8 +108,7 @@ export function useFormValidation<T extends Record<string, any>>(
     if (isValid) {
       try {
         await onSubmit(data)
-      } catch (error) {
-        console.error("Error al enviar el formulario:", error)
+      } catch {
       }
     }
 

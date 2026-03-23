@@ -139,13 +139,13 @@ export default function DebtsPage() {
   const getTransactionTypeStyle = (type: string) => {
     switch (type) {
       case 'Payment':
-        return 'bg-green-100 text-green-800';
+        return 'border border-emerald-200/80 bg-emerald-50 text-emerald-800';
       case 'Charge':
         return 'bg-red-100 text-red-800';
       case 'Adjustment':
         return 'bg-yellow-100 text-yellow-800';
       case 'Refund':
-        return 'bg-blue-100 text-blue-800';
+        return 'border border-sky-200/80 bg-sky-50 text-sky-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -175,7 +175,7 @@ export default function DebtsPage() {
       className: 'text-right',
       width: '15%',
       cell: (t: Transaction) => (
-        <span className={`font-semibold ${t.Amount < 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <span className={`font-semibold ${t.Amount < 0 ? 'text-emerald-700' : 'text-red-600'}`}>
           $ {Math.abs(t.Amount).toLocaleString()}
         </span>
       )
@@ -228,11 +228,11 @@ export default function DebtsPage() {
                       searchResults.Items.map((p) => (
                         <div
                           key={p.CustomerId}
-                          className="flex items-center p-3 hover:bg-blue-50 cursor-pointer transition-colors border-b last:border-0"
+                          className="flex cursor-pointer items-center border-b p-3 transition-colors last:border-0 hover:bg-emerald-50"
                           onClick={() => handleSelectCustomer(p)}
                         >
-                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                            <UserIcon className="h-4 w-4 text-blue-600" />
+                           <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+                             <UserIcon className="h-4 w-4 text-emerald-700" />
                           </div>
                           <div>
                             <p className="text-sm font-medium">{p.FirstName} {p.LastName}</p>
@@ -293,17 +293,17 @@ export default function DebtsPage() {
       {selectedCustomer ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-blue-600 text-white">
+            <Card className="border-0 bg-[linear-gradient(135deg,#182b1f,#35533f)] text-white shadow-[0_22px_48px_rgba(17,29,20,0.18)]">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-blue-100 text-sm font-medium">Balance Actual</p>
-                  <Wallet className="h-5 w-5 text-blue-200" />
+                  <p className="text-sm font-medium text-emerald-100">Balance Actual</p>
+                  <Wallet className="h-5 w-5 text-emerald-200" />
                 </div>
                 <h3 className="text-3xl font-bold">
                   $ {summary?.CurrentBalance?.toLocaleString() ?? 0}
                 </h3>
                 <div className="mt-3 flex items-center justify-between">
-                  <p className="text-xs text-blue-200">Total acumulado a la fecha</p>
+                  <p className="text-xs text-emerald-200">Total acumulado a la fecha</p>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -321,9 +321,9 @@ export default function DebtsPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-gray-500 text-sm font-medium">Pagos (Rango)</p>
-                  <ArrowUpRight className="h-5 w-5 text-green-500" />
+                  <ArrowUpRight className="h-5 w-5 text-emerald-600" />
                 </div>
-                <h3 className="text-3xl font-bold text-green-600">
+                <h3 className="text-3xl font-bold text-emerald-700">
                   $ {summary?.Transactions?.Items?.filter((t: any) => t.TransactionType === 'Payment').reduce((acc: number, t: any) => acc + Math.abs(t.Amount), 0).toLocaleString() ?? 0}
                 </h3>
               </CardContent>
@@ -359,8 +359,8 @@ export default function DebtsPage() {
                 <div className="mt-4">
                   <TablePagination
                     currentPage={currentPage}
-                    totalPages={summary?.Transactions?.TotalPages}
-                    totalItems={summary?.Transactions?.TotalRecords}
+                    totalPages={summary?.Transactions?.TotalPages ?? 0}
+                    totalItems={summary?.Transactions?.TotalRecords ?? 0}
                     itemsPerPage={pageSize}
                     onPageChange={setCurrentPage}
                     itemName="transacciones"

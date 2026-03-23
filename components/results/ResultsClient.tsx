@@ -17,7 +17,6 @@ import { Card, CardContent, CardFooter } from '../ui/card';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { useTenant } from '@/contexts/TenantContext';
 
-// 1. Definimos las props que el componente de cliente recibirá del Server Component.
 interface ResultsClientProps {
   initialReserves: PagedReserveResponse<ReserveSummaryItem>;
   searchParams: {
@@ -45,9 +44,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     setLoading(false);
   }, [initialReserves]);
 
-  // Leer los parámetros de búsqueda desde las props
   const {
-    tripId = '',
     originName = 'Origen',
     destinationName = 'Destino',
     tripType = 'OneWay',
@@ -56,11 +53,9 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     passengers = '1',
   } = searchParams;
 
-  // Formatear fechas para mostrar en la UI
   const formattedDepartureDate = departureDate ? formatWithTimezone(departureDate) : '';
   const formattedReturnDate = returnDate ? formatWithTimezone(returnDate) : '';
 
-  // Estado para la selección de viajes
   const [activeTab, setActiveTab] = useState('outbound');
   const [selectedOutboundTrip, setSelectedOutboundTrip] = useState<ReserveSummaryItem | null>(null);
 
@@ -71,23 +66,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     router.push(`/results?${params.toString()}`);
   };
 
-  const handleSelectOutbound = (trip: ReserveSummaryItem) => {
-    if (tripType === 'RoundTrip') {
-      setSelectedOutboundTrip(trip);
-      setActiveTab('return');
-    } else {
-      handleCheckout(trip, undefined);
-    }
-  };
-
-  const handleSelectReturn = (returnTrip: ReserveSummaryItem) => {
-    if (!selectedOutboundTrip) {
-      console.error('No se puede seleccionar un viaje de vuelta sin uno de ida.');
-      return;
-    }
-    handleCheckout(selectedOutboundTrip, returnTrip);
-  };
-
   const { setCheckout } = useCheckout();
 
   const handleCheckout = (outboundTrip: ReserveSummaryItem, returnTrip?: ReserveSummaryItem) => {
@@ -96,7 +74,22 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
       returnTrip: returnTrip || null,
       passengers: Number(passengers),
     });
-    router.push(`/checkout`);
+    router.push('/checkout');
+  };
+
+  const handleSelectOutbound = (trip: ReserveSummaryItem) => {
+    if (tripType === 'RoundTrip') {
+      setSelectedOutboundTrip(trip);
+      setActiveTab('return');
+      return;
+    }
+
+    handleCheckout(trip, undefined);
+  };
+
+  const handleSelectReturn = (returnTripSelection: ReserveSummaryItem) => {
+    if (!selectedOutboundTrip) return;
+    handleCheckout(selectedOutboundTrip, returnTripSelection);
   };
 
   function formatLocation(location: string): string {
@@ -104,210 +97,198 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     return location.charAt(0).toUpperCase() + location.slice(1);
   }
 
+  const renderTripList = (items: ReserveSummaryItem[], isReturnList = false) => {
+    if (loading) {
+      return (
+        <div className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-slate-700" />
+          <p className="mt-4 text-slate-600">Actualizando salidas disponibles...</p>
+        </div>
+      );
+    }
+
+    if (items.length === 0) {
+      return (
+        <div className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center">
+          <Info className="mb-4 h-12 w-12 text-slate-300" />
+          <h3 className="text-lg font-medium text-slate-900">No encontramos opciones para esa fecha</h3>
+          <p className="mt-2 text-slate-600">Prueba otra fecha o cambia la ruta elegida.</p>
+        </div>
+      );
+    }
+
+    return (
+      <ScrollArea className="h-[620px]">
+        <div className="space-y-4 p-4">
+          {items.map((trip) => (
+            <article
+              key={trip.ReserveId}
+              className={cn(
+                'glass-panel rounded-[1.6rem] border-0 p-5 transition-transform duration-200 hover:-translate-y-0.5',
+                selectedOutboundTrip?.ReserveId === trip.ReserveId && 'ring-2 ring-amber-300'
+              )}
+            >
+              <div className="grid gap-5 lg:grid-cols-[0.7fr_1fr_0.9fr] lg:items-center">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">salida</p>
+                  <div className="mt-2 text-4xl font-display text-slate-900">{trip.DepartureHour}</div>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+                    <Calendar className="h-4 w-4" />
+                    {isReturnList ? formattedReturnDate : formattedDepartureDate}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-700">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-white">
+                      <Bus className="h-3.5 w-3.5" />
+                      Servicio estandar
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5">
+                      <Users className="h-3.5 w-3.5 text-slate-500" />
+                      {trip.AvailableQuantity} disponibles
+                    </div>
+                  </div>
+
+                  {trip.StopSchedules && trip.StopSchedules.length > 0 && (
+                    <div className="rounded-2xl border border-black/5 bg-white/70 p-3 text-xs text-slate-600">
+                      <div className="mb-2 flex items-center gap-2 font-medium text-slate-800">
+                        <MapPin className="h-3.5 w-3.5" />
+                        Puntos de subida
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        {trip.StopSchedules.map((stop) => (
+                          <span key={stop.DirectionId}>
+                            {stop.DirectionName}: {stop.PickupTime}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-[1.4rem] bg-[linear-gradient(180deg,rgba(17,38,45,0.98),rgba(12,28,33,0.96))] p-5 text-white">
+                  <div className="text-xs uppercase tracking-[0.28em] text-white/50">por pasajero</div>
+                  <div className="mt-2 text-3xl font-display">${trip.Price.toFixed(2)}</div>
+                  <Button
+                    className="mt-5 h-11 w-full rounded-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+                    onClick={() => (isReturnList ? handleSelectReturn(trip) : handleSelectOutbound(trip))}
+                  >
+                    {isReturnList ? 'Elegir vuelta' : 'Reservar'}
+                  </Button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </ScrollArea>
+    );
+  };
+
   return (
     <>
-      {/* Resumen de búsqueda y botón de volver */}
-      <div className="mb-6 sm:mb-8">
-        <Link href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-3 sm:mb-4 text-sm sm:text-base">
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Volver a la búsqueda
-        </Link>
-        <div className="bg-white rounded-lg border p-3 sm:p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Ruta */}
-            <div className="flex items-center justify-center sm:justify-start">
-              <h1 className="flex flex-wrap justify-center items-center gap-x-1 text-sm sm:text-xl md:text-2xl font-bold text-blue-800 font-display text-center leading-tight">
+      <section className="mb-6">
+        <div className="glass-panel rounded-[2rem] px-5 py-6 sm:px-7">
+          <Link href="/" className="inline-flex items-center text-sm text-slate-600 transition-colors hover:text-slate-900">
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Volver a la busqueda
+          </Link>
+
+          <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">resultado de viaje</p>
+              <h1 className="mt-3 flex flex-wrap items-center gap-2 text-3xl text-slate-900 sm:text-4xl font-display">
                 <span>{formatLocation(originName)}</span>
-                <ArrowRight className="h-3 w-3 sm:h-5 sm:w-5 md:h-6 md:w-6 flex-shrink-0 text-blue-800" />
+                <ArrowRight className="h-5 w-5 text-slate-400" />
                 <span>{formatLocation(destinationName)}</span>
               </h1>
             </div>
 
-            {/* Info badges */}
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>{formattedDepartureDate}</span>
-              </div>
-              <span className="hidden sm:inline">•</span>
-              <div className="flex items-center gap-1">
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>
-                  {passengers} {Number.parseInt(passengers) === 1 ? 'Pasajero' : 'Pasajeros'}
-                </span>
-              </div>
+            <div className="flex flex-wrap gap-2 text-sm text-slate-600">
+              <div className="rounded-full bg-white/80 px-4 py-2">{formattedDepartureDate}</div>
               {tripType === 'RoundTrip' && returnDate && (
-                <>
-                  <span className="hidden sm:inline">•</span>
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium">Vuelta:</span>
-                    <span>{formattedReturnDate}</span>
-                  </div>
-                </>
+                <div className="rounded-full bg-white/80 px-4 py-2">Vuelta: {formattedReturnDate}</div>
               )}
+              <div className="rounded-full bg-white/80 px-4 py-2">
+                {passengers} {Number.parseInt(passengers, 10) === 1 ? 'pasajero' : 'pasajeros'}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Carrusel de fechas */}
-      <div className="mb-6">
-        <DateCarousel selectedDate={departureDate} onDateSelect={handleDateSelect} className="bg-white rounded-lg border shadow-sm p-4" />
-      </div>
+      <section className="mb-6">
+        <div className="glass-panel rounded-[1.75rem] p-4">
+          <DateCarousel selectedDate={departureDate} onDateSelect={handleDateSelect} />
+        </div>
+      </section>
 
-      {/* Resultados de viajes */}
-      <div className="mb-8">
+      <section className="mb-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="outbound">Ida</TabsTrigger>
-            {tripType === 'RoundTrip' && returnDate && <TabsTrigger value="return">Vuelta</TabsTrigger>}
+          <TabsList className="mb-4 rounded-full bg-white/70 p-1">
+            <TabsTrigger value="outbound" className="rounded-full">Ida</TabsTrigger>
+            {tripType === 'RoundTrip' && returnDate && <TabsTrigger value="return" className="rounded-full">Vuelta</TabsTrigger>}
           </TabsList>
 
-          {/* Pestaña de Ida */}
           <TabsContent value="outbound" className="mt-0">
-            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-              <div className="p-4 bg-blue-50 border-b">
-                <h2 className="font-display font-bold text-lg text-blue-800">
-                  Reservas Disponibles: {formatLocation(originName)} → {formatLocation(destinationName)}
+            <div className="rounded-[2rem] border border-black/5 bg-[linear-gradient(180deg,rgba(255,248,239,0.86),rgba(233,241,243,0.8))] shadow-[0_20px_60px_rgba(16,32,36,0.08)]">
+              <div className="border-b border-black/5 px-5 py-5 sm:px-6">
+                <h2 className="text-2xl text-slate-900 font-display">
+                  Salidas disponibles: {formatLocation(originName)} a {formatLocation(destinationName)}
                 </h2>
-                <p className="text-sm text-blue-700">{formattedDepartureDate}</p>
+                <p className="mt-2 text-sm text-slate-600">{formattedDepartureDate}</p>
               </div>
-
-              {loading ? (
-                <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
-                  <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
-                  <p className="mt-4 text-gray-600">Buscando viajes...</p>
-                </div>
-              ) : reserves.Outbound.Items.length === 0 ? (
-                <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
-                  <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No hay viajes disponibles</h3>
-                  <p className="text-gray-600">No encontramos viajes para la fecha seleccionada.</p>
-                </div>
-              ) : (
-                <ScrollArea className="h-[600px]">
-                  <div className="divide-y">
-                    {reserves.Outbound.Items.map((trip) => (
-                      <div key={trip.ReserveId} className={cn('p-4 hover:bg-gray-50 transition-colors', selectedOutboundTrip?.ReserveId === trip.ReserveId && 'bg-blue-50')}>
-                        <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
-                          <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
-                          <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                          <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                          <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
-                          <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectOutbound(trip)}>Reservar</Button>
-                        </div>
-                        {trip.StopSchedules && trip.StopSchedules.length > 0 && (
-                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                            <MapPin className="h-3 w-3" />
-                            {trip.StopSchedules.map((stop, idx) => (
-                              <span key={stop.DirectionId}>
-                                {stop.DirectionName}: {stop.PickupTime}
-                                {idx < trip.StopSchedules!.length - 1 && ' |'}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
+              {renderTripList(reserves.Outbound.Items, false)}
             </div>
           </TabsContent>
 
-          {/* Pestaña de Vuelta */}
           {tripType === 'RoundTrip' && returnDate && (
             <TabsContent value="return" className="mt-0">
               {!selectedOutboundTrip ? (
-                <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px] bg-white rounded-lg border shadow-sm">
-                  <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Selecciona un viaje de ida</h3>
-                  <p className="text-gray-600">Primero debes seleccionar un viaje de ida para poder elegir tu vuelta.</p>
+                <div className="glass-panel rounded-[2rem] p-10 text-center">
+                  <Info className="mx-auto h-12 w-12 text-slate-300" />
+                  <h3 className="mt-4 text-lg font-medium text-slate-900">Primero elige la salida de ida</h3>
+                  <p className="mt-2 text-slate-600">Despues de elegirla vas a poder completar la vuelta.</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-                  <div className="p-4 bg-blue-50 border-b">
-                    <h2 className="font-display font-bold text-lg text-blue-800">
-                      Reservas Disponibles: {formatLocation(destinationName)} → {formatLocation(originName)}
+                <div className="rounded-[2rem] border border-black/5 bg-[linear-gradient(180deg,rgba(255,248,239,0.86),rgba(233,241,243,0.8))] shadow-[0_20px_60px_rgba(16,32,36,0.08)]">
+                  <div className="border-b border-black/5 px-5 py-5 sm:px-6">
+                    <h2 className="text-2xl text-slate-900 font-display">
+                      Vuelta disponible: {formatLocation(destinationName)} a {formatLocation(originName)}
                     </h2>
-                    <p className="text-sm text-blue-700">{formattedReturnDate}</p>
+                    <p className="mt-2 text-sm text-slate-600">{formattedReturnDate}</p>
                   </div>
-                  {reserves.Return.Items.length === 0 ? (
-                    <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
-                      <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No hay viajes de vuelta disponibles</h3>
-                      <p className="text-gray-600">No encontramos viajes para la fecha de vuelta seleccionada.</p>
-                    </div>
-                  ) : (
-                    <ScrollArea className="h-[600px]">
-                      <div className="divide-y">
-                        {reserves.Return.Items.map((trip) => (
-                          <div key={trip.ReserveId} className="p-4 hover:bg-gray-50 transition-colors">
-                            <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
-                              <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
-                              <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                              <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                              <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
-                              <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectReturn(trip)}>Seleccionar Vuelta</Button>
-                            </div>
-                            {trip.StopSchedules && trip.StopSchedules.length > 0 && (
-                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                                <MapPin className="h-3 w-3" />
-                                {trip.StopSchedules.map((stop, idx) => (
-                                  <span key={stop.DirectionId}>
-                                    {stop.DirectionName}: {stop.PickupTime}
-                                    {idx < trip.StopSchedules!.length - 1 && ' |'}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
+                  {renderTripList(reserves.Return.Items, true)}
                 </div>
               )}
             </TabsContent>
           )}
         </Tabs>
-      </div>
+      </section>
 
-      {/* Información de la reserva */}
-      <Card className="mb-8">
+      <Card className="glass-panel rounded-[2rem] border-0">
         <CardContent className="p-6">
-          <h2 className="text-xl font-bold text-blue-800 font-display mb-4">
-            Información de la Reserva
-          </h2>
-          <div className="grid md:grid-cols-2 gap-6">
+          <h2 className="text-2xl text-slate-900 font-display">Antes de confirmar tu viaje</h2>
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
             <div>
-              <h3 className="font-medium text-blue-800 mb-2">
-                Métodos de Pago
-              </h3>
-              <div className="flex items-center gap-2 text-gray-600 mb-1">
+              <h3 className="mb-2 font-medium text-slate-900">Medios de pago</h3>
+              <div className="mb-1 flex items-center gap-2 text-slate-700">
                 <CreditCard className="h-4 w-4" />
-                <span>Tarjetas de Crédito/Débito</span>
+                <span>Tarjetas de credito, debito y Mercado Pago Wallet</span>
               </div>
-              <p className="text-sm text-gray-500">
-                Aceptamos Visa, Mastercard, American Express y Discover.
+              <p className="text-sm text-slate-500">
+                El checkout mantiene la reserva temporal mientras completas el pago.
               </p>
             </div>
             <div>
-              <h3 className="font-medium text-blue-800 mb-2">
-                Política de Cancelación
-              </h3>
-              <p className="text-sm text-gray-600">
-                {legal.cancellationPolicy}
-              </p>
+              <h3 className="mb-2 font-medium text-slate-900">Politica de cancelacion</h3>
+              <p className="text-sm text-slate-600">{legal.cancellationPolicy}</p>
             </div>
           </div>
         </CardContent>
-        <CardFooter className="bg-gray-50 px-6 py-4 border-t">
-          <div className="text-sm text-gray-600">
-            ¿Necesitas ayuda? Llámanos al{" "}
-            <span className="font-medium">{contact.phone}</span> o envíanos un correo electrónico a{" "}
-            <span className="font-medium">{contact.bookingsEmail}</span>
-          </div>
+        <CardFooter className="border-t border-black/5 bg-white/45 px-6 py-4 text-sm text-slate-600">
+          ¿Necesitas ayuda? Llámanos al <span className="mx-1 font-medium text-slate-900">{contact.phone}</span> o escribe a
+          <span className="ml-1 font-medium text-slate-900">{contact.bookingsEmail}</span>.
         </CardFooter>
       </Card>
     </>

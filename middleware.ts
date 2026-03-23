@@ -98,8 +98,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  console.log('User role:', userRole, 'Required roles:', routeConfigs[matchingRoute].roles);
-
   if (!userRole || !routeConfigs[matchingRoute].roles.includes(userRole)) {
     // Si el usuario no tiene el rol adecuado, redirigir a la página no autorizada
     const redirectTo = routeConfigs[matchingRoute].redirectTo || "/unauthorized"

@@ -72,8 +72,7 @@ export default function PassengersManagement() {
       try {
         const servicesList = await getServicesList();
         setServices(servicesList);
-      } catch (error) {
-        console.error('Error fetching services:', error);
+      } catch {
       } finally {
         setServicesLoading(false);
       }
@@ -197,7 +196,7 @@ export default function PassengersManagement() {
             passenger.Services.map((s) => (
               <span
                 key={s.ServiceId}
-                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
               >
                 {s.ServiceName}
               </span>
@@ -225,7 +224,7 @@ export default function PassengersManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="h-9 rounded-full border-black/8 bg-white/80 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
             onClick={() => handleEditPassenger(passenger)}
           >
             <Edit className="h-4 w-4" />
@@ -249,14 +248,14 @@ export default function PassengersManagement() {
         title="Pasajeros"
         description="Gestiona y visualiza toda la información de las pasajeros."
         action={
-          <Button onClick={() => handleAddPassegers()}>
+          <Button onClick={() => handleAddPassegers()} className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-5 text-white hover:opacity-95">
             <UserPlusIcon className="mr-2 h-4 w-4" />
             Agregar
           </Button>
         }
       />
 
-      <Card className="w-full">
+      <Card className="w-full overflow-hidden rounded-[1.75rem] border border-black/6 bg-white/78 shadow-[0_22px_48px_rgba(22,34,24,0.06)]">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
             <FilterBar onReset={resetFilters}>
@@ -273,12 +272,12 @@ export default function PassengersManagement() {
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {(data?.Items?.length ?? 0) > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.TotalPages ?? 0}
+                totalItems={data?.TotalRecords ?? 0}
+                itemsPerPage={data?.PageSize ?? 0}
                 onPageChange={setCurrentPage}
                 itemName="pasajeros"
               />
@@ -309,7 +308,7 @@ export default function PassengersManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
+        ) : (data?.Items?.length ?? 0) > 0 ? (
           data?.Items?.map((passenger: Passenger) => (
             <MobileCard
               key={passenger.CustomerId}
@@ -326,7 +325,7 @@ export default function PassengersManagement() {
             />
           ))
         ) : (
-          <div className="text-center p-4 border rounded-md">No se encontraron pasajeros.</div>
+          <div className="rounded-[1.25rem] border border-dashed border-black/8 p-6 text-center text-sm text-slate-500">No se encontraron pasajeros.</div>
         )}
       </div>
 

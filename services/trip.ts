@@ -11,7 +11,6 @@ export async function getTrips(params: Partial<PaginationParams>): Promise<Paged
 }
 
 export async function getTripById(tripId: number, reserveId?: number): Promise<Trip> {
-  console.log('[getTripById] Fetching tripId:', tripId, 'reserveId:', reserveId);
   const queryParams = reserveId ? `?reserveId=${reserveId}` : '';
   return await getPure<Trip>(`/trip/${tripId}${queryParams}`);
 }

@@ -8,16 +8,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { ChevronDown, ChevronUp, User } from "lucide-react"
 import { useEffect, useState } from "react"
+import { CheckoutPassengerData } from "@/utils/checkout"
 
 interface PassengerFormProps {
   passengerCount: number
-  onDataChange: (data: Record<string, any>[]) => void
-  initialData?: Record<string, any>[]
+  onDataChange: (data: CheckoutPassengerData[]) => void
+  initialData?: CheckoutPassengerData[]
 }
 
 export function PassengerForm({ passengerCount, onDataChange, initialData = [] }: PassengerFormProps) {
   const [expandedPassenger, setExpandedPassenger] = useState(0)
-  const [passengers, setPassengers] = useState<Record<string, any>[]>([])
+  const [passengers, setPassengers] = useState<CheckoutPassengerData[]>([])
 
   // Initialize passenger data
   useEffect(() => {
@@ -26,7 +27,7 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
     } else {
       const initialPassengers = Array(passengerCount)
         .fill(0)
-        .map((_, i) => ({
+        .map(() => ({
           firstName: "",
           lastName: "",
           email: "",

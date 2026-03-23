@@ -154,7 +154,7 @@ export default function CitiesManagement() {
       width: '25%',
       cell: (city: City) => (
         <div className="flex justify-end gap-2">
-          <Button size="sm" variant="outline" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEditCity(city)}>
+          <Button size="sm" variant="outline" className="h-9 rounded-full border-black/8 bg-white/80 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800" onClick={() => handleEditCity(city)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300" onClick={() => handleDeleteCity(city.Id)}>
@@ -171,7 +171,7 @@ export default function CitiesManagement() {
         title="Ciudades"
         description="Gestiona y visualiza toda la información de las ciudades."
         action={
-          <Button onClick={() => setIsAddModalOpen(true)}>
+          <Button onClick={() => setIsAddModalOpen(true)} className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-5 text-white hover:opacity-95">
             <Building className="mr-2 h-4 w-4" />
             Agregar
           </Button>
@@ -182,7 +182,7 @@ export default function CitiesManagement() {
           <Skeleton className="h-8 w-48" />
         </div>
       ) : (
-      <Card className="w-full">
+      <Card className="w-full overflow-hidden rounded-[1.75rem] border border-black/6 bg-white/78 shadow-[0_22px_48px_rgba(22,34,24,0.06)]">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
             <FilterBar onReset={resetFilters}>
@@ -199,12 +199,12 @@ export default function CitiesManagement() {
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {(data?.Items?.length ?? 0) > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.TotalPages ?? 0}
+                totalItems={data?.TotalRecords ?? 0}
+                itemsPerPage={data?.PageSize ?? 0}
                 onPageChange={setCurrentPage}
                 itemName="ciudades"
               />
@@ -238,7 +238,7 @@ export default function CitiesManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
+        ) : (data?.Items?.length ?? 0) > 0 ? (
           data?.Items?.map((city: City) => (
             <MobileCard
               key={city.Id}
@@ -251,7 +251,7 @@ export default function CitiesManagement() {
             />
           ))
         ) : (
-          <div className="text-center p-4 border rounded-md">No se encontraron ciudades.</div>
+          <div className="rounded-[1.25rem] border border-dashed border-black/8 p-6 text-center text-sm text-slate-500">No se encontraron ciudades.</div>
         )}
       </div>
 

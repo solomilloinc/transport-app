@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Geist } from 'next/font/google';
+import { Fraunces, Manrope } from 'next/font/google';
 import { Toaster } from '@/components/ui/toaster';
 import AuthProvider from '@/components/auth-provider';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -11,10 +11,16 @@ import { TenantStyles } from '@/components/tenant-styles';
 import { getTenantConfig } from '@/services/tenant';
 import { getRequestHost } from '@/lib/get-host';
 
-const geist = Geist({
+const manrope = Manrope({
   subsets: ['latin'],
-  weight: ['200', '400', '600', '700'],
-  variable: '--font-sans',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-body',
+});
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--font-display',
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,7 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background font-sans antialiased", geist.variable)}>
+      <body className={cn("min-h-screen bg-background font-sans antialiased", manrope.variable, fraunces.variable)}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

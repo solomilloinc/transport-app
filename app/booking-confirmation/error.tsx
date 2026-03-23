@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
@@ -13,10 +12,6 @@ interface ErrorProps {
 }
 
 export default function BookingConfirmationError({ error, reset }: ErrorProps) {
-  useEffect(() => {
-    console.error('Booking confirmation error:', error);
-  }, [error]);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />

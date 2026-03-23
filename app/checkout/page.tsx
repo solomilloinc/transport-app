@@ -21,27 +21,45 @@ import { post } from '@/services/api';
 import { CreateReserveExternalResult } from '@/interfaces/reserve';
 import { LocationSelector, LocationSelectionData } from '@/components/checkout/LocationSelector';
 import { useTenant } from '@/contexts/TenantContext';
+import {
+  buildReservePayloadItems,
+  CheckoutPassengerData,
+  CheckoutStep,
+  clearCheckoutDraftFromStorage,
+  getEffectiveTripPrice,
+  loadCheckoutDraftFromStorage,
+  saveCheckoutDraftToStorage,
+  validatePassengerData,
+} from '@/utils/checkout';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { checkout, setLockState, isLockValid, clearCheckout } = useCheckout();
+  const { checkout, setLockState, isLockValid, isHydrated } = useCheckout();
   const { identity, legal } = useTenant();
 
   // If there's no outbound trip, there's nothing to check out. Redirect to home.
   useEffect(() => {
-    if (!checkout.outboundTrip) {
+    if (isHydrated && !checkout.outboundTrip) {
       router.replace('/');
     }
-  }, [checkout.outboundTrip, router]);
+  }, [checkout.outboundTrip, isHydrated, router]);
 
-  const [currentStep, setCurrentStep] =
-    useState<'passengers' | 'payment' | 'review'>('passengers');
-  const [passengerData, setPassengerData] = useState<Record<string, any>[]>(() =>
-    Array(checkout.passengers || 1).fill(0).map(() => ({})),
+  const [currentStep, setCurrentStep] = useState<CheckoutStep>('passengers');
+  const [passengerData, setPassengerData] = useState<CheckoutPassengerData[]>(() =>
+    Array(checkout.passengers || 1).fill(0).map(() => ({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      documentNumber: '',
+      specialRequests: '',
+    })),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'wallet'>('card');
   const [lockError, setLockError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   const [formattedDepartureDate, setFormattedDepartureDate] = useState('');
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
@@ -65,8 +83,6 @@ export default function CheckoutPage() {
   // Check if it's a round trip
   const isRoundTrip = !!checkout.returnTrip;
 
-
-
   useEffect(() => {
     if (checkout.outboundTrip) {
       setFormattedDepartureDate(formatWithTimezone(checkout.outboundTrip.DepartureDate ?? ''));
@@ -76,67 +92,99 @@ export default function CheckoutPage() {
     }
   }, [checkout.outboundTrip, checkout.returnTrip]);
 
+  useEffect(() => {
+    if (!isHydrated || !checkout.outboundTrip || draftHydrated) {
+      return;
+    }
+
+    const draft = loadCheckoutDraftFromStorage();
+    if (
+      draft &&
+      draft.outboundReserveId === checkout.outboundTrip.ReserveId &&
+      draft.returnReserveId === (checkout.returnTrip?.ReserveId ?? null)
+    ) {
+      setCurrentStep(draft.currentStep);
+      setPassengerData(draft.passengerData);
+      setPaymentMethod(draft.paymentMethod);
+      setOutboundLocation(draft.outboundLocation);
+      setReturnLocation(draft.returnLocation);
+    }
+
+    setDraftHydrated(true);
+  }, [checkout.outboundTrip, draftHydrated, isHydrated]);
+
+  useEffect(() => {
+    if (!draftHydrated || !checkout.outboundTrip) {
+      return;
+    }
+
+    saveCheckoutDraftToStorage({
+      outboundReserveId: checkout.outboundTrip.ReserveId,
+      returnReserveId: checkout.returnTrip?.ReserveId ?? null,
+      currentStep,
+      passengerData,
+      paymentMethod,
+      outboundLocation,
+      returnLocation,
+    });
+  }, [
+    checkout.outboundTrip,
+    currentStep,
+    draftHydrated,
+    outboundLocation,
+    passengerData,
+    paymentMethod,
+    returnLocation,
+  ]);
+
   // Use dynamic dropoff price if selected, otherwise use default trip price
-  const outboundPrice = outboundLocation.dropoffPrice > 0
-    ? outboundLocation.dropoffPrice
-    : (checkout.outboundTrip?.Price || 0);
-  const returnPrice = returnLocation.dropoffPrice > 0
-    ? returnLocation.dropoffPrice
-    : (checkout.returnTrip?.Price || 0);
+  const outboundPrice = getEffectiveTripPrice(outboundLocation.dropoffPrice, checkout.outboundTrip?.Price || 0);
+  const returnPrice = getEffectiveTripPrice(returnLocation.dropoffPrice, checkout.returnTrip?.Price || 0);
   const totalPrice = (outboundPrice + returnPrice) * checkout.passengers;
   const serviceFee = 0;
   const finalTotal = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
 
-  const handlePassengerDataChange = (data: Record<string, any>[]) => {
+  const reserveItems = useMemo(() => {
+    if (!checkout.outboundTrip) return [];
+
+    return buildReservePayloadItems({
+      passengers: passengerData,
+      outboundTrip: checkout.outboundTrip,
+      returnTrip: checkout.returnTrip,
+      outboundLocation,
+      returnLocation,
+      outboundPrice,
+      returnPrice,
+    });
+  }, [
+    checkout.outboundTrip,
+    checkout.returnTrip,
+    outboundLocation,
+    outboundPrice,
+    passengerData,
+    returnLocation,
+    returnPrice,
+  ]);
+
+  const handlePassengerDataChange = (data: CheckoutPassengerData[]) => {
     if (JSON.stringify(data) !== JSON.stringify(passengerData)) {
       setPassengerData(data);
+      if (validationError) {
+        setValidationError(null);
+      }
     }
   };
 
-  const createWalletPayload = useMemo(() => {
-    const items = passengerData.map((p) => ({
-      reserveId: checkout.outboundTrip?.ReserveId ?? 0,
-      reserveTypeId: isRoundTrip ? 2 : 1, // 1 = Ida, 2 = IdaVuelta
-      customerId: null,
-      isPayment: true,
-      pickupLocationId: outboundLocation.pickupDirectionId,
-      dropoffLocationId: outboundLocation.dropoffDirectionId,
-      dropoffCityId: outboundLocation.dropoffCityId,
-      hasTraveled: false,
-      price: Number(outboundPrice.toFixed(2)),
-      firstName: p.firstName,
-      lastName: p.lastName,
-      email: p.email || '',
-      phone1: p.phone,
-      documentNumber: p.documentNumber,
-    }));
-
-    if (checkout.returnTrip) {
-      items.push(
-        ...passengerData.map((p) => ({
-          reserveId: checkout.returnTrip?.ReserveId ?? 0,
-          reserveTypeId: 2, // Vuelta siempre es tipo 2
-          customerId: null,
-          isPayment: true,
-          pickupLocationId: returnLocation.pickupDirectionId,
-          dropoffLocationId: returnLocation.dropoffDirectionId,
-          dropoffCityId: returnLocation.dropoffCityId,
-          hasTraveled: false,
-          price: Number(returnPrice.toFixed(2)),
-          firstName: p.firstName,
-          lastName: p.lastName,
-          email: p.email || '',
-          phone1: p.phone,
-          documentNumber: p.documentNumber,
-        })),
-      );
+  const validateCurrentCheckout = () => {
+    const passengerValidationError = validatePassengerData(passengerData, checkout.passengers);
+    if (passengerValidationError) {
+      setValidationError(passengerValidationError);
+      return false;
     }
 
-    return {
-      Payment: null,
-      Items: items,
-    };
-  }, [passengerData, checkout.outboundTrip, checkout.returnTrip, finalTotal]);
+    setValidationError(null);
+    return true;
+  };
 
   // Función para bloquear slots
   const lockSlots = async (): Promise<boolean> => {
@@ -156,8 +204,7 @@ export default function CheckoutPage() {
 
       setLockState(lockState);
       return true;
-    } catch (error) {
-      console.error('Error locking slots:', error);
+    } catch {
       setLockError('No se pudieron reservar los asientos. Intente nuevamente.');
       return false;
     }
@@ -165,6 +212,9 @@ export default function CheckoutPage() {
 
   const goToNextStep = async () => {
     if (currentStep === 'passengers') {
+      if (!validateCurrentCheckout()) {
+        return;
+      }
       setCurrentStep('review');
     } else if (currentStep === 'review') {
       // Verificar si tenemos un lock válido
@@ -187,10 +237,7 @@ export default function CheckoutPage() {
 
   const isCurrentStepComplete = () => {
     if (currentStep === 'passengers') {
-      return (
-        passengerData.length === checkout.passengers &&
-        passengerData.every((p) => p.firstName && p.lastName && p.documentNumber)
-      );
+      return !validatePassengerData(passengerData, checkout.passengers);
     }
     return true;
   };
@@ -210,11 +257,11 @@ export default function CheckoutPage() {
       throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
     }
 
-    const payloadWithLock = {
-      lockToken: checkout.lockState.lockToken,
-      items: createWalletPayload.Items,
-      payment: null,
-    };
+      const payloadWithLock = {
+        lockToken: checkout.lockState.lockToken,
+        items: reserveItems,
+        payment: null,
+      };
 
     const response = await post('/passenger-reserves-create-with-lock', payloadWithLock);
     const responseData = typeof response === 'string' ? JSON.parse(response) : response;
@@ -226,7 +273,7 @@ export default function CheckoutPage() {
 
     // Devolver el PreferenceId para que MP abra el wallet
     return responseData.PreferenceId;
-  }, [finalTotal, createWalletPayload]);
+  }, [checkout.lockState, finalTotal, isLockValid, reserveItems]);
 
   // Procesar el pago con tarjeta (el Brick llama esto y espera una Promise)
   const handleCardSubmit = async (data: {
@@ -249,47 +296,9 @@ export default function CheckoutPage() {
 
       const compraDescripcion = checkout.returnTrip ? 'Pasaje ida y vuelta' : 'Pasaje de ida';
 
-      const items = passengerData.map((p) => ({
-        reserveId: checkout.outboundTrip?.ReserveId ?? 0,
-        reserveTypeId: isRoundTrip ? 2 : 1, // 1 = Ida, 2 = IdaVuelta
-        customerId: null,
-        isPayment: true,
-        pickupLocationId: outboundLocation.pickupDirectionId,
-        dropoffLocationId: outboundLocation.dropoffDirectionId,
-        dropoffCityId: outboundLocation.dropoffCityId,
-        hasTraveled: false,
-        price: Number(outboundPrice.toFixed(2)),
-        firstName: p.firstName,
-        lastName: p.lastName,
-        email: p.email,
-        phone1: p.phone,
-        documentNumber: p.documentNumber,
-      }));
-
-      if (checkout.returnTrip) {
-        items.push(
-          ...passengerData.map((p) => ({
-            reserveId: checkout.returnTrip?.ReserveId ?? 0,
-            reserveTypeId: 2, // Vuelta siempre es tipo 2
-            customerId: null,
-            isPayment: true,
-            pickupLocationId: returnLocation.pickupDirectionId,
-            dropoffLocationId: returnLocation.dropoffDirectionId,
-            dropoffCityId: returnLocation.dropoffCityId,
-            hasTraveled: false,
-            price: Number(returnPrice.toFixed(2)),
-            firstName: p.firstName,
-            lastName: p.lastName,
-            email: p.email,
-            phone1: p.phone,
-            documentNumber: p.documentNumber,
-          })),
-        );
-      }
-
       const payload = {
         lockToken: checkout.lockState.lockToken,
-        items: items,
+        items: reserveItems,
         payment: {
           transactionAmount: Number(finalTotal.toFixed(2)),
           token: data.token,
@@ -308,6 +317,7 @@ export default function CheckoutPage() {
 
       if (responseData.Status === 'approved') {
         const reserveId = checkout.outboundTrip?.ReserveId;
+        clearCheckoutDraftFromStorage();
         router.push(`/booking-confirmation?success=true&reserveId=${reserveId}`);
       } else {
         router.push(`/booking-confirmation?status=${encodeURIComponent(responseData.Status || 'unknown')}`);
@@ -318,19 +328,19 @@ export default function CheckoutPage() {
   };
 
   // If there's no trip, don't render the checkout form to prevent errors while redirecting
-  if (!checkout.outboundTrip) {
+  if (!isHydrated || !checkout.outboundTrip) {
     return null; // Or a loading spinner
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
+    <div className="min-h-screen w-full overflow-x-hidden">
       <Navbar />
       <main className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <div className="mb-4 sm:mb-6">
           <Button
             variant="link"
             onClick={() => router.back()}
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 p-0 h-auto text-sm sm:text-base"
+            className="inline-flex h-auto items-center p-0 text-sm text-slate-600 hover:text-slate-900 sm:text-base"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Volver
@@ -339,16 +349,19 @@ export default function CheckoutPage() {
 
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-lg border shadow-sm p-4 sm:p-6 relative w-full">
+            <div className="glass-panel relative w-full rounded-[2rem] p-4 sm:p-6">
 
               {/* Overlay de loading durante el pago */}
               {isSubmitting && (
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center rounded-lg z-10">
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[2rem] bg-white/60 backdrop-blur-[1px]">
                   <span className="text-sm text-gray-700">Procesando pago…</span>
                 </div>
               )}
 
-              <h1 className="text-xl sm:text-2xl font-bold text-blue-800 font-display mb-4">Complete su reserva</h1>
+              <div className="mb-6 border-b border-black/5 pb-5">
+                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">checkout protegido</p>
+                <h1 className="mt-2 text-2xl font-display text-slate-900 sm:text-3xl">Completa tu reserva</h1>
+              </div>
 
               {/* Timer Component - Aislado para evitar re-renders */}
               <LockTimer
@@ -356,7 +369,7 @@ export default function CheckoutPage() {
                 expiresAt={checkout.lockState?.expiresAt}
                 onExpire={() => {
                   // No limpiar inmediatamente para permitir mostrar el mensaje de expiración
-                  console.log('Timer expired');
+                  
                 }}
                 onRestart={() => {
                   setLockState(null);
@@ -374,12 +387,20 @@ export default function CheckoutPage() {
                 </div>
               )}
 
+              {validationError && (
+                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="text-sm text-amber-700">{validationError}</div>
+                  </div>
+                </div>
+              )}
+
               {/* Steps */}
-              <div className="mb-8">
+              <div className="mb-8 rounded-[1.5rem] border border-black/5 bg-white/45 p-4 sm:p-5">
                 <div className="flex items-center justify-between">
-                  <div className={`flex flex-col items-center ${currentStep === 'passengers' ? 'text-blue-600' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'passengers' ? 'bg-blue-600 text-white'
-                      : currentStep === 'payment' || currentStep === 'review' ? 'bg-green-500 text-white'
+                  <div className={`flex flex-col items-center ${currentStep === 'passengers' ? 'text-slate-900' : 'text-gray-500'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'passengers' ? 'bg-slate-900 text-white'
+                      : currentStep === 'payment' || currentStep === 'review' ? 'bg-emerald-600 text-white'
                         : 'bg-gray-200 text-gray-500'
                       }`}>
                       <Users className="h-4 w-4" />
@@ -388,12 +409,12 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="flex-1 h-1 mx-2 bg-gray-200">
-                    <div className={`h-full bg-blue-600 ${currentStep !== 'passengers' ? 'w-full' : 'w-0'}`} />
+                    <div className={`h-full bg-slate-900 ${currentStep !== 'passengers' ? 'w-full' : 'w-0'}`} />
                   </div>
 
-                  <div className={`flex flex-col items-center ${currentStep === 'review' ? 'text-blue-600' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'review' ? 'bg-blue-600 text-white'
-                      : currentStep === 'payment' ? 'bg-green-500 text-white'
+                  <div className={`flex flex-col items-center ${currentStep === 'review' ? 'text-slate-900' : 'text-gray-500'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'review' ? 'bg-slate-900 text-white'
+                      : currentStep === 'payment' ? 'bg-emerald-600 text-white'
                         : 'bg-gray-200 text-gray-500'
                       }`}>
                       <CreditCard className="h-4 w-4" />
@@ -402,11 +423,11 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="flex-1 h-1 mx-2 bg-gray-200">
-                    <div className={`h-full bg-blue-600 ${currentStep === 'payment' ? 'w-full' : 'w-0'}`} />
+                    <div className={`h-full bg-slate-900 ${currentStep === 'payment' ? 'w-full' : 'w-0'}`} />
                   </div>
 
-                  <div className={`flex flex-col items-center ${currentStep === 'payment' ? 'text-blue-600' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'payment' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                  <div className={`flex flex-col items-center ${currentStep === 'payment' ? 'text-slate-900' : 'text-gray-500'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'payment' ? 'bg-slate-900 text-white' : 'bg-gray-200 text-gray-500'
                       }`}>
                       <Shield className="h-4 w-4" />
                     </div>
@@ -421,8 +442,8 @@ export default function CheckoutPage() {
                   <div className="space-y-8">
                     {/* Passenger Information */}
                     <div>
-                      <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Información de los Pasajeros</h2>
-                      <p className="text-gray-600 mb-6 text-sm sm:text-base">Por favor ingrese los detalles de cada pasajero.</p>
+                      <h2 className="mb-4 text-lg font-display font-medium text-slate-900 sm:text-xl">Informacion de los pasajeros</h2>
+                      <p className="mb-6 text-sm text-gray-600 sm:text-base">Ingresa los datos de cada pasajero tal como deben figurar en la reserva.</p>
                       <PassengerForm
                         passengerCount={checkout.passengers}
                         onDataChange={handlePassengerDataChange}
@@ -431,13 +452,11 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Location Selection - Outbound */}
-                    {/* Debug log */}
-                    {console.log('[Checkout] outboundTrip:', checkout.outboundTrip, 'TripId:', checkout.outboundTrip?.TripId, 'ReserveId:', checkout.outboundTrip?.ReserveId)}
                     {checkout.outboundTrip?.TripId && checkout.outboundTrip?.ReserveId && (
-                      <div className="border-t pt-6">
-                        <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4 flex items-center gap-2">
+                      <div className="border-t border-black/5 pt-6">
+                        <h2 className="mb-4 flex items-center gap-2 text-lg font-display font-medium text-slate-900 sm:text-xl">
                           <MapPin className="h-5 w-5" />
-                          Puntos de Subida y Bajada - Ida
+                          Puntos de subida y bajada - ida
                         </h2>
                         <p className="text-gray-600 mb-4 text-sm sm:text-base">
                           Seleccione dónde desea subir y bajar del vehículo.
@@ -455,10 +474,10 @@ export default function CheckoutPage() {
 
                     {/* Location Selection - Return (only for round trips) */}
                     {isRoundTrip && checkout.returnTrip?.TripId && (
-                      <div className="border-t pt-6">
-                        <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4 flex items-center gap-2">
+                      <div className="border-t border-black/5 pt-6">
+                        <h2 className="mb-4 flex items-center gap-2 text-lg font-display font-medium text-slate-900 sm:text-xl">
                           <MapPin className="h-5 w-5" />
-                          Puntos de Subida y Bajada - Vuelta
+                          Puntos de subida y bajada - vuelta
                         </h2>
                         <p className="text-gray-600 mb-4 text-sm sm:text-base">
                           Seleccione dónde desea subir y bajar en el viaje de vuelta.
@@ -478,15 +497,15 @@ export default function CheckoutPage() {
 
                 {currentStep === 'review' && (
                   <div>
-                    <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Revise su Reserva</h2>
-                    <p className="text-gray-600 mb-6 text-sm sm:text-base">
-                      Por favor, revise los detalles de su reserva antes de confirmar la compra.
+                    <h2 className="mb-4 text-lg font-display font-medium text-slate-900 sm:text-xl">Revisa tu reserva</h2>
+                    <p className="mb-6 text-sm text-gray-600 sm:text-base">
+                      Revisa los detalles del viaje y el total antes de pasar al pago.
                     </p>
 
                     <div className="space-y-6">
                       {/* Ida */}
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h3 className="font-medium text-blue-800 mb-2">Detalle del Viaje de Ida</h3>
+                      <div className="rounded-[1.25rem] border border-black/5 bg-white/70 p-4">
+                        <h3 className="mb-2 font-medium text-slate-900">Detalle del viaje de ida</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           <div className="text-gray-600">Ruta:</div>
                           <div className="font-medium flex items-center">
@@ -510,8 +529,8 @@ export default function CheckoutPage() {
 
                       {/* Vuelta */}
                       {checkout.returnTrip && (
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <h3 className="font-medium text-blue-800 mb-2">Detalle del Viaje de Vuelta</h3>
+                        <div className="rounded-[1.25rem] border border-black/5 bg-white/70 p-4">
+                          <h3 className="mb-2 font-medium text-slate-900">Detalle del viaje de vuelta</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                             <div className="text-gray-600">Ruta:</div>
                             <div className="font-medium flex items-center">
@@ -529,10 +548,10 @@ export default function CheckoutPage() {
 
                       {/* Pasajeros */}
                       <div>
-                        <h3 className="font-medium text-blue-800 mb-2">Información de Pasajeros</h3>
+                        <h3 className="mb-2 font-medium text-slate-900">Informacion de pasajeros</h3>
                         <div className="space-y-3">
                           {passengerData.map((p, idx) => (
-                            <div key={idx} className="bg-gray-50 p-3 rounded-lg text-sm">
+                            <div key={idx} className="rounded-[1.1rem] border border-black/5 bg-white/70 p-3 text-sm">
                               <div className="font-medium">
                                 Pasajero {idx + 1}: {p.firstName} {p.lastName}
                               </div>
@@ -548,8 +567,8 @@ export default function CheckoutPage() {
                       </div>
 
                       {/* Términos */}
-                      <div className="bg-yellow-50 p-4 rounded-lg text-sm">
-                        <h3 className="font-medium text-yellow-800 mb-2">Términos y Condiciones</h3>
+                      <div className="rounded-[1.25rem] border border-amber-100 bg-yellow-50 p-4 text-sm">
+                        <h3 className="mb-2 font-medium text-yellow-800">Terminos y condiciones</h3>
                         <p className="text-yellow-700 mb-2">
                           {legal.termsText.replace('los términos y condiciones', `los términos y condiciones de ${identity.companyName}`)}
                         </p>
@@ -558,8 +577,8 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                       {/* Resumen de Precio - SOLO MOBILE */}
-                      <div className="lg:hidden bg-white p-4 rounded-lg border border-gray-200 mt-4 shadow-sm">
-                        <h3 className="font-medium text-blue-800 mb-3">Resumen de Precio</h3>
+                      <div className="mt-4 rounded-[1.25rem] border border-black/5 bg-white/75 p-4 shadow-sm lg:hidden">
+                        <h3 className="mb-3 font-medium text-slate-900">Resumen de precio</h3>
                         <div className="space-y-2 mb-4 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Precio (ida)</span>
@@ -583,18 +602,18 @@ export default function CheckoutPage() {
 
                 {currentStep === 'payment' && (
                   <div>
-                    <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Detalles del Pago</h2>
-                    <p className="text-gray-600 mb-6 text-sm sm:text-base">Su información de pago es segura y está encriptada.</p>
+                    <h2 className="mb-4 text-lg font-display font-medium text-slate-900 sm:text-xl">Detalles del pago</h2>
+                    <p className="mb-6 text-sm text-gray-600 sm:text-base">Tu información de pago viaja de forma segura y protegida.</p>
 
                     {/* Payment Method Selector */}
                     <div className="mb-6">
-                      <h3 className="font-medium text-gray-900 mb-3">Seleccione su método de pago</h3>
+                      <h3 className="mb-3 font-medium text-slate-900">Selecciona tu método de pago</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('card')}
-                          className={`p-4 border rounded-lg text-left transition-colors ${paymentMethod === 'card'
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          className={`rounded-[1.25rem] p-4 border text-left transition-colors ${paymentMethod === 'card'
+                            ? 'border-slate-900 bg-slate-900 text-white'
                             : 'border-gray-200 hover:border-gray-300'
                             }`}
                           disabled={isSubmitting}
@@ -603,14 +622,14 @@ export default function CheckoutPage() {
                             <CreditCard className="h-5 w-5 mr-2" />
                             <span className="font-medium">Tarjeta de Crédito/Débito</span>
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">Pago seguro con tarjeta</p>
+                          <p className={`mt-1 text-sm ${paymentMethod === 'card' ? 'text-white/70' : 'text-gray-500'}`}>Pago seguro con tarjeta</p>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('wallet')}
-                          className={`p-4 border rounded-lg text-left transition-colors ${paymentMethod === 'wallet'
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          className={`rounded-[1.25rem] p-4 border text-left transition-colors ${paymentMethod === 'wallet'
+                            ? 'border-slate-900 bg-slate-900 text-white'
                             : 'border-gray-200 hover:border-gray-300'
                             }`}
                           disabled={isSubmitting}
@@ -619,7 +638,7 @@ export default function CheckoutPage() {
                             <Shield className="h-5 w-5 mr-2" />
                             <span className="font-medium">MercadoPago Wallet</span>
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">Pago con cuenta de MP</p>
+                          <p className={`mt-1 text-sm ${paymentMethod === 'wallet' ? 'text-white/70' : 'text-gray-500'}`}>Pago con cuenta de MP</p>
                         </button>
                       </div>
                     </div>
@@ -641,9 +660,7 @@ export default function CheckoutPage() {
                           key="wallet-payment-form"
                           amount={finalTotal}
                           onSubmit={handleWalletSubmit}
-                          onError={(error) => {
-                            console.error('Wallet error:', error);
-                          }}
+                          onError={() => {}}
                           disabled={isSubmitting}
                         />
                       )}
@@ -656,7 +673,7 @@ export default function CheckoutPage() {
               {currentStep !== 'payment' && (
                 <div className="flex justify-between mt-8">
                   {currentStep !== 'passengers' ? (
-                    <Button type="button" variant="outline" onClick={goToPreviousStep} disabled={isSubmitting}>
+                    <Button type="button" variant="outline" onClick={goToPreviousStep} disabled={isSubmitting} className="rounded-full px-6">
                       Volver
                     </Button>
                   ) : <div />}
@@ -665,7 +682,7 @@ export default function CheckoutPage() {
                     type="button"
                     onClick={goToNextStep}
                     disabled={!isCurrentStepComplete() || isSubmitting}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="rounded-full bg-[linear-gradient(135deg,#12353d,#255d6a)] px-6 hover:opacity-95"
                   >
                     Continuar
                   </Button>
@@ -675,7 +692,7 @@ export default function CheckoutPage() {
               {/* Navegación para el paso de payment con botón Volver solamente */}
               {currentStep === 'payment' && (
                 <div className="flex justify-between mt-8">
-                  <Button type="button" variant="outline" onClick={goToPreviousStep} disabled={isSubmitting}>
+                  <Button type="button" variant="outline" onClick={goToPreviousStep} disabled={isSubmitting} className="rounded-full px-6">
                     Volver
                   </Button>
                   <div />
@@ -686,9 +703,9 @@ export default function CheckoutPage() {
 
           {/* Sidebar - Oculto en mobile, visible en LG */}
           <div className="hidden lg:block">
-            <div className="bg-white rounded-lg border shadow-sm md:sticky md:top-24">
-              <div className="p-4 border-b bg-blue-50">
-                <h2 className="font-bold text-blue-800 font-display">Resumen de la Reserva</h2>
+            <div className="glass-panel rounded-[2rem] md:sticky md:top-24">
+              <div className="border-b border-black/5 bg-white/40 p-5">
+                <h2 className="font-display text-2xl text-slate-900">Resumen de la reserva</h2>
               </div>
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -701,11 +718,11 @@ export default function CheckoutPage() {
 
                 <div className="space-y-3 text-sm mb-4">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-blue-600" />
+                    <Calendar className="h-4 w-4 text-slate-700" />
                     <span>{formattedDepartureDate}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-600" />
+                    <Clock className="h-4 w-4 text-slate-700" />
                     <div className="flex items-center">
                       <span>{checkout.outboundTrip?.DepartureHour}</span>
                       <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
@@ -713,11 +730,11 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Bus className="h-4 w-4 text-blue-600" />
+                    <Bus className="h-4 w-4 text-slate-700" />
                     <span>{checkout.outboundTrip?.VehicleName}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-600" />
+                    <Users className="h-4 w-4 text-slate-700" />
                     <span>
                       {checkout.passengers} Pasajero{checkout.passengers > 1 ? 's' : ''}
                     </span>
@@ -734,7 +751,7 @@ export default function CheckoutPage() {
 
                 {checkout.returnTrip && (
                   <>
-                    <Separator className="my-4" />
+                    <Separator className="my-4 bg-black/5" />
                     <div className="flex items-center justify-between mb-4">
                       <div className="text-lg font-medium flex items-center">
                         {checkout.returnTrip?.OriginName}
@@ -744,11 +761,11 @@ export default function CheckoutPage() {
                     </div>
                     <div className="space-y-3 text-sm mb-4">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <Calendar className="h-4 w-4 text-slate-700" />
                         <span>{formattedReturnDate}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-blue-600" />
+                        <Clock className="h-4 w-4 text-slate-700" />
                         <div className="flex items-center">
                           <span>{checkout.returnTrip?.DepartureHour}</span>
                           <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
@@ -757,7 +774,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Bus className="h-4 w-4 text-blue-600" />
+                        <Bus className="h-4 w-4 text-slate-700" />
                         <span>{checkout.returnTrip?.VehicleName}</span>
 
                       </div>
@@ -765,7 +782,7 @@ export default function CheckoutPage() {
                   </>
                 )}
 
-                <Separator className="my-4" />
+                <Separator className="my-4 bg-black/5" />
 
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">

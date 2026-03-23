@@ -1,9 +1,8 @@
 'use client';
 
-import { ArrowUpDown, ChevronDown, ChevronUp, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronUp, DollarSign, Edit2, TrashIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { PassengerReserveReport, PaymentStatusEnum, PaymentStatusLabels } from '@/interfaces/passengerReserve';
 
 export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
@@ -38,85 +37,74 @@ export function PassengerListTable({
 }: PassengerListTableProps) {
   const renderSortIndicator = (column: PassengerSortColumn) => {
     if (sortColumn !== column) {
-      return <ArrowUpDown className="ml-1 h-4 w-4 inline" />;
+      return <ArrowUpDown className="ml-1 inline h-4 w-4" />;
     }
-    return sortDirection === 'asc' ? <ChevronUp className="ml-1 h-4 w-4 inline" /> : <ChevronDown className="ml-1 h-4 w-4 inline" />;
+
+    return sortDirection === 'asc' ? <ChevronUp className="ml-1 inline h-4 w-4" /> : <ChevronDown className="ml-1 inline h-4 w-4" />;
   };
 
   if (isLoading) {
-    return <div className="text-center py-10 text-gray-500">Cargando pasajeros...</div>;
+    return <div className="rounded-[1.25rem] border border-dashed border-black/8 py-10 text-center text-sm text-slate-500">Cargando pasajeros...</div>;
   }
 
   if (!passengers || passengers.length === 0) {
-    return <div className="text-center py-10 text-gray-500">No hay pasajeros en este viaje.</div>;
+    return <div className="rounded-[1.25rem] border border-dashed border-black/8 py-10 text-center text-sm text-slate-500">No hay pasajeros en este viaje.</div>;
   }
 
   return (
-    <div className="overflow-x-auto w-full">
-      <table className="w-full border-collapse table-fixed">
+    <div className="overflow-x-auto rounded-[1.5rem] border border-black/6 bg-white/72">
+      <table className="w-full min-w-[980px] table-fixed border-collapse">
         <thead>
-          <tr className="border-b text-left text-sm font-medium text-gray-500">
-            <th className="py-3 pr-4 w-[24%]">
-              <button className="flex items-center font-medium text-gray-500 hover:text-gray-700" onClick={() => onSort('name')}>
+          <tr className="border-b border-black/6 bg-[#f5f6f1] text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <th className="w-[24%] px-4 py-4">
+              <button className="flex items-center font-semibold text-slate-500 hover:text-slate-800" onClick={() => onSort('name')}>
                 Pasajero {renderSortIndicator('name')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[11%]">
-              <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                onClick={() => onSort('pickup')}
-              >
+            <th className="w-[12%] px-4 py-4 text-center">
+              <button className="mx-auto flex items-center font-semibold text-slate-500 hover:text-slate-800" onClick={() => onSort('pickup')}>
                 Subida {renderSortIndicator('pickup')}
               </button>
             </th>
-            <th className="py-3 pr-4 text-center w-[10%]">
-              <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                onClick={() => onSort('paid')}
-              >
-                Estado Pago {renderSortIndicator('paid')}
+            <th className="w-[14%] px-4 py-4 text-center">
+              <button className="mx-auto flex items-center font-semibold text-slate-500 hover:text-slate-800" onClick={() => onSort('paid')}>
+                Estado pago {renderSortIndicator('paid')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[22%] text-center">
-              <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                onClick={() => onSort('paymentMethod')}
-              >
+            <th className="w-[18%] px-4 py-4 text-center">
+              <button className="mx-auto flex items-center font-semibold text-slate-500 hover:text-slate-800" onClick={() => onSort('paymentMethod')}>
                 Medio de pago {renderSortIndicator('paymentMethod')}
               </button>
             </th>
-            <th className="py-3 pr-4 text-center w-[12%]">
-              <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
-                onClick={() => onSort('paidAmount')}
-              >
+            <th className="w-[12%] px-4 py-4 text-center">
+              <button className="mx-auto flex items-center font-semibold text-slate-500 hover:text-slate-800" onClick={() => onSort('paidAmount')}>
                 Monto {renderSortIndicator('paidAmount')}
               </button>
             </th>
-            <th className="py-3 pl-4 text-right w-[25%]">Acciones</th>
+            <th className="w-[20%] px-4 py-4 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {passengers.map((passenger) => (
-            <tr key={passenger.PassengerId} className="border-b">
-              <td className="py-3 pr-4">
+            <tr key={passenger.PassengerId} className="border-b border-black/5 text-sm text-slate-700 transition-colors hover:bg-[#fbfcf8]">
+              <td className="px-4 py-4">
                 <div className="flex items-center">
                   <Checkbox
                     id={`passenger-${passenger.CustomerId}`}
                     checked={passenger.HasTraveled}
                     onCheckedChange={(checked) => onCheckPassenger(passenger, checked as boolean)}
-                    className="mr-2"
+                    className="mr-3 border-black/20"
                     disabled={disabledPassengers.includes(passenger.PassengerId)}
                   />
                   <div>
-                    <label htmlFor={`passenger-${passenger.PassengerId}`} className="font-medium">
+                    <label htmlFor={`passenger-${passenger.PassengerId}`} className="font-semibold text-slate-900">
                       {passenger.FullName}
                     </label>
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
                       <span>DNI: {passenger.DocumentNumber}</span>
-                      {passenger.DocumentNumber && (passenger.CurrentBalance) !== null && passenger.CurrentBalance !== 0 && (
-                        <span className={(passenger.CurrentBalance) > 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
-                          {(passenger.CurrentBalance) > 0
+                      {passenger.DocumentNumber && passenger.CurrentBalance !== null && passenger.CurrentBalance !== 0 && (
+                        <span className={passenger.CurrentBalance > 0 ? 'font-semibold text-red-500' : 'font-semibold text-emerald-700'}>
+                          {passenger.CurrentBalance > 0
                             ? `Debe $${passenger.CurrentBalance.toLocaleString()}`
                             : `A favor $${Math.abs(passenger.CurrentBalance).toLocaleString()}`}
                         </span>
@@ -125,31 +113,30 @@ export function PassengerListTable({
                   </div>
                 </div>
               </td>
-              <td className="py-3 pr-4 text-center">
-                {/* Dropdown for pickup location can be added here if needed */}
-                {passenger.PickupLocationName}
-              </td>
-              <td className="py-3 pr-4 text-center">
+              <td className="px-4 py-4 text-center">{passenger.PickupLocationName}</td>
+              <td className="px-4 py-4 text-center">
                 {(() => {
                   const status = passenger.Status ?? passenger.StatusPaymentId;
                   const label = PaymentStatusLabels[status] || 'Desconocido';
-                  let badgeClass = 'bg-gray-100 text-gray-700';
-                  if (status === PaymentStatusEnum.PendingPayment) badgeClass = 'bg-yellow-100 text-yellow-800';
-                  else if (status === PaymentStatusEnum.Confirmed) badgeClass = 'bg-green-100 text-green-700';
-                  else if (status === PaymentStatusEnum.Cancelled) badgeClass = 'bg-red-100 text-red-700';
-                  else if (status === PaymentStatusEnum.Traveled) badgeClass = 'bg-blue-100 text-blue-700';
-                  else if (status === PaymentStatusEnum.NoShow) badgeClass = 'bg-gray-200 text-gray-600';
-                  else if (status === PaymentStatusEnum.Refunded) badgeClass = 'bg-purple-100 text-purple-700';
+                  let badgeClass = 'border border-slate-200 bg-slate-100 text-slate-700';
+
+                  if (status === PaymentStatusEnum.PendingPayment) badgeClass = 'border border-amber-200 bg-amber-50 text-amber-800';
+                  else if (status === PaymentStatusEnum.Confirmed) badgeClass = 'border border-emerald-200 bg-emerald-50 text-emerald-700';
+                  else if (status === PaymentStatusEnum.Cancelled) badgeClass = 'border border-red-200 bg-red-50 text-red-700';
+                  else if (status === PaymentStatusEnum.Traveled) badgeClass = 'border border-sky-200 bg-sky-50 text-sky-700';
+                  else if (status === PaymentStatusEnum.NoShow) badgeClass = 'border border-slate-200 bg-slate-200 text-slate-600';
+                  else if (status === PaymentStatusEnum.Refunded) badgeClass = 'border border-violet-200 bg-violet-50 text-violet-700';
+
                   return (
                     <div className="flex items-center justify-center gap-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${badgeClass}`}>
                         {label}
                       </span>
                       {status === PaymentStatusEnum.PendingPayment && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-yellow-600 hover:bg-yellow-50"
+                          className="h-7 w-7 rounded-full text-amber-700 hover:bg-amber-50"
                           onClick={() => onAddPayment(passenger)}
                           title="Agregar pago"
                         >
@@ -160,36 +147,36 @@ export function PassengerListTable({
                   );
                 })()}
               </td>
-              <td className="py-3 pr-4 text-center">{passenger.PaymentMethods}</td>
-              <td className="py-3 pr-4 text-center font-medium">
+              <td className="px-4 py-4 text-center">{passenger.PaymentMethods}</td>
+              <td className="px-4 py-4 text-center font-semibold text-slate-900">
                 ${(passenger.PaidAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
-              <td className="py-3 pl-4 text-right">
-                <div className="flex justify-end items-center">
+              <td className="px-4 py-4 text-right">
+                <div className="flex items-center justify-end gap-2">
                   <div
-                    className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ml-4 mr-2 ${
+                    className={
                       passenger.HasTraveled
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
+                        ? 'rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700'
+                        : 'rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500'
+                    }
                   >
-                    {passenger.HasTraveled ? 'Subió' : 'No subió'}
+                    {passenger.HasTraveled ? 'Subio' : 'No subio'}
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                    className="h-9 w-9 rounded-full border border-black/6 text-slate-600 hover:bg-emerald-50 hover:text-emerald-800"
                     onClick={() => onEdit(passenger)}
-                    title="Editar Reserva"
+                    title="Editar reserva"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                    className="h-9 w-9 rounded-full border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700"
                     onClick={() => onDelete(passenger)}
-                    title="Eliminar Pasajero"
+                    title="Eliminar pasajero"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </Button>

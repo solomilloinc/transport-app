@@ -1,13 +1,11 @@
-// Ya no es un componente de cliente, por lo que se elimina 'use client'.
 import { get } from '@/services/api';
 import { PagedReserveResponse } from '@/services/types';
 import { ReserveSummaryItem } from '@/interfaces/reserve';
-import ResultsClient from '@/components/results/ResultsClient'; // Este será nuestro nuevo componente de cliente.
+import ResultsClient from '@/components/results/ResultsClient';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import { format } from 'date-fns';
 
-// 1. Definimos la forma de los searchParams que la página recibe como props.
 interface ResultsSearchParams {
   tripId?: string;
   returnTripId?: string;
@@ -20,13 +18,11 @@ interface ResultsSearchParams {
   pickupDirectionId?: string;
 }
 
-// 2. Creamos una respuesta vacía para usar en caso de error o parámetros faltantes.
 const emptyResponse: PagedReserveResponse<ReserveSummaryItem> = {
   Outbound: { Items: [], PageNumber: 1, PageSize: 10, TotalRecords: 0, TotalPages: 0 },
   Return: { Items: [], PageNumber: 1, PageSize: 10, TotalRecords: 0, TotalPages: 0 },
 };
 
-// 3. La función de carga de datos ahora se ejecuta en el servidor.
 async function getReserves(searchParams: ResultsSearchParams): Promise<PagedReserveResponse<ReserveSummaryItem>> {
   const tripId = searchParams.tripId;
   const returnTripId = searchParams.returnTripId;
@@ -36,12 +32,11 @@ async function getReserves(searchParams: ResultsSearchParams): Promise<PagedRese
   const pickupDirectionId = searchParams.pickupDirectionId;
 
   if (!tripId) {
-    console.error('Error: Falta tripId para la búsqueda de reservas.');
     return emptyResponse;
   }
 
   try {
-    const response = await get<any, PagedReserveResponse<ReserveSummaryItem>>(
+    return await get<any, PagedReserveResponse<ReserveSummaryItem>>(
       '/public/reserve-summary',
       {
         pageNumber: 1,
@@ -49,7 +44,7 @@ async function getReserves(searchParams: ResultsSearchParams): Promise<PagedRese
         filters: {
           tripId: Number(tripId),
           returnTripId: returnTripId ? Number(returnTripId) : null,
-          departureDate: departureDate,
+          departureDate,
           passengers: Number(passengers),
           returnDate: returnDate || null,
           ...(pickupDirectionId ? { pickupDirectionId: Number(pickupDirectionId) } : {}),
@@ -57,16 +52,13 @@ async function getReserves(searchParams: ResultsSearchParams): Promise<PagedRese
       },
       { skipAuth: true }
     );
-    return response;
-  } catch (error) {
-    console.error('Falló la obtención de reservas iniciales:', error);
+  } catch {
     return emptyResponse;
   }
 }
 
-// 4. La página ahora es un Server Component asíncrono.
 export default async function ResultsPage({ searchParams }: {
-  searchParams: { [key: string]: string | undefined }
+  searchParams: Promise<{ [key: string]: string | undefined }>
 }) {
   const resolvedSearchParams = await searchParams;
   const initialReserves = await getReserves(resolvedSearchParams);
@@ -84,10 +76,9 @@ export default async function ResultsPage({ searchParams }: {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Navbar />
       <main className="container py-8">
-        {/* La UI interactiva ahora se delega a un Componente de Cliente. */}
         <ResultsClient initialReserves={initialReserves} searchParams={clientSearchParams} />
       </main>
       <Footer />

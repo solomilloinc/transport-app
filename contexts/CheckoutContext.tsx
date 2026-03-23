@@ -1,7 +1,12 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { ReserveSummaryItem } from '@/interfaces/reserve';
+import {
+  clearCheckoutFromStorage,
+  loadCheckoutFromStorage,
+  saveCheckoutToStorage,
+} from '@/utils/checkout';
 
 export interface LockState {
   lockToken: string;
@@ -23,6 +28,7 @@ interface CheckoutContextProps {
   clearCheckout: () => void;
   isLockValid: () => boolean;
   getTimeRemaining: () => number;
+  isHydrated: boolean;
 }
 
 const CheckoutContext = createContext<CheckoutContextProps>({
@@ -32,12 +38,29 @@ const CheckoutContext = createContext<CheckoutContextProps>({
   clearCheckout: () => {},
   isLockValid: () => false,
   getTimeRemaining: () => 0,
+  isHydrated: false,
 });
 
 const defaultState: CheckoutState = { outboundTrip: null, returnTrip: null, passengers: 1 };
 
 export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
   const [checkout, setCheckoutState] = useState<CheckoutState>(defaultState);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    const persistedCheckout = loadCheckoutFromStorage();
+
+    if (persistedCheckout) {
+      setCheckoutState(persistedCheckout);
+    }
+
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    saveCheckoutToStorage(checkout);
+  }, [checkout, isHydrated]);
 
   const setCheckout = (state: CheckoutState) => setCheckoutState(state);
 
@@ -45,7 +68,10 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
     setCheckoutState(prev => ({ ...prev, lockState }));
   };
 
-  const clearCheckout = () => setCheckoutState(defaultState);
+  const clearCheckout = () => {
+    clearCheckoutFromStorage();
+    setCheckoutState(defaultState);
+  };
 
   const isLockValid = () => {
     if (!checkout.lockState) return false;
@@ -66,7 +92,8 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
       setLockState,
       clearCheckout,
       isLockValid,
-      getTimeRemaining
+      getTimeRemaining,
+      isHydrated,
     }}>
       {children}
     </CheckoutContext.Provider>

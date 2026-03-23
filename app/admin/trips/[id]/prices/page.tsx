@@ -58,14 +58,11 @@ export default function TripPricesManagement() {
 
   // Función para cargar el trip
   const fetchTrip = async (id: number) => {
-    console.log('[TripPricesPage] fetchTrip called with id:', id);
     setIsLoading(true);
     try {
       const response = await getTripById(id);
-      console.log('[TripPricesPage] Trip loaded:', response);
       setTrip(response);
-    } catch (error) {
-      console.error('[TripPricesPage] Error loading trip:', error);
+    } catch {
       toast({
         title: 'Error',
         description: 'Error al cargar la ruta',
@@ -287,7 +284,7 @@ export default function TripPricesManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="h-9 rounded-full border-black/8 bg-white/80 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
             onClick={() => handleEditPrice(price)}
           >
             <Edit className="h-4 w-4" />

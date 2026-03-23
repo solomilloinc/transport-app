@@ -1,12 +1,11 @@
 import { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { jwtDecode } from 'jwt-decode'
-import { cookies } from 'next/headers'
-import { getTenantHeaders } from '@/services/tenant-headers'
-import { getRequestHost } from '@/lib/get-host'
+import { jwtDecode } from 'jwt-decode';
+import { cookies } from 'next/headers';
+import { getTenantHeaders } from '@/services/tenant-headers';
+import { getRequestHost } from '@/lib/get-host';
 
-// Tipado de respuesta de tu API
 interface LoginResponse {
   AccessToken: string;
   user: {
@@ -17,14 +16,12 @@ interface LoginResponse {
   };
 }
 
-// Tipado del JWT decodificado
 interface DecodedJWT {
   exp?: number;
   iat?: number;
   [key: string]: unknown;
 }
 
-// Extendemos el User para que tenga los datos que vienen del token
 interface ExtendedUser extends User {
   id: string;
   email: string;
@@ -32,12 +29,8 @@ interface ExtendedUser extends User {
   name?: string;
 }
 
-// Tiempo antes de expiración para renovar (5 minutos en segundos)
 const REFRESH_THRESHOLD_SECONDS = 5 * 60;
 
-/**
- * Intenta renovar el accessToken usando el refreshToken de las cookies
- */
 async function refreshAccessToken(cookieHeader: string, tenantHost?: string): Promise<{ token: string; exp: number } | null> {
   try {
     const response = await fetch(`${process.env.BACKEND_URL}/renew-token`, {
@@ -51,7 +44,6 @@ async function refreshAccessToken(cookieHeader: string, tenantHost?: string): Pr
     });
 
     if (!response.ok) {
-      console.error('Error renovando token:', response.status);
       return null;
     }
 
@@ -63,8 +55,7 @@ async function refreshAccessToken(cookieHeader: string, tenantHost?: string): Pr
       token: data.token,
       exp: decoded.exp || 0,
     };
-  } catch (error) {
-    console.error('Error en refreshAccessToken:', error);
+  } catch {
     return null;
   }
 }
@@ -78,7 +69,6 @@ export const nextAuthOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        // Resolve tenant from the real public host (Azure SWA replaces `host` with internal hostname)
         const reqHeaders = req?.headers as Record<string, string> | undefined;
         const host = await getRequestHost() || reqHeaders?.host || undefined;
         const tenantH = await getTenantHeaders(host);
@@ -100,13 +90,11 @@ export const nextAuthOptions: NextAuthOptions = {
 
         try {
           const decoded: ExtendedUser = jwtDecode(data.AccessToken);
-          // Retornamos el usuario + el token como propiedad aparte
           return {
             ...decoded,
             token: data.AccessToken,
           };
-        } catch (err) {
-          console.error("Error decodificando token:", err);
+        } catch {
           return null;
         }
       },
@@ -124,16 +112,14 @@ export const nextAuthOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user, account }) {
-      // Login inicial - guardar token y expiración
       if (user && account && account?.provider === "credentials") {
         const { token: accessToken, ...userInfo } = user as any;
         token.user = userInfo;
         token.accessToken = accessToken;
 
-        // Extraer expiración del JWT
         try {
           const decoded: DecodedJWT = jwtDecode(accessToken);
-          token.accessTokenExpires = decoded.exp ? decoded.exp * 1000 : 0; // Convertir a ms
+          token.accessTokenExpires = decoded.exp ? decoded.exp * 1000 : 0;
         } catch {
           token.accessTokenExpires = 0;
         }
@@ -141,14 +127,12 @@ export const nextAuthOptions: NextAuthOptions = {
         return token;
       }
 
-      // En llamadas subsecuentes, verificar si el token está por expirar
       const now = Date.now();
       const expiresAt = (token.accessTokenExpires as number) || 0;
       const shouldRefresh = expiresAt > 0 && (expiresAt - now) < REFRESH_THRESHOLD_SECONDS * 1000;
 
       if (shouldRefresh && token.accessToken) {
         try {
-          // Obtener las cookies y headers del request actual
           const cookieStore = await cookies();
           const allCookies = cookieStore.getAll();
           const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
@@ -156,21 +140,18 @@ export const nextAuthOptions: NextAuthOptions = {
           let tenantHost: string | undefined;
           try {
             tenantHost = await getRequestHost();
-          } catch { /* headers not available */ }
+          } catch {}
 
           if (cookieHeader) {
             const refreshed = await refreshAccessToken(cookieHeader, tenantHost);
             if (refreshed) {
               token.accessToken = refreshed.token;
               token.accessTokenExpires = refreshed.exp * 1000;
-              console.log('Token renovado exitosamente');
             } else {
-              // Si falla la renovación, marcar el token como expirado
               token.error = 'RefreshTokenError';
             }
           }
-        } catch (error) {
-          console.error('Error al renovar token:', error);
+        } catch {
           token.error = 'RefreshTokenError';
         }
       }
@@ -181,7 +162,6 @@ export const nextAuthOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.user = token.user as ExtendedUser;
       (session as any).accessToken = token.accessToken;
-      // Exponer error si la renovación falló
       if (token.error) {
         (session as any).error = token.error;
       }
@@ -189,34 +169,20 @@ export const nextAuthOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // If signing in and user is admin, redirect to admin/reserves
       if (url === baseUrl || url === `${baseUrl}/`) {
         return baseUrl;
       }
-      
-      // If user is going to /admin, they'll be handled by the page component
+
       if (url.startsWith(`${baseUrl}/admin`) || url.startsWith('/admin')) {
         return url;
       }
 
-      // Default behavior
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       if (new URL(url).origin === baseUrl) return url;
-      
+
       return baseUrl;
     },
   },
 
   secret: process.env.NEXTAUTH_SECRET
 };
-
-
-
-// // Si viene de Google, podrías buscar el user desde tu API y agregar rol
-      // if (account?.provider === "google") {
-      //   const email = token.email;
-      //   console.log(email)
-      //   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/get-user-info?email=${email}`);
-      //   const data = await res.json();
-      //   token.user = data.user;
-      // }

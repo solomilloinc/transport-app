@@ -48,8 +48,7 @@ async function loadTrips(): Promise<TripSelectOption[]> {
         stopSchedules: trip.stopSchedules,
       }));
     }
-  } catch (error) {
-    console.error('Failed to load trips for landing page:', error);
+  } catch {
     return [];
   }
   return [];
@@ -62,16 +61,16 @@ export default async function Home() {
       <Navbar
         middleContent={
           <>
-            <ScrollToSection href="#about" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+            <ScrollToSection href="#about" className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950">
               Nosotros
             </ScrollToSection>
-            <ScrollToSection href="#routes" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+            <ScrollToSection href="#routes" className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950">
               Rutas
             </ScrollToSection>
-            <ScrollToSection href="#testimonials" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+            <ScrollToSection href="#testimonials" className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950">
               Testimonios
             </ScrollToSection>
-            <ScrollToSection href="#contact" className="text-sm font-medium text-blue-900 hover:text-blue-700">
+            <ScrollToSection href="#contact" className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950">
               Contacto
             </ScrollToSection>
           </>

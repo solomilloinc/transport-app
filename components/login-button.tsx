@@ -16,13 +16,9 @@ export default function LoginButton() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Primero revocar el refresh token en el backend
       await logoutFromBackend();
-      // Luego cerrar la sesión de NextAuth
       await signOut({ callbackUrl: '/', redirect: true });
-    } catch (error) {
-      console.error('Error durante logout:', error);
-      // Aún así intentar cerrar la sesión local
+    } catch {
       await signOut({ callbackUrl: '/', redirect: true });
     } finally {
       setIsLoggingOut(false);

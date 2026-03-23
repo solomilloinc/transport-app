@@ -8,28 +8,32 @@ export default function Footer() {
   const { identity } = useTenant();
 
   return (
-    <footer className="bg-blue-900 text-white py-8 mt-12">
+    <footer className="mt-12 border-t border-black/5 bg-[linear-gradient(180deg,rgba(18,53,61,0.98),rgba(10,25,29,1))] text-white">
       <div className="container">
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col gap-8 py-10 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-xl">
+            <div className="mb-4 flex items-center gap-3">
               {identity.logoUrl ? (
-                <Image src={identity.logoUrl} alt={identity.companyName} width={24} height={24} className="h-6 w-6" />
+                <Image src={identity.logoUrl} alt={identity.companyName} width={32} height={32} className="h-8 w-8 rounded-full object-cover ring-1 ring-white/15" />
               ) : (
-                <Bus className="h-6 w-6 text-blue-300" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
+                  <Bus className="h-5 w-5 text-amber-300" />
+                </div>
               )}
-              <span className="text-xl font-bold font-display">
+              <span className="text-2xl font-display text-white">
                 {identity.companyNameShort}
               </span>
             </div>
-            <p className="text-blue-200 text-sm">
+            <p className="text-sm leading-6 text-slate-300">
               {identity.tagline}
             </p>
           </div>
-          <div className="text-center md:text-right">
-            <p className="text-blue-200 text-sm">
-              &copy; {new Date().getFullYear()} {identity.companyNameShort}. All rights
-              reserved.
+          <div className="text-left md:text-right">
+            <p className="text-xs uppercase tracking-[0.28em] text-slate-400">
+              Operacion digital
+            </p>
+            <p className="mt-2 text-sm text-slate-300">
+              &copy; {new Date().getFullYear()} {identity.companyNameShort}. Todos los derechos reservados.
             </p>
           </div>
         </div>

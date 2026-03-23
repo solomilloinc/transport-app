@@ -6,8 +6,6 @@ import type {
   ICardPaymentFormData,
   ICardPaymentBrickPayer,
 } from '@mercadopago/sdk-react/bricks/cardPayment/type';
-import { Button } from '@/components/ui/button';
-import { CreditCard, Loader2 } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
 
 type Props = {
@@ -75,114 +73,56 @@ export default function CardPaymentForm({
     }
   };
 
-  const handleCustomButtonClick = () => {
-    // Buscar el botón por los selectores específicos del HTML que compartiste
-    const selectors = [
-      '#cardPaymentBrick_submit',
-      '[data-testid="submit-button"] button',
-      '[data-testid="submit-wrapper"] button',
-      '#cardPaymentBrick_container button[type="submit"]',
-      '.button-container-8cRhpK button',
-      'button.primary-1pmA6_'
-    ];
-    
-    for (const selector of selectors) {
-      const button = document.querySelector(selector) as HTMLButtonElement;
-      if (button) {
-        button.click();
-        break;
-      }
-    }
-  };
-
   if (!mpReady) return null;
 
   return (
-    <>
-      {/* Estilos para ocultar el botón nativo */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          #cardPaymentBrick_container [data-testid="submit-wrapper"],
-          #cardPaymentBrick_container [data-testid="submit-button"],
-          #cardPaymentBrick_container button[type="submit"],
-          #cardPaymentBrick_container .button-container-8cRhpK,
-          #cardPaymentBrick_container .primary-1pmA6_ {
-            position: absolute !important;
-            left: -9999px !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
+    <div id="cardPaymentBrick_container" className={isSubmitting || isProcessing ? 'pointer-events-none opacity-70' : ''}>
+      <CardPayment
+        initialization={{
+          amount: effectiveAmount,
+          payer: {
+            email: defaultEmail ?? '',
+          },
+        }}
+        customization={{
+          paymentMethods: {
+            minInstallments: 1,
+            maxInstallments,
+          },
+          visual: {
+            hidePaymentButton: false,
+            hideFormTitle: true,
+            style: {
+              theme: 'bootstrap',
+              customVariables: {
+                baseColor: '#2563eb',
+              }
+            }
+          },
+        }}
+        onSubmit={async (data) => {
+          try {
+            await handleSubmit(data);
+          } catch (err) {
+            onError?.(err);
+            throw err;
           }
-        `
-      }} />
-
-      <div className="space-y-4">
-        <div id="cardPaymentBrick_container">
-          <CardPayment
-            initialization={{
-              amount: effectiveAmount,
-              payer: {
-                email:  '',
-              },
-            }}
-            customization={{
-              paymentMethods: { 
-                minInstallments: 1, 
-                maxInstallments,
-              },
-              visual: { 
-                hidePaymentButton: false,
-                hideFormTitle: true,
-                style: {
-                  theme: 'bootstrap',
-                  customVariables: {
-                    baseColor: '#2563eb',
-                  }
-                }
-              },
-            }}
-            onSubmit={async (data) => {
-              try {
-                await handleSubmit(data);
-              } catch (err) {
-                onError?.(err);
-                throw err;
-              }
-            }}
-            onError={(e) => {
-              if (process.env.NODE_ENV !== 'production') {
-                console.debug('[CardPayment Brick Error]', e);
-              }
-              onError?.(e);
-            }}
-            onReady={() => {
-              console.log('Payment brick ready');
-            }}
-          />
-        </div>
-        
-        {/* Botón personalizado */}
-        <div className="flex justify-end mt-6">
-          <Button
-            type="button"
-            onClick={handleCustomButtonClick}
-            disabled={isSubmitting || isProcessing}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 flex items-center"
-          >
-            {(isSubmitting || isProcessing) ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Procesando pago...
-              </>
-            ) : (
-              <>
-                <CreditCard className="mr-2 h-4 w-4" />
-                Confirmar y Pagar
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </>
+        }}
+        onError={(e) => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('[CardPayment Brick Error]', e);
+          }
+          onError?.(e);
+        }}
+        onReady={() => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('[CardPayment Brick] ready');
+          }
+        }}
+      />
+      {(isSubmitting || isProcessing) && (
+        <p className="mt-4 text-sm text-gray-600">Procesando pago...</p>
+      )}
+    </div>
   );
 }

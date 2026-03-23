@@ -17,10 +17,10 @@ interface StatusFilterProps {
 export function StatusFilter({ value, onChange, options, placeholder = 'Filtrar por estado' }: StatusFilterProps) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full sm:w-[180px]">
+      <SelectTrigger className="h-12 w-full rounded-2xl border-black/8 bg-white/85 text-slate-700 shadow-none focus:ring-emerald-700/20 sm:w-[210px]">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="rounded-2xl border-black/8 bg-white/95">
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}

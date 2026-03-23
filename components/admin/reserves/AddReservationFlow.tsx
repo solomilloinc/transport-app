@@ -187,22 +187,19 @@ export function AddReservationFlow({
     const fetchTripDetails = async () => {
       if (!initialTrip?.TripId) return;
 
-      console.log('[AddReservationFlow] Fetching trip details for TripId:', initialTrip.TripId, 'ReserveId:', initialTrip.ReserveId);
       setIsTripLoading(true);
       try {
         const data = await getTripById(initialTrip.TripId, initialTrip.ReserveId);
-        console.log('[AddReservationFlow] Trip data received:', data);
         setTripData(data);
 
         // Auto-select main destination price
         const dropoffIda = data?.DropoffOptionsIda || [];
         const mainDest = dropoffIda.find((opt: any) => opt.IsMainDestination);
         if (mainDest) {
-          reserveForm.setField('DropoffLocationId', mainDest.TripPriceId);
+          reserveForm.setField('DropoffLocationId', (mainDest as any).TripPriceId ?? mainDest.CityId);
           reserveForm.setField('Price', mainDest.Price);
         }
-      } catch (error) {
-        console.error('[AddReservationFlow] Error fetching trip details:', error);
+      } catch {
         toast({ title: 'Error', description: 'Error al cargar los precios del viaje', variant: 'destructive' });
       } finally {
         setIsTripLoading(false);
@@ -308,16 +305,11 @@ export function AddReservationFlow({
         Price: getSelectedDropoffPrice(),
       };
 
-      console.log('[handleSubmitDetails] Outbound ReserveId:', outboundReserveId);
-      console.log('[handleSubmitDetails] Reserve data:', reserveData);
-
       if (data.ReserveTypeId === 2) {
         // Round trip - create both reserves
 
         // Get the return ReserveId from returnTrip
         const returnReserveId = returnTrip!.ReserveId;
-
-        console.log('[handleSubmitDetails] Return ReserveId:', returnReserveId);
 
         if (outboundReserveId === returnReserveId) {
           console.warn('[handleSubmitDetails] Outbound and Return ReserveId are the same - blocking submission');
@@ -341,7 +333,6 @@ export function AddReservationFlow({
           Price: idaVueltaPrice, // Same price as outbound
         };
 
-        console.log('[handleSubmitDetails] Return reserve data:', returnReserveData);
         setPassengerReserves([reserveData, returnReserveData]);
       } else {
         // One way

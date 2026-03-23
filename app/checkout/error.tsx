@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, RefreshCw, ArrowLeft, CreditCard } from 'lucide-react';
@@ -14,10 +13,6 @@ interface ErrorProps {
 }
 
 export default function CheckoutError({ error, reset }: ErrorProps) {
-  useEffect(() => {
-    console.error('Checkout error:', error);
-  }, [error]);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />

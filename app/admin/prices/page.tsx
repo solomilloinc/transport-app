@@ -273,7 +273,7 @@ export default function PriceManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="h-9 rounded-full border-black/8 bg-white/80 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
             onClick={() => handleEditPrice(price)}
           >
             <Edit className="h-4 w-4" />
@@ -297,14 +297,14 @@ export default function PriceManagement() {
         title="Precios"
         description="Gestiona y visualiza toda la información de los precios base por tramo."
         action={
-          <Button onClick={() => handleAddPrice()}>
+          <Button onClick={() => handleAddPrice()} className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-5 text-white hover:opacity-95">
             <CreditCard className="mr-2 h-4 w-4" />
             Agregar
           </Button>
         }
       />
 
-      <Card className="w-full">
+      <Card className="w-full overflow-hidden rounded-[1.75rem] border border-black/6 bg-white/78 shadow-[0_22px_48px_rgba(22,34,24,0.06)]">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
             <FilterBar onReset={resetFilters}>
@@ -370,7 +370,7 @@ export default function PriceManagement() {
             />
           ))
         ) : (
-          <div className="text-center p-4 border rounded-md">No se encontraron precios.</div>
+          <div className="rounded-[1.25rem] border border-dashed border-black/8 p-6 text-center text-sm text-slate-500">No se encontraron precios.</div>
         )}
       </div>
 

@@ -49,6 +49,12 @@
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 0.5rem;
+    --surface: rgba(255, 252, 247, 0.86);
+    --surface-strong: rgba(255, 255, 255, 0.94);
+    --page-warm: #fffaf1;
+    --page-tint: #e5eef0;
+    --ink-soft: #5f6368;
+    --shadow-soft: 0 24px 60px rgba(18, 35, 39, 0.12);
   }
 
   .dark {
@@ -89,6 +95,12 @@
 
   body {
     @apply bg-background text-foreground font-sans;
+    background:
+      radial-gradient(circle at top left, rgba(250, 204, 21, 0.16), transparent 24%),
+      radial-gradient(circle at top right, rgba(51, 102, 204, 0.12), transparent 28%),
+      linear-gradient(180deg, var(--page-warm) 0%, #f7f2e8 42%, var(--page-tint) 100%);
+    color: hsl(var(--foreground));
+    font-family: var(--font-body), sans-serif;
   }
 
   html {
@@ -106,7 +118,40 @@
   h5,
   h6,
   .font-display {
+    font-family: var(--font-display), serif;
     font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  ::selection {
+    background: rgba(250, 204, 21, 0.34);
+  }
+
+  .glass-panel {
+    background: linear-gradient(180deg, var(--surface-strong), var(--surface));
+    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(24, 40, 43, 0.08);
+  }
+
+  .section-shell {
+    position: relative;
+  }
+
+  .section-shell::before {
+    content: '';
+    position: absolute;
+    inset: 1.25rem;
+    border: 1px solid rgba(26, 51, 56, 0.08);
+    border-radius: 1.5rem;
+    pointer-events: none;
+  }
+
+  .route-grid {
+    background-image:
+      linear-gradient(rgba(19, 45, 49, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(19, 45, 49, 0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
 }
 

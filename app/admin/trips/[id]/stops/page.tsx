@@ -47,8 +47,7 @@ export default function TripStopsManagement() {
     try {
       const response = await getTripById(id);
       setTrip(response);
-    } catch (error) {
-      console.error('[TripStopsPage] Error loading trip:', error);
+    } catch {
       toast({
         title: 'Error',
         description: 'Error al cargar la ruta',
@@ -91,7 +90,6 @@ export default function TripStopsManagement() {
           sortDescending: true,
           filters: {},
         });
-        console.log('[TripStopsPage] direction-report response:', response);
         if (response?.Items) {
           const originDirections = response.Items.filter(
             (d: Direction) => d.CityId === trip.OriginCityId
@@ -101,11 +99,9 @@ export default function TripStopsManagement() {
             value: direction.DirectionId.toString(),
             label: direction.Name,
           }));
-          console.log('[TripStopsPage] Formatted directions:', formattedDirections);
           setDirections(formattedDirections);
         }
-      } catch (error) {
-        console.error('[TripStopsPage] Error loading directions:', error);
+      } catch {
         setOptionsError('Error al cargar las direcciones');
       } finally {
         setIsOptionsLoading(false);
@@ -246,7 +242,7 @@ export default function TripStopsManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="h-9 rounded-full border-black/8 bg-white/80 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
             onClick={() => handleEditStop(stop)}
           >
             <Edit className="h-4 w-4" />
