@@ -1,4 +1,3 @@
-export const revalidate = 86400; // Revalidate every 24 hours
 import { SelectOption } from '@/components/dashboard/select';
 
 import { ScrollToSection } from '@/components/scroll-to-section';
@@ -8,6 +7,7 @@ import { getPublicTrips, getTripById, PublicTripDto } from '@/services/trip';
 import { TripPickupStopReportDto } from '@/interfaces/trip';
 import { LandingContent } from '@/components/landing-content';
 import Footer from '@/components/footer';
+export const revalidate = 86400; // Revalidate every 24 hours
 
 // Extended SelectOption to include trip data
 export interface TripSelectOption extends SelectOption {

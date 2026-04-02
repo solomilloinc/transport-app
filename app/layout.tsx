@@ -58,7 +58,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es">
       <body className={cn("min-h-screen bg-background font-sans antialiased", manrope.variable, fraunces.variable)}>
         <ThemeProvider
           attribute="class"
