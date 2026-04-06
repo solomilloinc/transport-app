@@ -23,13 +23,21 @@ export function DashboardTable({ columns, data, emptyMessage = 'No se encontraro
   const visibleColumns = columns.filter((col) => !col.hidden);
 
   return (
-    <div className="w-full overflow-hidden rounded-[1.5rem] border border-black/6 bg-white/78 shadow-[0_20px_45px_rgba(22,34,24,0.06)]">
+    <div className="w-full overflow-hidden rounded-[1.35rem] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(246,250,255,0.98))] shadow-[0_16px_38px_rgba(15,23,42,0.06)]">
       <div className="w-full overflow-auto">
         <Table className="w-full table-fixed">
           <TableHeader>
-            <TableRow className="border-black/6 bg-[linear-gradient(180deg,rgba(245,246,241,0.96),rgba(238,242,234,0.92))]">
+            <TableRow className="border-sky-100/80 bg-[linear-gradient(180deg,rgba(240,248,255,0.98),rgba(233,244,255,0.94))]">
               {columns.map((column) => (
-                <TableHead key={column.accessor} className={column.hidden ? 'hidden md:table-cell text-slate-500 uppercase tracking-[0.18em] text-[11px]' : `text-slate-500 uppercase tracking-[0.18em] text-[11px] ${column.className || ''}`} style={{ width: column.width || `${100 / visibleColumns.length}%` }}>
+                <TableHead
+                  key={column.accessor}
+                  className={
+                    column.hidden
+                      ? 'hidden text-[11px] uppercase tracking-[0.18em] text-slate-500 md:table-cell'
+                      : `text-[11px] uppercase tracking-[0.18em] text-slate-500 ${column.className || ''}`
+                  }
+                  style={{ width: column.width || `${100 / visibleColumns.length}%` }}
+                >
                   {column.header}
                 </TableHead>
               ))}
@@ -39,7 +47,7 @@ export function DashboardTable({ columns, data, emptyMessage = 'No se encontraro
             {isLoading ? (
               // Loading skeleton rows
               Array.from({ length: skeletonRows }).map((_, rowIndex) => (
-                <TableRow key={`skeleton-${rowIndex}`} className="border-black/6">
+                <TableRow key={`skeleton-${rowIndex}`} className="border-sky-100/70 bg-white">
                   {columns.map((column, colIndex) => (
                     <TableCell
                       key={`skeleton-${rowIndex}-${colIndex}`}
@@ -54,7 +62,14 @@ export function DashboardTable({ columns, data, emptyMessage = 'No se encontraro
             ) : data.length > 0 ? (
               // Actual data rows
               data.map((item, index) => (
-                <TableRow key={index} className="border-black/6 hover:bg-[#f6f7f2]">
+                <TableRow
+                  key={index}
+                  className={
+                    index % 2 === 0
+                      ? 'border-sky-100/70 bg-white hover:bg-sky-50/60'
+                      : 'border-sky-100/70 bg-[rgba(248,251,255,0.96)] hover:bg-sky-50/80'
+                  }
+                >
                   {columns.map((column) => (
                     <TableCell
                       key={`${index}-${column.accessor}`}
@@ -69,7 +84,7 @@ export function DashboardTable({ columns, data, emptyMessage = 'No se encontraro
             ) : (
               // Empty state - only shown when not loading and no data
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-slate-500">
+                <TableCell colSpan={columns.length} className="h-24 bg-white text-center text-slate-500">
                   {emptyMessage}
                 </TableCell>
               </TableRow>

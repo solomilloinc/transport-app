@@ -60,8 +60,8 @@ export function LandingContent() {
                   {landing.about.features.map((feature, index) => {
                     const Icon = getIcon(feature.icon);
                     return (
-                      <div key={index} className="rounded-[1.25rem] border border-black/5 bg-white/75 p-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-amber-300">
+                      <div key={index} className="rounded-[1.25rem] border border-sky-100/80 bg-[rgba(248,251,255,0.9)] p-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#0f3f8f,#2563eb)] text-sky-50">
                           <Icon className="h-4 w-4" />
                         </div>
                         <h3 className="mt-4 font-display text-xl text-slate-900">{feature.title}</h3>
@@ -86,9 +86,9 @@ export function LandingContent() {
 
               <div className="mt-8 space-y-3">
                 {landing.routes.map((route, index) => (
-                  <div key={index} className="flex items-center justify-between rounded-[1.25rem] border border-black/5 bg-white/80 px-4 py-4">
+                  <div key={index} className="flex items-center justify-between rounded-[1.25rem] border border-sky-100/80 bg-[rgba(248,251,255,0.94)] px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-700">
                         <MapPin className="h-4 w-4" />
                       </div>
                       <div>
@@ -103,14 +103,14 @@ export function LandingContent() {
             </div>
 
             <div className="section-shell overflow-hidden rounded-[2rem]">
-              <div className="relative min-h-[420px] overflow-hidden rounded-[2rem] border border-black/5 shadow-[0_28px_60px_rgba(17,31,37,0.14)]">
+              <div className="relative min-h-[420px] overflow-hidden rounded-[2rem] border border-sky-100/70 shadow-[0_28px_60px_rgba(17,31,37,0.14)]">
                 <Image
                   src={images.routesMap || '/placeholder.svg?height=900&width=1400'}
                   alt="Mapa de rutas"
                   fill
                   className="object-cover"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(11,30,36,0.8),rgba(11,30,36,0.18)_50%,rgba(251,191,36,0.22))]" />
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(9,29,58,0.82),rgba(14,58,114,0.2)_52%,rgba(56,189,248,0.24))]" />
                 <div className="absolute left-6 top-6 max-w-md rounded-[1.5rem] border border-white/10 bg-white/12 p-5 text-white backdrop-blur">
                   <p className="text-xs uppercase tracking-[0.28em] text-white/65">rutas frecuentes</p>
                   <h3 className="mt-3 text-2xl font-display">Cobertura pensada para salir y llegar sin rodeos</h3>
@@ -142,7 +142,7 @@ export function LandingContent() {
                   <CardContent className="p-6">
                     <div className="flex gap-1">
                       {Array(testimonial.rating).fill(0).map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                        <Star key={i} className="h-4 w-4 fill-sky-400 text-sky-400" />
                       ))}
                     </div>
                     <p className="mt-5 text-lg leading-8 text-slate-700">&ldquo;{testimonial.comment}&rdquo;</p>
@@ -157,12 +157,12 @@ export function LandingContent() {
 
       <AnimatedSection className="px-3 py-8 sm:px-4 md:py-14" animation="fade-in">
         <div className="container">
-          <div className="overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#12353d,#0b2229_64%,#70521a)] px-6 py-10 text-white shadow-[0_30px_80px_rgba(12,25,31,0.22)] md:px-10">
+          <div className="overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#0b2b63,#123f93_54%,#38bdf8)] px-6 py-10 text-white shadow-[0_30px_80px_rgba(16,52,120,0.22)] md:px-10">
             <p className="text-xs uppercase tracking-[0.3em] text-white/55">salida rapida</p>
             <h2 className="mt-4 max-w-3xl text-3xl leading-tight font-display md:text-5xl">{landing.cta.title}</h2>
             <p className="mt-5 max-w-2xl text-white/75">{landing.cta.subtitle}</p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" className="rounded-full bg-amber-400 px-7 text-slate-950 hover:bg-amber-300">
+              <Button size="lg" className="rounded-full bg-white px-7 text-sky-900 hover:bg-sky-50">
                 {landing.cta.ctaPrimary}
               </Button>
               <Button size="lg" variant="outline" className="rounded-full border-white/20 bg-white/10 px-7 text-white hover:bg-white/15">
@@ -185,28 +185,28 @@ export function LandingContent() {
 
               <div className="mt-8 space-y-5">
                 <div className="flex items-start gap-4">
-                  <MapPin className="mt-1 h-5 w-5 text-slate-700" />
+                  <MapPin className="mt-1 h-5 w-5 text-sky-700" />
                   <div>
                     <h3 className="font-medium text-slate-900">Oficina principal</h3>
                     <p className="text-slate-600">{contact.address}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <Phone className="mt-1 h-5 w-5 text-slate-700" />
+                  <Phone className="mt-1 h-5 w-5 text-sky-700" />
                   <div>
                     <h3 className="font-medium text-slate-900">Telefono</h3>
                     <p className="text-slate-600">{contact.phone}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <Mail className="mt-1 h-5 w-5 text-slate-700" />
+                  <Mail className="mt-1 h-5 w-5 text-sky-700" />
                   <div>
                     <h3 className="font-medium text-slate-900">Correo</h3>
                     <p className="text-slate-600">{contact.email}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <Clock className="mt-1 h-5 w-5 text-slate-700" />
+                  <Clock className="mt-1 h-5 w-5 text-sky-700" />
                   <div>
                     <h3 className="font-medium text-slate-900">Horarios</h3>
                     {contact.schedule.map((line, i) => (
@@ -226,29 +226,29 @@ export function LandingContent() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-800">Nombre</label>
-                        <Input className="h-12 rounded-2xl border-black/5 bg-white/80" placeholder="Ingresa tu nombre" />
+                        <Input className="h-12 rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)]" placeholder="Ingresa tu nombre" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-800">Apellido</label>
-                        <Input className="h-12 rounded-2xl border-black/5 bg-white/80" placeholder="Ingresa tu apellido" />
+                        <Input className="h-12 rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)]" placeholder="Ingresa tu apellido" />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-800">Email</label>
-                      <Input className="h-12 rounded-2xl border-black/5 bg-white/80" type="email" placeholder="Ingresa tu email" />
+                      <Input className="h-12 rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)]" type="email" placeholder="Ingresa tu email" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-800">Telefono</label>
-                      <Input className="h-12 rounded-2xl border-black/5 bg-white/80" placeholder="Ingresa tu numero de telefono" />
+                      <Input className="h-12 rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)]" placeholder="Ingresa tu numero de telefono" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-800">Mensaje</label>
                       <textarea
-                        className="flex min-h-[140px] w-full rounded-[1.5rem] border border-black/5 bg-white/80 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                        className="flex min-h-[140px] w-full rounded-[1.5rem] border border-sky-100/80 bg-[rgba(248,251,255,0.96)] px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200"
                         placeholder="Cuéntanos como podemos ayudarte"
                       />
                     </div>
-                    <Button className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#12353d,#255d6a)] text-white hover:opacity-95">
+                    <Button className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#0f3f8f,#2563eb,#38bdf8)] text-white hover:opacity-95">
                       Enviar mensaje
                     </Button>
                   </form>

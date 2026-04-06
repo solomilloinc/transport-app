@@ -26,7 +26,7 @@ export function TablePagination({ currentPage, totalPages, totalItems, itemsPerP
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-[1.5rem] border border-black/6 bg-white/78 px-4 py-4 shadow-[0_16px_34px_rgba(22,34,24,0.06)] sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 px-1 py-1 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-slate-500">
         Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} a {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} {itemName}
       </div>
@@ -36,7 +36,7 @@ export function TablePagination({ currentPage, totalPages, totalItems, itemsPerP
           size="sm"
           onClick={handlePreviousPage}
           disabled={currentPage === 1}
-          className="h-9 rounded-full border-black/8 bg-white/80 px-3 text-slate-700"
+          className="h-9 rounded-full border-sky-100/90 bg-white px-3 text-slate-700 hover:bg-sky-50"
         >
           <ChevronLeftIcon className="h-4 w-4" />
           <span className="sr-only">Pagina anterior</span>
@@ -50,8 +50,8 @@ export function TablePagination({ currentPage, totalPages, totalItems, itemsPerP
               onClick={() => onPageChange(page)}
               className={
                 currentPage === page
-                  ? 'h-9 w-9 rounded-full border-0 bg-[linear-gradient(135deg,#182b1f,#35533f)] p-0 text-white shadow-none'
-                  : 'h-9 w-9 rounded-full border-black/8 bg-white/80 p-0 text-slate-700'
+                  ? 'h-9 w-9 rounded-full border-0 bg-[linear-gradient(135deg,#0f3f8f,#2563eb)] p-0 text-white shadow-[0_10px_20px_rgba(37,99,235,0.16)]'
+                  : 'h-9 w-9 rounded-full border-sky-100/90 bg-white p-0 text-slate-700 hover:bg-sky-50'
               }
             >
               {page}
@@ -63,7 +63,7 @@ export function TablePagination({ currentPage, totalPages, totalItems, itemsPerP
           size="sm"
           onClick={handleNextPage}
           disabled={currentPage === totalPages}
-          className="h-9 rounded-full border-black/8 bg-white/80 px-3 text-slate-700"
+          className="h-9 rounded-full border-sky-100/90 bg-white px-3 text-slate-700 hover:bg-sky-50"
         >
           <ChevronRightIcon className="h-4 w-4" />
           <span className="sr-only">Pagina siguiente</span>

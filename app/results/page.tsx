@@ -76,7 +76,7 @@ export default async function ResultsPage({ searchParams }: {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(191,219,254,0.28),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#eef5ff_48%,#f8fbff_100%)]">
       <Navbar />
       <main className="container py-8">
         <ResultsClient initialReserves={initialReserves} searchParams={clientSearchParams} />

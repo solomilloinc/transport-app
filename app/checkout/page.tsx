@@ -333,14 +333,14 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[radial-gradient(circle_at_top,rgba(191,219,254,0.28),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#eef5ff_48%,#f8fbff_100%)]">
       <Navbar />
       <main className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <div className="mb-4 sm:mb-6">
           <Button
             variant="link"
             onClick={() => router.back()}
-            className="inline-flex h-auto items-center p-0 text-sm text-slate-600 hover:text-slate-900 sm:text-base"
+            className="inline-flex h-auto items-center p-0 text-sm text-slate-600 hover:text-blue-700 sm:text-base"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Volver
@@ -349,7 +349,7 @@ export default function CheckoutPage() {
 
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="glass-panel relative w-full rounded-[2rem] p-4 sm:p-6">
+            <div className="relative w-full rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(244,249,255,0.98))] p-4 shadow-[0_22px_52px_rgba(15,23,42,0.08)] sm:p-6">
 
               {/* Overlay de loading durante el pago */}
               {isSubmitting && (
@@ -358,7 +358,7 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              <div className="mb-6 border-b border-black/5 pb-5">
+              <div className="mb-6 border-b border-sky-100 pb-5">
                 <p className="text-xs uppercase tracking-[0.28em] text-slate-500">checkout protegido</p>
                 <h1 className="mt-2 text-2xl font-display text-slate-900 sm:text-3xl">Completa tu reserva</h1>
               </div>
@@ -380,7 +380,7 @@ export default function CheckoutPage() {
 
               {/* Lock Error Display */}
               {lockError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="mb-4 rounded-[1.25rem] border border-red-200 bg-red-50 p-4">
                   <div className="flex items-center">
                     <div className="text-sm text-red-600">{lockError}</div>
                   </div>
@@ -388,7 +388,7 @@ export default function CheckoutPage() {
               )}
 
               {validationError && (
-                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="mb-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4">
                   <div className="flex items-center">
                     <div className="text-sm text-amber-700">{validationError}</div>
                   </div>
@@ -396,11 +396,11 @@ export default function CheckoutPage() {
               )}
 
               {/* Steps */}
-              <div className="mb-8 rounded-[1.5rem] border border-black/5 bg-white/45 p-4 sm:p-5">
+              <div className="mb-8 rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4 sm:p-5">
                 <div className="flex items-center justify-between">
                   <div className={`flex flex-col items-center ${currentStep === 'passengers' ? 'text-slate-900' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'passengers' ? 'bg-slate-900 text-white'
-                      : currentStep === 'payment' || currentStep === 'review' ? 'bg-emerald-600 text-white'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'passengers' ? 'bg-blue-700 text-white'
+                      : currentStep === 'payment' || currentStep === 'review' ? 'bg-blue-500 text-white'
                         : 'bg-gray-200 text-gray-500'
                       }`}>
                       <Users className="h-4 w-4" />
@@ -408,13 +408,13 @@ export default function CheckoutPage() {
                     <span className="text-xs">Pasajeros</span>
                   </div>
 
-                  <div className="flex-1 h-1 mx-2 bg-gray-200">
-                    <div className={`h-full bg-slate-900 ${currentStep !== 'passengers' ? 'w-full' : 'w-0'}`} />
+                  <div className="mx-2 h-1 flex-1 bg-sky-100">
+                    <div className={`h-full bg-blue-600 ${currentStep !== 'passengers' ? 'w-full' : 'w-0'}`} />
                   </div>
 
                   <div className={`flex flex-col items-center ${currentStep === 'review' ? 'text-slate-900' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'review' ? 'bg-slate-900 text-white'
-                      : currentStep === 'payment' ? 'bg-emerald-600 text-white'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'review' ? 'bg-blue-700 text-white'
+                      : currentStep === 'payment' ? 'bg-blue-500 text-white'
                         : 'bg-gray-200 text-gray-500'
                       }`}>
                       <CreditCard className="h-4 w-4" />
@@ -422,12 +422,12 @@ export default function CheckoutPage() {
                     <span className="text-xs">Revisar</span>
                   </div>
 
-                  <div className="flex-1 h-1 mx-2 bg-gray-200">
-                    <div className={`h-full bg-slate-900 ${currentStep === 'payment' ? 'w-full' : 'w-0'}`} />
+                  <div className="mx-2 h-1 flex-1 bg-sky-100">
+                    <div className={`h-full bg-blue-600 ${currentStep === 'payment' ? 'w-full' : 'w-0'}`} />
                   </div>
 
                   <div className={`flex flex-col items-center ${currentStep === 'payment' ? 'text-slate-900' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'payment' ? 'bg-slate-900 text-white' : 'bg-gray-200 text-gray-500'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${currentStep === 'payment' ? 'bg-blue-700 text-white' : 'bg-gray-200 text-gray-500'
                       }`}>
                       <Shield className="h-4 w-4" />
                     </div>
@@ -453,7 +453,7 @@ export default function CheckoutPage() {
 
                     {/* Location Selection - Outbound */}
                     {checkout.outboundTrip?.TripId && checkout.outboundTrip?.ReserveId && (
-                      <div className="border-t border-black/5 pt-6">
+                      <div className="border-t border-sky-100 pt-6">
                         <h2 className="mb-4 flex items-center gap-2 text-lg font-display font-medium text-slate-900 sm:text-xl">
                           <MapPin className="h-5 w-5" />
                           Puntos de subida y bajada - ida
@@ -474,7 +474,7 @@ export default function CheckoutPage() {
 
                     {/* Location Selection - Return (only for round trips) */}
                     {isRoundTrip && checkout.returnTrip?.TripId && (
-                      <div className="border-t border-black/5 pt-6">
+                      <div className="border-t border-sky-100 pt-6">
                         <h2 className="mb-4 flex items-center gap-2 text-lg font-display font-medium text-slate-900 sm:text-xl">
                           <MapPin className="h-5 w-5" />
                           Puntos de subida y bajada - vuelta
@@ -504,7 +504,7 @@ export default function CheckoutPage() {
 
                     <div className="space-y-6">
                       {/* Ida */}
-                      <div className="rounded-[1.25rem] border border-black/5 bg-white/70 p-4">
+                      <div className="rounded-[1.25rem] border border-sky-100 bg-sky-50/55 p-4">
                         <h3 className="mb-2 font-medium text-slate-900">Detalle del viaje de ida</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           <div className="text-gray-600">Ruta:</div>
@@ -529,7 +529,7 @@ export default function CheckoutPage() {
 
                       {/* Vuelta */}
                       {checkout.returnTrip && (
-                        <div className="rounded-[1.25rem] border border-black/5 bg-white/70 p-4">
+                        <div className="rounded-[1.25rem] border border-sky-100 bg-sky-50/55 p-4">
                           <h3 className="mb-2 font-medium text-slate-900">Detalle del viaje de vuelta</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                             <div className="text-gray-600">Ruta:</div>
@@ -551,7 +551,7 @@ export default function CheckoutPage() {
                         <h3 className="mb-2 font-medium text-slate-900">Informacion de pasajeros</h3>
                         <div className="space-y-3">
                           {passengerData.map((p, idx) => (
-                            <div key={idx} className="rounded-[1.1rem] border border-black/5 bg-white/70 p-3 text-sm">
+                            <div key={idx} className="rounded-[1.1rem] border border-sky-100 bg-white p-3 text-sm shadow-sm">
                               <div className="font-medium">
                                 Pasajero {idx + 1}: {p.firstName} {p.lastName}
                               </div>
@@ -567,17 +567,17 @@ export default function CheckoutPage() {
                       </div>
 
                       {/* Términos */}
-                      <div className="rounded-[1.25rem] border border-amber-100 bg-yellow-50 p-4 text-sm">
-                        <h3 className="mb-2 font-medium text-yellow-800">Terminos y condiciones</h3>
-                        <p className="text-yellow-700 mb-2">
+                      <div className="rounded-[1.25rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(239,246,255,0.95),rgba(219,234,254,0.88))] p-4 text-sm">
+                        <h3 className="mb-2 font-medium text-blue-800">Terminos y condiciones</h3>
+                        <p className="mb-2 text-slate-700">
                           {legal.termsText.replace('los términos y condiciones', `los términos y condiciones de ${identity.companyName}`)}
                         </p>
-                        <p className="text-yellow-700">
+                        <p className="text-slate-700">
                           {legal.cancellationPolicy}
                         </p>
                       </div>
                       {/* Resumen de Precio - SOLO MOBILE */}
-                      <div className="mt-4 rounded-[1.25rem] border border-black/5 bg-white/75 p-4 shadow-sm lg:hidden">
+                      <div className="mt-4 rounded-[1.25rem] border border-sky-100 bg-white p-4 shadow-sm lg:hidden">
                         <h3 className="mb-3 font-medium text-slate-900">Resumen de precio</h3>
                         <div className="space-y-2 mb-4 text-sm">
                           <div className="flex justify-between">
@@ -613,8 +613,8 @@ export default function CheckoutPage() {
                           type="button"
                           onClick={() => setPaymentMethod('card')}
                           className={`rounded-[1.25rem] p-4 border text-left transition-colors ${paymentMethod === 'card'
-                            ? 'border-slate-900 bg-slate-900 text-white'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-blue-600 bg-blue-600 text-white'
+                            : 'border-sky-100 bg-white hover:border-sky-200 hover:bg-sky-50'
                             }`}
                           disabled={isSubmitting}
                         >
@@ -629,8 +629,8 @@ export default function CheckoutPage() {
                           type="button"
                           onClick={() => setPaymentMethod('wallet')}
                           className={`rounded-[1.25rem] p-4 border text-left transition-colors ${paymentMethod === 'wallet'
-                            ? 'border-slate-900 bg-slate-900 text-white'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-blue-600 bg-blue-600 text-white'
+                            : 'border-sky-100 bg-white hover:border-sky-200 hover:bg-sky-50'
                             }`}
                           disabled={isSubmitting}
                         >
@@ -682,7 +682,7 @@ export default function CheckoutPage() {
                     type="button"
                     onClick={goToNextStep}
                     disabled={!isCurrentStepComplete() || isSubmitting}
-                    className="rounded-full bg-[linear-gradient(135deg,#12353d,#255d6a)] px-6 hover:opacity-95"
+                    className="rounded-full bg-blue-600 px-6 text-white hover:bg-blue-700"
                   >
                     Continuar
                   </Button>
@@ -703,8 +703,8 @@ export default function CheckoutPage() {
 
           {/* Sidebar - Oculto en mobile, visible en LG */}
           <div className="hidden lg:block">
-            <div className="glass-panel rounded-[2rem] md:sticky md:top-24">
-              <div className="border-b border-black/5 bg-white/40 p-5">
+            <div className="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(244,249,255,0.98))] shadow-[0_22px_52px_rgba(15,23,42,0.08)] md:sticky md:top-24">
+              <div className="border-b border-sky-100 bg-sky-50/70 p-5">
                 <h2 className="font-display text-2xl text-slate-900">Resumen de la reserva</h2>
               </div>
               <div className="p-4">
@@ -751,7 +751,7 @@ export default function CheckoutPage() {
 
                 {checkout.returnTrip && (
                   <>
-                    <Separator className="my-4 bg-black/5" />
+                    <Separator className="my-4 bg-sky-100" />
                     <div className="flex items-center justify-between mb-4">
                       <div className="text-lg font-medium flex items-center">
                         {checkout.returnTrip?.OriginName}
@@ -782,7 +782,7 @@ export default function CheckoutPage() {
                   </>
                 )}
 
-                <Separator className="my-4 bg-black/5" />
+                <Separator className="my-4 bg-sky-100" />
 
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">

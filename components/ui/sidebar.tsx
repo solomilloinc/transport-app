@@ -333,7 +333,8 @@ const SidebarContent = React.forwardRef<HTMLDivElement, React.ComponentProps<'di
       ref={ref}
       data-sidebar="content"
       className={cn(
-        'flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden',
+        'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden group-data-[collapsible=icon]:overflow-hidden',
+        '[scrollbar-width:thin] [scrollbar-color:rgba(15,23,42,0.16)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/10 [&::-webkit-scrollbar-thumb:hover]:bg-black/20 [&::-webkit-scrollbar-track]:bg-transparent',
         className
       )}
       {...props}

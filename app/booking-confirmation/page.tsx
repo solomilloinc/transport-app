@@ -27,12 +27,12 @@ export default function BookingConfirmationPage() {
 
   if (isPendingVerification) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(191,219,254,0.28),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#eef5ff_48%,#f8fbff_100%)]">
         <Navbar />
         <main className="container py-12">
           <div className="mx-auto max-w-4xl">
-            <Card className="glass-panel overflow-hidden rounded-[2rem] border-0">
-              <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(250,204,21,0.22),rgba(255,255,255,0.55))] p-8 text-center">
+            <Card className="overflow-hidden rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(244,249,255,0.98))] shadow-[0_24px_56px_rgba(15,23,42,0.08)]">
+              <div className="border-b border-sky-100 bg-[linear-gradient(135deg,rgba(219,234,254,0.9),rgba(255,255,255,0.7))] p-8 text-center">
                 <Clock3 className="mx-auto mb-4 h-16 w-16 text-amber-600" />
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">estado del pago</p>
                 <h1 className="mt-3 text-3xl text-slate-900 font-display md:text-4xl">
@@ -44,12 +44,12 @@ export default function BookingConfirmationPage() {
                 </p>
               </div>
               <CardContent className="p-8">
-                <div className="rounded-[1.25rem] border border-black/5 bg-white/80 p-5 text-sm text-slate-700">
+                <div className="rounded-[1.25rem] border border-sky-100 bg-white p-5 text-sm text-slate-700 shadow-sm">
                   Estado informado por Mercado Pago: <span className="font-semibold text-slate-900">{status || 'pendiente'}</span>.
                 </div>
                 <div className="mt-6 flex flex-col gap-3 md:flex-row">
                   <Link href="/" className="w-full">
-                    <Button className="h-12 w-full rounded-full bg-[linear-gradient(135deg,#12353d,#255d6a)] text-white hover:opacity-95">
+                    <Button className="h-12 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700">
                       Volver al inicio
                     </Button>
                   </Link>
@@ -69,12 +69,12 @@ export default function BookingConfirmationPage() {
 
   if (!isConfirmed) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(191,219,254,0.28),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#eef5ff_48%,#f8fbff_100%)]">
         <Navbar />
         <main className="container py-12">
           <div className="mx-auto max-w-3xl">
-            <Card className="glass-panel overflow-hidden rounded-[2rem] border-0">
-              <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(239,68,68,0.14),rgba(255,255,255,0.55))] p-8 text-center">
+            <Card className="overflow-hidden rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(244,249,255,0.98))] shadow-[0_24px_56px_rgba(15,23,42,0.08)]">
+              <div className="border-b border-sky-100 bg-[linear-gradient(135deg,rgba(254,226,226,0.78),rgba(255,255,255,0.7))] p-8 text-center">
                 <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500" />
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">pago rechazado</p>
                 <h1 className="mt-3 text-3xl text-slate-900 font-display">No pudimos confirmar tu pago</h1>
@@ -88,7 +88,7 @@ export default function BookingConfirmationPage() {
                 </div>
                 <div className="mt-6">
                   <Link href="/" className="w-full">
-                    <Button className="h-12 w-full rounded-full bg-[linear-gradient(135deg,#12353d,#255d6a)] text-white hover:opacity-95">
+                    <Button className="h-12 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700">
                       Volver al inicio
                     </Button>
                   </Link>
@@ -102,7 +102,7 @@ export default function BookingConfirmationPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(191,219,254,0.28),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#eef5ff_48%,#f8fbff_100%)]">
       <Navbar />
       <main className="container py-12">
         <div className="mx-auto max-w-4xl">
@@ -116,9 +116,9 @@ export default function BookingConfirmationPage() {
             </Button>
           </Link>
 
-          <Card className="glass-panel overflow-hidden rounded-[2rem] border-0">
-            <div className="border-b border-black/5 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(255,255,255,0.55))] p-8 text-center">
-              <CheckCircle className="mx-auto mb-4 h-16 w-16 text-emerald-500" />
+          <Card className="overflow-hidden rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(244,249,255,0.98))] shadow-[0_24px_56px_rgba(15,23,42,0.08)]">
+            <div className="border-b border-sky-100 bg-[linear-gradient(135deg,rgba(219,234,254,0.88),rgba(255,255,255,0.72))] p-8 text-center">
+              <CheckCircle className="mx-auto mb-4 h-16 w-16 text-blue-600" />
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">reserva confirmada</p>
               <h1 className="mt-3 text-3xl text-slate-900 font-display md:text-4xl">
                 Tu viaje ya esta listo
@@ -128,7 +128,7 @@ export default function BookingConfirmationPage() {
               </p>
             </div>
             <CardContent className="p-8">
-              <div className="mb-6 rounded-[1.4rem] border border-black/5 bg-[linear-gradient(180deg,rgba(255,248,239,0.88),rgba(255,255,255,0.92))] p-5">
+              <div className="mb-6 rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(239,246,255,0.9),rgba(255,255,255,0.98))] p-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <div className="text-xs uppercase tracking-[0.28em] text-slate-500">
@@ -140,7 +140,7 @@ export default function BookingConfirmationPage() {
                   </div>
                   <Button
                     variant="outline"
-                    className="rounded-full border-black/10 bg-white/80 text-slate-700 hover:bg-white"
+                    className="rounded-full border-sky-100 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-blue-700"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Descargar ticket
@@ -148,7 +148,7 @@ export default function BookingConfirmationPage() {
                 </div>
               </div>
 
-              <div className="rounded-[1.25rem] border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-900">
+              <div className="rounded-[1.25rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(239,246,255,0.95),rgba(219,234,254,0.88))] p-5 text-sm text-slate-800">
                 <h2 className="mb-3 text-lg font-display text-slate-900">Informacion importante</h2>
                 <div className="space-y-2">
                   <p>
@@ -169,7 +169,7 @@ export default function BookingConfirmationPage() {
             </p>
             <div className="mt-4 flex flex-col justify-center gap-4 md:flex-row">
               <Link href="/">
-                <Button variant="outline" className="rounded-full border-black/10 bg-white/75 px-6">
+                <Button variant="outline" className="rounded-full border-sky-100 bg-white px-6 hover:border-sky-200 hover:bg-sky-50 hover:text-blue-700">
                   Reservar otro viaje
                 </Button>
               </Link>

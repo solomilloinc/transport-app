@@ -132,7 +132,7 @@ function MenuItem({
           tooltip={item.name}
           isActive={isActive}
           onClick={onToggle}
-          className="rounded-2xl px-3 py-2 text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-950"
+          className="rounded-2xl px-3 py-2 text-slate-600 transition-all duration-200 hover:bg-white hover:text-slate-950 data-[active=true]:bg-[linear-gradient(135deg,rgba(18,99,236,0.12),rgba(56,189,248,0.16))] data-[active=true]:text-sky-950"
         >
           <item.icon className="h-4 w-4" />
           <span className="font-medium">{item.name}</span>
@@ -140,7 +140,7 @@ function MenuItem({
         </SidebarMenuButton>
 
         <div className={cn('overflow-hidden transition-all duration-300 ease-in-out', isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0')}>
-          <SidebarMenuSub className="ml-3 border-l border-black/6 pl-3">
+          <SidebarMenuSub className="ml-3 border-l border-sky-100 pl-3">
             {item.submenu
               ?.filter((subItem) => subItem.roles?.includes(userRole))
               .map((subItem) => (
@@ -148,7 +148,7 @@ function MenuItem({
                   <SidebarMenuSubButton
                     asChild
                     isActive={pathname === subItem.path}
-                    className="rounded-xl text-slate-600 transition-colors hover:bg-white hover:text-slate-950"
+                    className="rounded-xl text-slate-500 transition-colors hover:bg-white hover:text-slate-950 data-[active=true]:bg-sky-50/80 data-[active=true]:text-sky-900"
                   >
                     <Link href={subItem.path}>{subItem.name}</Link>
                   </SidebarMenuSubButton>
@@ -166,7 +166,7 @@ function MenuItem({
         asChild
         isActive={isActive}
         tooltip={item.name}
-        className="rounded-2xl px-3 py-2 text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-950"
+        className="rounded-2xl px-3 py-2 text-slate-600 transition-all duration-200 hover:bg-white hover:text-slate-950 data-[active=true]:bg-[linear-gradient(135deg,rgba(18,99,236,0.12),rgba(56,189,248,0.16))] data-[active=true]:text-sky-950"
       >
         <Link href={item.path}>
           <item.icon className="h-4 w-4" />
@@ -220,23 +220,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[linear-gradient(180deg,#eef1eb,#e4ebe4)] text-slate-900">
-        <SidebarComponent className="border-r border-black/6 bg-[linear-gradient(180deg,#f6f6f1,#edf1ea)]">
-          <SidebarHeader className="border-b border-black/6">
+      <div className="flex min-h-screen w-full bg-[radial-gradient(circle_at_top_left,rgba(125,211,252,0.18),transparent_32%),linear-gradient(180deg,#f7fbff,#eef6ff)] text-slate-900">
+        <SidebarComponent className="border-r border-sky-100/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(240,248,255,0.96))]">
+          <SidebarHeader className="border-b border-sky-100/80">
             <div className="px-4 py-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#182b1f,#35533f)] shadow-[0_16px_30px_rgba(24,43,31,0.16)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f3f8f,#1d4ed8_55%,#38bdf8)] shadow-[0_18px_34px_rgba(29,78,216,0.2)]">
                   {identity.logoUrl ? (
                     <Image src={identity.logoUrl} alt={identity.companyName} width={24} height={24} className="h-6 w-6 rounded-full object-cover" />
                   ) : (
-                    <Bus className="h-5 w-5 text-emerald-100" />
+                    <Bus className="h-5 w-5 text-sky-50" />
                   )}
                 </div>
                 <div className="min-w-0">
-                  <Link href="/" className="font-display text-xl text-slate-950 transition-colors hover:text-slate-700">
+                  <Link href="/" className="font-display text-xl text-slate-950 transition-colors hover:text-sky-800">
                     {identity.companyNameShort}
                   </Link>
-                  <p className="truncate text-xs uppercase tracking-[0.28em] text-slate-500">
+                  <p className="truncate text-xs uppercase tracking-[0.28em] text-sky-700/65">
                     {isCustomerView ? 'portal cliente' : 'consola operativa'}
                   </p>
                 </div>
@@ -247,7 +247,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <SidebarContent className="px-3 py-4">
             {(filteredMainMenu.length > 0 || filteredCustomerMenu.length > 0) && (
               <SidebarGroup>
-                <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">
+                <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-sky-700/60">
                   {isCustomerView ? 'mi cuenta' : 'operacion'}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -269,7 +269,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {filteredConfigMenu.length > 0 && (
               <SidebarGroup>
-                <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">
+                <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-sky-700/60">
                   administracion
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -290,13 +290,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-black/6">
+          <SidebarFooter className="border-t border-sky-100/80">
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="m-3 rounded-[1.25rem] border border-black/6 bg-white/72 p-3">
+                <div className="m-3 rounded-[1.25rem] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(240,248,255,0.9))] p-3">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border border-black/6">
-                      <AvatarFallback className="bg-[linear-gradient(135deg,#182b1f,#35533f)] text-sm font-medium text-white">
+                    <Avatar className="h-10 w-10 border border-sky-100/80">
+                      <AvatarFallback className="bg-[linear-gradient(135deg,#0f3f8f,#1d4ed8,#38bdf8)] text-sm font-medium text-white">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
@@ -308,10 +308,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </SidebarMenuItem>
 
-              <Separator className="my-1 bg-black/6" />
+              <Separator className="my-1 bg-sky-100/90" />
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Ir al inicio" className="rounded-2xl px-3 py-2 text-slate-600 hover:bg-white hover:text-slate-950">
+                <SidebarMenuButton asChild tooltip="Ir al inicio" className="rounded-2xl px-3 py-2 text-slate-600 hover:bg-white hover:text-sky-950">
                   <Link href="/">
                     <Home className="h-4 w-4" />
                     <span>Ir al inicio</span>
@@ -337,12 +337,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </SidebarComponent>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-40 border-b border-black/6 bg-[rgba(244,246,239,0.9)] backdrop-blur-xl">
+          <header className="sticky top-0 z-40 border-b border-sky-100/80 bg-[rgba(248,252,255,0.88)] backdrop-blur-xl">
             <div className="flex h-16 items-center gap-4 px-5">
-              <SidebarTrigger className="-ml-1 rounded-full border border-black/6 bg-white/75" />
-              <Separator orientation="vertical" className="h-6 bg-black/6" />
+              <SidebarTrigger className="-ml-1 rounded-full border border-sky-100/90 bg-white/90 text-sky-900" />
+              <Separator orientation="vertical" className="h-6 bg-sky-100/90" />
               <div className="flex-1">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">operacion del dia</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-sky-700/60">operacion del dia</p>
                 <h1 className="mt-1 text-sm font-medium text-slate-900">
                   {new Date().toLocaleDateString('es-ES', {
                     weekday: 'long',

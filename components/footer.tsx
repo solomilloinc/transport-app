@@ -8,7 +8,7 @@ export default function Footer() {
   const { identity } = useTenant();
 
   return (
-    <footer className="mt-12 border-t border-black/5 bg-[linear-gradient(180deg,rgba(18,53,61,0.98),rgba(10,25,29,1))] text-white">
+    <footer className="mt-12 border-t border-sky-900/10 bg-[linear-gradient(180deg,rgba(11,43,99,0.98),rgba(8,24,58,1))] text-white">
       <div className="container">
         <div className="flex flex-col gap-8 py-10 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xl">
@@ -17,7 +17,7 @@ export default function Footer() {
                 <Image src={identity.logoUrl} alt={identity.companyName} width={32} height={32} className="h-8 w-8 rounded-full object-cover ring-1 ring-white/15" />
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
-                  <Bus className="h-5 w-5 text-amber-300" />
+                  <Bus className="h-5 w-5 text-sky-300" />
                 </div>
               )}
               <span className="text-2xl font-display text-white">

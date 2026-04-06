@@ -125,29 +125,29 @@ export function LocationSelector({
   if (loading) {
     return (
       <div className="animate-pulse space-y-4">
-        <div className="h-10 rounded bg-gray-200" />
-        <div className="h-10 rounded bg-gray-200" />
+        <div className="h-10 rounded-xl bg-sky-100" />
+        <div className="h-10 rounded-xl bg-sky-100" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
         {error}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 rounded-[1.4rem] border border-sky-100 bg-white/80 p-4 shadow-sm">
       <div className="space-y-2">
         <Label className="flex items-center gap-2 text-blue-800">
           <MapPin className="h-4 w-4" />
           Punto de Subida
         </Label>
         <Select value={selectedPickupId} onValueChange={setSelectedPickupId}>
-          <SelectTrigger>
+          <SelectTrigger className="border-sky-100 bg-white">
             <SelectValue placeholder="Selecciona dónde subir" />
           </SelectTrigger>
           <SelectContent>
@@ -193,7 +193,7 @@ export function LocationSelector({
           }}
           disabled={isRoundTrip && dropoffOptions.length === 1}
         >
-          <SelectTrigger>
+          <SelectTrigger className="border-sky-100 bg-white">
             <SelectValue placeholder="Selecciona ciudad de bajada" />
           </SelectTrigger>
           <SelectContent>
@@ -218,7 +218,7 @@ export function LocationSelector({
             Dirección de Bajada
           </Label>
           <Select value={selectedDropoffDirectionId} onValueChange={setSelectedDropoffDirectionId}>
-            <SelectTrigger>
+            <SelectTrigger className="border-sky-100 bg-white">
               <SelectValue placeholder="Selecciona dirección de bajada" />
             </SelectTrigger>
             <SelectContent>

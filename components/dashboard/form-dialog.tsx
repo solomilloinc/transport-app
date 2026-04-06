@@ -35,7 +35,7 @@ export function FormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'max-h-[90vh] w-[95%] max-w-none overflow-y-auto rounded-[2rem] border border-black/8 bg-[linear-gradient(180deg,rgba(253,253,250,0.98),rgba(242,244,238,0.95))] p-0 shadow-[0_30px_80px_rgba(16,24,18,0.16)] sm:w-[90%] md:w-[75%] lg:w-[50%]',
+          'max-h-[90vh] w-[95%] max-w-none overflow-y-auto rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,249,255,0.97))] p-0 shadow-[0_34px_90px_rgba(15,23,42,0.16)] sm:w-[90%] md:w-[75%] lg:w-[50%]',
           className
         )}
       >
@@ -45,12 +45,12 @@ export function FormDialog({
             <DialogDescription className="text-slate-500">{description}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">{children}</div>
-          <DialogFooter className="border-t border-black/6 pt-6">
+          <DialogFooter className="border-t border-sky-100/90 pt-6">
             <Button
               type="submit"
               onClick={onSubmit}
               disabled={isLoading || disabled}
-              className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-6 text-white hover:opacity-95"
+              className="rounded-full bg-blue-600 px-6 text-white shadow-sm hover:bg-blue-700"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {submitText}

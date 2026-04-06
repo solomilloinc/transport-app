@@ -292,7 +292,7 @@ export default function TripPricesManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+            className="h-8 rounded-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeletePrice(price.TripPriceId)}
           >
             <Trash className="h-4 w-4" />
@@ -328,16 +328,14 @@ export default function TripPricesManagement() {
         title={`Precios: ${trip?.Description || ''}`}
         description={`${trip?.OriginCityName} → ${trip?.DestinationCityName}`}
         action={
-          <Button onClick={handleAddPrice}>
+          <Button onClick={handleAddPrice} className="rounded-full bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700">
             <Plus className="mr-2 h-4 w-4" />
             Agregar Precio
           </Button>
         }
       />
 
-      <Card className="w-full">
-        <CardContent className="pt-6 w-full">
-          <div className="space-y-4 w-full">
+      <div className="space-y-4 w-full">
             <FilterBar onReset={() => setFilterReserveType('')}>
               <ApiSelect
                 value={filterReserveType}
@@ -359,9 +357,7 @@ export default function TripPricesManagement() {
                 skeletonRows={5}
               />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Mobile view */}
       <div className="md:hidden space-y-4 mt-4">

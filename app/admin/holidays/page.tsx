@@ -187,7 +187,7 @@ export default function HolidaysManagement() {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+            className="h-8 rounded-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={() => handleDeleteHoliday(holiday.HolidayId)}
           >
             <Trash className="h-4 w-4" />
@@ -203,43 +203,39 @@ export default function HolidaysManagement() {
         title="Feriados"
         description="Gestiona y visualiza toda la información de los feriados."
         action={
-          <Button onClick={() => handleAddHolidays()} className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-5 text-white hover:opacity-95">
+          <Button onClick={() => handleAddHolidays()} className="rounded-full bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700">
             <UserPlusIcon className="mr-2 h-4 w-4" />
             Agregar
           </Button>
         }
       />
 
-      <Card className="w-full overflow-hidden rounded-[1.75rem] border border-black/6 bg-white/78 shadow-[0_22px_48px_rgba(22,34,24,0.06)]">
-        <CardContent className="pt-6 w-full">
-          <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
-            </FilterBar>
+      <div className="space-y-4 w-full">
+        <FilterBar onReset={resetFilters}>
+          <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+        </FilterBar>
 
-            <div className="hidden md:block w-full">
-              <DashboardTable
-                columns={columns}
-                data={data?.Items ?? []}
-                emptyMessage="No se encontraron feriados."
-                isLoading={isLoading}
-                skeletonRows={data?.PageSize}
-              />
-            </div>
+        <div className="hidden md:block w-full">
+          <DashboardTable
+            columns={columns}
+            data={data?.Items ?? []}
+            emptyMessage="No se encontraron feriados."
+            isLoading={isLoading}
+            skeletonRows={data?.PageSize}
+          />
+        </div>
 
-            {(data?.Items?.length ?? 0) > 0 && (
-              <TablePagination
-                currentPage={currentPage}
-                totalPages={data?.TotalPages ?? 0}
-                totalItems={data?.TotalRecords ?? 0}
-                itemsPerPage={data?.PageSize ?? 0}
-                onPageChange={setCurrentPage}
-                itemName="pasajeros"
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        {(data?.Items?.length ?? 0) > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={data?.TotalPages ?? 0}
+            totalItems={data?.TotalRecords ?? 0}
+            itemsPerPage={data?.PageSize ?? 0}
+            onPageChange={setCurrentPage}
+            itemName="pasajeros"
+          />
+        )}
+      </div>
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">

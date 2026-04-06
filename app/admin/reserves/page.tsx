@@ -6,7 +6,6 @@ import { es, is } from 'date-fns/locale';
 import { PrinterIcon, UserPlusIcon, DollarSignIcon, TicketPlus, Edit2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EditTripDialog } from '@/components/admin/reserves/EditTripDialog';
@@ -337,26 +336,38 @@ export default function ReservationsPage() {
         description="Supervisa salidas, pasajeros y cobros del dia desde una misma vista operativa"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" title="Imprimir" className="rounded-full border-black/10 bg-white/70">
+            <Button variant="outline" size="icon" title="Imprimir" className="rounded-full border-sky-100 bg-white text-slate-600 shadow-sm hover:border-sky-200 hover:bg-sky-50 hover:text-blue-700">
               <PrinterIcon className="h-4 w-4" />
             </Button>
 
             {/* Vehicle selection button */}
-            <Button variant="outline" size="icon" title="Editar reserva" onClick={() => handleEditReserve(selectedTrip ?? undefined)} className="rounded-full border-black/10 bg-white/70">
+            <Button
+              variant="outline"
+              size="icon"
+              title="Editar reserva"
+              onClick={() => handleEditReserve(selectedTrip ?? undefined)}
+              className="rounded-full border-sky-100 bg-white text-slate-600 shadow-sm hover:border-sky-200 hover:bg-sky-50 hover:text-blue-700"
+            >
               <Edit2 className="h-4 w-4" />
             </Button>
 
-            <Button variant="outline" size="icon" title="Resumen de pagos" onClick={() => setIsPaymentSummaryOpen(true)} className="rounded-full border-black/10 bg-white/70">
+            <Button
+              variant="outline"
+              size="icon"
+              title="Resumen de pagos"
+              onClick={() => setIsPaymentSummaryOpen(true)}
+              className="rounded-full border-sky-100 bg-white text-slate-600 shadow-sm hover:border-sky-200 hover:bg-sky-50 hover:text-blue-700"
+            >
               <DollarSignIcon className="h-4 w-4" />
             </Button>
-            <Button onClick={handleAddPassenger} className="rounded-full bg-[linear-gradient(135deg,#182b1f,#35533f)] px-5 text-white hover:opacity-95">
+            <Button onClick={handleAddPassenger} className="rounded-full bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700">
               <TicketPlus className=" mr-2 h-6 w-6" />
               Agregar
             </Button>
           </div>
         }
       />
-      <div className="grid w-full gap-4 md:grid-cols-[minmax(280px,340px)_1fr]">
+      <div className="grid w-full gap-4 md:grid-cols-[minmax(204px,244px)_minmax(0,1fr)]">
         <TripSelectionPanel
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
@@ -367,14 +378,11 @@ export default function ReservationsPage() {
           isLoading={loadingReserves}
         />
 
-        {/* Passengers Card */}
-        <Card className="w-full overflow-hidden rounded-[1.75rem] border border-black/6 bg-white/78 shadow-[0_22px_48px_rgba(22,34,24,0.06)]">
-          <CardContent className="w-full p-6">
-            <div className="space-y-4">
-              <div className="rounded-[1.25rem] border border-black/6 bg-[linear-gradient(180deg,rgba(245,246,241,0.96),rgba(238,242,234,0.92))] px-4 py-4">
-                <div className="mb-2 text-[11px] uppercase tracking-[0.26em] text-slate-500">manifiesto de pasajeros</div>
+        <div className="min-w-0 space-y-4">
+          <div className="rounded-[1.25rem] border border-blue-200 bg-[linear-gradient(180deg,rgba(222,238,255,0.98),rgba(206,227,251,0.96))] px-4 py-4 shadow-[0_14px_28px_rgba(37,99,235,0.10),inset_0_1px_0_rgba(255,255,255,0.78)]">
+                <div className="mb-2 text-[11px] uppercase tracking-[0.26em] text-sky-700">manifiesto de pasajeros</div>
                 <div className="flex items-center text-xl font-display text-slate-900">
-                  <UserPlusIcon className="mr-2 h-5 w-5 text-emerald-700" />
+                  <UserPlusIcon className="mr-2 h-5 w-5 text-blue-700" />
                 {selectedDate
                   ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
                   format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
@@ -397,9 +405,7 @@ export default function ReservationsPage() {
                 getClientBalance={() => null} // Placeholder, implement if needed
                 disabledPassengers={disabledPassengers}
               />
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
 
       <AddReservationFlow

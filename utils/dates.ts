@@ -29,7 +29,8 @@ export const formatWithTimezone = (
 
 export function formatWithTimezone(dateIso?: string, tz = 'America/Argentina/Buenos_Aires') {
   if (!dateIso) return '';
-  const d = new Date(dateIso);
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateIso);
+  const d = isDateOnly ? parseISO(dateIso) : new Date(dateIso);
   return new Intl.DateTimeFormat('es-AR', {
     dateStyle: 'medium',
     timeStyle: undefined,

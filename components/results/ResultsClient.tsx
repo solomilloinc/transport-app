@@ -118,14 +118,14 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     }
 
     return (
-      <ScrollArea className="h-[620px]">
+      <ScrollArea className="max-h-[620px]">
         <div className="space-y-4 p-4">
           {items.map((trip) => (
             <article
               key={trip.ReserveId}
               className={cn(
-                'glass-panel rounded-[1.6rem] border-0 p-5 transition-transform duration-200 hover:-translate-y-0.5',
-                selectedOutboundTrip?.ReserveId === trip.ReserveId && 'ring-2 ring-amber-300'
+                'rounded-[1.6rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,249,255,0.96))] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5 hover:border-sky-200',
+                selectedOutboundTrip?.ReserveId === trip.ReserveId && 'ring-2 ring-blue-200'
               )}
             >
               <div className="grid gap-5 lg:grid-cols-[0.7fr_1fr_0.9fr] lg:items-center">
@@ -140,20 +140,20 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
 
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-3 text-sm text-slate-700">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-white">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-white">
                       <Bus className="h-3.5 w-3.5" />
                       Servicio estandar
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5">
-                      <Users className="h-3.5 w-3.5 text-slate-500" />
+                    <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50 px-3 py-1.5">
+                      <Users className="h-3.5 w-3.5 text-blue-600" />
                       {trip.AvailableQuantity} disponibles
                     </div>
                   </div>
 
                   {trip.StopSchedules && trip.StopSchedules.length > 0 && (
-                    <div className="rounded-2xl border border-black/5 bg-white/70 p-3 text-xs text-slate-600">
+                    <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-slate-600">
                       <div className="mb-2 flex items-center gap-2 font-medium text-slate-800">
-                        <MapPin className="h-3.5 w-3.5" />
+                        <MapPin className="h-3.5 w-3.5 text-blue-600" />
                         Puntos de subida
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -167,11 +167,11 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                   )}
                 </div>
 
-                <div className="rounded-[1.4rem] bg-[linear-gradient(180deg,rgba(17,38,45,0.98),rgba(12,28,33,0.96))] p-5 text-white">
-                  <div className="text-xs uppercase tracking-[0.28em] text-white/50">por pasajero</div>
+                <div className="rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(239,246,255,0.98),rgba(219,234,254,0.94))] p-5 text-slate-900">
+                  <div className="text-xs uppercase tracking-[0.28em] text-blue-700/70">por pasajero</div>
                   <div className="mt-2 text-3xl font-display">${trip.Price.toFixed(2)}</div>
                   <Button
-                    className="mt-5 h-11 w-full rounded-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+                    className="mt-5 h-11 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700"
                     onClick={() => (isReturnList ? handleSelectReturn(trip) : handleSelectOutbound(trip))}
                   >
                     {isReturnList ? 'Elegir vuelta' : 'Reservar'}
@@ -188,7 +188,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
   return (
     <>
       <section className="mb-6">
-        <div className="glass-panel rounded-[2rem] px-5 py-6 sm:px-7">
+        <div className="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] px-5 py-6 shadow-[0_20px_48px_rgba(15,23,42,0.08)] sm:px-7">
           <Link href="/" className="inline-flex items-center text-sm text-slate-600 transition-colors hover:text-slate-900">
             <ChevronLeft className="mr-1 h-4 w-4" />
             Volver a la busqueda
@@ -205,11 +205,11 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
             </div>
 
             <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-              <div className="rounded-full bg-white/80 px-4 py-2">{formattedDepartureDate}</div>
+              <div className="rounded-full border border-sky-100 bg-sky-50 px-4 py-2">{formattedDepartureDate}</div>
               {tripType === 'RoundTrip' && returnDate && (
-                <div className="rounded-full bg-white/80 px-4 py-2">Vuelta: {formattedReturnDate}</div>
+                <div className="rounded-full border border-sky-100 bg-sky-50 px-4 py-2">Vuelta: {formattedReturnDate}</div>
               )}
-              <div className="rounded-full bg-white/80 px-4 py-2">
+              <div className="rounded-full border border-sky-100 bg-sky-50 px-4 py-2">
                 {passengers} {Number.parseInt(passengers, 10) === 1 ? 'pasajero' : 'pasajeros'}
               </div>
             </div>
@@ -218,21 +218,21 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
       </section>
 
       <section className="mb-6">
-        <div className="glass-panel rounded-[1.75rem] p-4">
+        <div className="rounded-[1.75rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,249,255,0.96))] p-4 shadow-[0_16px_38px_rgba(15,23,42,0.06)]">
           <DateCarousel selectedDate={departureDate} onDateSelect={handleDateSelect} />
         </div>
       </section>
 
       <section className="mb-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 rounded-full bg-white/70 p-1">
+          <TabsList className="mb-4 rounded-full border border-sky-100 bg-white/90 p-1 shadow-sm">
             <TabsTrigger value="outbound" className="rounded-full">Ida</TabsTrigger>
             {tripType === 'RoundTrip' && returnDate && <TabsTrigger value="return" className="rounded-full">Vuelta</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="outbound" className="mt-0">
-            <div className="rounded-[2rem] border border-black/5 bg-[linear-gradient(180deg,rgba(255,248,239,0.86),rgba(233,241,243,0.8))] shadow-[0_20px_60px_rgba(16,32,36,0.08)]">
-              <div className="border-b border-black/5 px-5 py-5 sm:px-6">
+            <div className="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,247,255,0.96))] shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+              <div className="border-b border-sky-100 px-5 py-5 sm:px-6">
                 <h2 className="text-2xl text-slate-900 font-display">
                   Salidas disponibles: {formatLocation(originName)} a {formatLocation(destinationName)}
                 </h2>
@@ -245,14 +245,14 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
           {tripType === 'RoundTrip' && returnDate && (
             <TabsContent value="return" className="mt-0">
               {!selectedOutboundTrip ? (
-                <div className="glass-panel rounded-[2rem] p-10 text-center">
+                <div className="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,249,255,0.96))] p-10 text-center shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                   <Info className="mx-auto h-12 w-12 text-slate-300" />
                   <h3 className="mt-4 text-lg font-medium text-slate-900">Primero elige la salida de ida</h3>
                   <p className="mt-2 text-slate-600">Despues de elegirla vas a poder completar la vuelta.</p>
                 </div>
               ) : (
-                <div className="rounded-[2rem] border border-black/5 bg-[linear-gradient(180deg,rgba(255,248,239,0.86),rgba(233,241,243,0.8))] shadow-[0_20px_60px_rgba(16,32,36,0.08)]">
-                  <div className="border-b border-black/5 px-5 py-5 sm:px-6">
+                <div className="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,247,255,0.96))] shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+                  <div className="border-b border-sky-100 px-5 py-5 sm:px-6">
                     <h2 className="text-2xl text-slate-900 font-display">
                       Vuelta disponible: {formatLocation(destinationName)} a {formatLocation(originName)}
                     </h2>
@@ -266,7 +266,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
         </Tabs>
       </section>
 
-      <Card className="glass-panel rounded-[2rem] border-0">
+      <Card className="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] shadow-[0_20px_48px_rgba(15,23,42,0.08)]">
         <CardContent className="p-6">
           <h2 className="text-2xl text-slate-900 font-display">Antes de confirmar tu viaje</h2>
           <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -286,7 +286,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
             </div>
           </div>
         </CardContent>
-        <CardFooter className="border-t border-black/5 bg-white/45 px-6 py-4 text-sm text-slate-600">
+        <CardFooter className="border-t border-sky-100 bg-sky-50/60 px-6 py-4 text-sm text-slate-600">
           ¿Necesitas ayuda? Llámanos al <span className="mx-1 font-medium text-slate-900">{contact.phone}</span> o escribe a
           <span className="ml-1 font-medium text-slate-900">{contact.bookingsEmail}</span>.
         </CardFooter>

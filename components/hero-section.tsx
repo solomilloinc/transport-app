@@ -105,17 +105,17 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
           className="object-cover brightness-[0.55] saturate-[0.9]"
           priority
         />
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(8,18,24,0.88),rgba(16,51,61,0.74)_48%,rgba(240,182,71,0.28))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(6,23,45,0.9),rgba(13,53,110,0.76)_45%,rgba(56,189,248,0.24))]" />
         <div className="route-grid absolute inset-0 opacity-20 mix-blend-soft-light" />
-        <div className="absolute -left-16 top-16 h-56 w-56 rounded-full bg-amber-300/15 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-sky-300/15 blur-3xl" />
+        <div className="absolute -left-16 top-16 h-56 w-56 rounded-full bg-sky-300/14 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-blue-300/18 blur-3xl" />
       </div>
 
       <div className="container relative z-10 py-8 md:py-14 lg:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div className="max-w-2xl text-white">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/80 backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              <Sparkles className="h-3.5 w-3.5 text-sky-300" />
               reserva directa y simple
             </div>
             <h1 className="mt-6 text-4xl leading-[0.95] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl font-display">
@@ -125,7 +125,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
               {landing.hero.subtitle}
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" className="rounded-full bg-amber-400 px-7 text-slate-950 hover:bg-amber-300">
+              <Button size="lg" className="rounded-full bg-[linear-gradient(135deg,#38bdf8,#2563eb)] px-7 text-white shadow-[0_14px_30px_rgba(37,99,235,0.24)] hover:opacity-95">
                 {landing.hero.ctaPrimary}
               </Button>
               <Button size="lg" variant="outline" className="rounded-full border-white/25 bg-white/10 px-7 text-white hover:bg-white/15 backdrop-blur-sm">
@@ -151,13 +151,13 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
           <div className="section-shell">
             <Card className="glass-panel overflow-hidden rounded-[1.75rem] border-0">
               <CardContent className="p-0">
-                <div className="border-b border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,248,236,0.8))] px-5 py-5 sm:px-6">
+                <div className="border-b border-sky-100/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(240,248,255,0.9))] px-5 py-5 sm:px-6">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.28em] text-slate-500">planifica tu salida</p>
                       <h2 className="mt-2 text-2xl text-slate-900 font-display">Busca tu pasaje</h2>
                     </div>
-                    <div className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 sm:flex sm:items-center sm:gap-2">
+                    <div className="hidden rounded-full bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 sm:flex sm:items-center sm:gap-2">
                       <ShieldCheck className="h-3.5 w-3.5" />
                       pago protegido
                     </div>
@@ -168,13 +168,13 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-800">Tipo</label>
                       <RadioGroup defaultValue="OneWay" className="grid grid-cols-2 gap-3" value={tripType} onValueChange={setTripType}>
-                        <div className="flex items-center space-x-2 rounded-2xl border border-black/5 bg-white/80 px-4 py-3">
+                        <div className="flex items-center space-x-2 rounded-2xl border border-sky-100/80 bg-[rgba(248,251,255,0.96)] px-4 py-3">
                           <RadioGroupItem value="OneWay" id="OneWay" />
                           <label htmlFor="OneWay" className="text-sm font-medium leading-none text-slate-700">
                             Ida
                           </label>
                         </div>
-                        <div className="flex items-center space-x-2 rounded-2xl border border-black/5 bg-white/80 px-4 py-3">
+                        <div className="flex items-center space-x-2 rounded-2xl border border-sky-100/80 bg-[rgba(248,251,255,0.96)] px-4 py-3">
                           <RadioGroupItem value="RoundTrip" id="RoundTrip" />
                           <label htmlFor="RoundTrip" className="text-sm font-medium leading-none text-slate-700">
                             Ida y vuelta
@@ -186,7 +186,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-800">Ruta</label>
                       <Select value={selectedTripId} onValueChange={setSelectedTripId}>
-                        <SelectTrigger className="h-12 rounded-2xl border-black/5 bg-white/80">
+                        <SelectTrigger className="h-12 rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)]">
                           <SelectValue placeholder="Selecciona tu ruta" />
                         </SelectTrigger>
                         <SelectContent>
@@ -208,7 +208,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                           {returnTrip ? (
                             <>Vuelta disponible: {returnTrip.label}</>
                           ) : (
-                            <span className="text-amber-700">No hay ruta de vuelta disponible</span>
+                            <span className="text-sky-700">No hay ruta de vuelta disponible</span>
                           )}
                         </div>
                       )}
@@ -221,7 +221,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                           Punto de subida
                         </label>
                         <Select value={selectedPickupDirectionId} onValueChange={setSelectedPickupDirectionId}>
-                          <SelectTrigger className="h-12 rounded-2xl border-black/5 bg-white/80">
+                          <SelectTrigger className="h-12 rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)]">
                             <SelectValue placeholder="Selecciona donde subir (opcional)" />
                           </SelectTrigger>
                           <SelectContent>
@@ -240,7 +240,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                         <label className="text-sm font-medium text-slate-800">Fecha ida</label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="h-12 w-full justify-start rounded-2xl border-black/5 bg-white/80 text-left font-normal">
+                            <Button variant="outline" className="h-12 w-full justify-start rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)] text-left font-normal">
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {departureDate ? format(departureDate, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
                             </Button>
@@ -264,7 +264,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                           <label className="text-sm font-medium text-slate-800">Fecha vuelta</label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="h-12 w-full justify-start rounded-2xl border-black/5 bg-white/80 text-left font-normal">
+                              <Button variant="outline" className="h-12 w-full justify-start rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)] text-left font-normal">
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {returnDate ? format(returnDate, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
                               </Button>
@@ -290,7 +290,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-800">Pasajeros</label>
                       <Select value={passengers} onValueChange={setPassengers}>
-                        <SelectTrigger className="h-12 rounded-2xl border-black/5 bg-white/80">
+                        <SelectTrigger className="h-12 rounded-2xl border-sky-100/80 bg-[rgba(248,251,255,0.96)]">
                           <SelectValue placeholder="Cantidad de pasajeros" />
                         </SelectTrigger>
                         <SelectContent>
@@ -303,7 +303,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                     </div>
                   </div>
 
-                  <Button type="submit" className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#12353d,#255d6a)] text-white hover:opacity-95">
+                  <Button type="submit" className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#0f3f8f,#2563eb,#38bdf8)] text-white hover:opacity-95">
                     Buscar disponibilidad
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
