@@ -109,7 +109,11 @@ export default function DebtsPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (customerSearch.length >= 3) {
-        fetchSearch({ filters: { search: customerSearch } });
+        // Split into first / last name tokens
+        const tokens = customerSearch.trim().split(/\s+/);
+        const firstName = tokens[0];
+        const lastName = tokens.slice(1).join(' ') || undefined;
+        fetchSearch({ filters: { firstName, lastName } } as any);
       }
     }, 500);
     return () => clearTimeout(timer);

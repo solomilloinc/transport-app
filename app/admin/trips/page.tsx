@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit, Plus, Trash, Route, DollarSign, MapPin } from 'lucide-react';
+import { Edit, Trash, Route, DollarSign, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
+import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
 import { MobileCard } from '@/components/dashboard/mobile-card';
@@ -19,12 +19,34 @@ import { FormField } from '@/components/dashboard/form-field';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse, PaginationParams } from '@/services/types';
+import { PagedResponse } from '@/services/types';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { City } from '@/interfaces/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { getTrips } from '@/services/trip';
 import { Trip, emptyTripForm } from '@/interfaces/trip';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import {
+  TripReportFilters,
+  emptyTripReportFilters,
+} from '@/interfaces/filters/trip-filters';
+import {
+  ENTITY_STATUS_OPTIONS,
+  EntityStatus,
+} from '@/interfaces/filters/common';
+import { enumParser, numberParser } from '@/hooks/url-parsers';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const tripFilterParsers = {
+  originCityId: numberParser,
+  destinationCityId: numberParser,
+  status: enumParser<EntityStatus>([
+    EntityStatus.Active,
+    EntityStatus.Inactive,
+    EntityStatus.Deleted,
+    EntityStatus.Suspended,
+  ]),
+};
 
 const tripValidationSchema = {
   description: {
@@ -40,8 +62,6 @@ const tripValidationSchema = {
 
 export default function TripManagement() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -55,36 +75,21 @@ export default function TripManagement() {
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
-  const [data, setData] = useState<PagedResponse<Trip> | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchTrips = useCallback(async (page?: number) => {
-    try {
-      setLoading(true);
-      const params: Partial<PaginationParams> = {
-        pageNumber: page ?? currentPage,
-        pageSize: 10,
-      };
-      if (searchQuery) {
-        (params as any).filters = { search: searchQuery };
-      }
-      const response = await getTrips(params);
-      setData(response);
-    } catch (error) {
-      console.error('[TripManagement] Error fetching trips:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al cargar las rutas',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, searchQuery]);
-
-  useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<TripReportFilters, Trip>({
+    defaults: emptyTripReportFilters,
+    parsers: tripFilterParsers,
+    apiCall: getTrips,
+  });
 
   const loadCities = async () => {
     try {
@@ -127,7 +132,7 @@ export default function TripManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetchTrips(currentPage);
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -161,7 +166,7 @@ export default function TripManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetchTrips(currentPage);
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -212,13 +217,14 @@ export default function TripManagement() {
     await deleteLogic(`/trip-delete/${currentTripId}`);
     setIsDeleteModalOpen(false);
     setCurrentTripId(null);
-    fetchTrips(currentPage);
+    refetch();
   };
 
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
-  };
+  // Precarga de ciudades para los selects del filtro + modales
+  useEffect(() => {
+    loadCities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const columns = [
     { header: 'Descripción', accessor: 'Description', width: '25%' },
@@ -299,8 +305,48 @@ export default function TripManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por descripción..." />
+            <FilterBar onReset={reset} onApply={apply}>
+              <Select
+                value={draft.originCityId != null ? String(draft.originCityId) : ''}
+                onValueChange={(v) =>
+                  setDraftField('originCityId', v ? Number(v) : undefined)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Ciudad origen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((c) => (
+                    <SelectItem key={`o-${c.value}`} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={draft.destinationCityId != null ? String(draft.destinationCityId) : ''}
+                onValueChange={(v) =>
+                  setDraftField('destinationCityId', v ? Number(v) : undefined)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Ciudad destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((c) => (
+                    <SelectItem key={`d-${c.value}`} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <StatusFilter
+                value={draft.status != null ? String(draft.status) : ''}
+                onChange={(v) =>
+                  setDraftField('status', v ? (Number(v) as EntityStatus) : undefined)
+                }
+                options={ENTITY_STATUS_OPTIONS}
+              />
             </FilterBar>
 
             <div className="hidden md:block w-full">
@@ -315,11 +361,11 @@ export default function TripManagement() {
 
             {data?.Items?.length > 0 && (
               <TablePagination
-                currentPage={currentPage}
+                currentPage={pageNumber}
                 totalPages={data?.TotalPages}
                 totalItems={data?.TotalRecords}
                 itemsPerPage={data?.PageSize}
-                onPageChange={setCurrentPage}
+                onPageChange={setPageNumber}
                 itemName="rutas"
               />
             )}

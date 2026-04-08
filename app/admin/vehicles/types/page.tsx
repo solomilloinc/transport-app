@@ -2,15 +2,14 @@
 
 import type React from 'react';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { useState } from 'react';
+import { Edit, Trash, TruckIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { deleteLogic, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
 import { MobileCard } from '@/components/dashboard/mobile-card';
@@ -20,18 +19,23 @@ import { FormField } from '@/components/dashboard/form-field';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse, PaginationParams } from '@/services/types';
 import { emptyVehicleType, VehicleType } from '@/interfaces/vehicleType';
-import { maxLengthRule, maxValueRule, minLengthRule, minValueRule } from '@/utils/validation-rules';
 import { useFormValidation } from '@/hooks/use-form-validation';
-import { useApi } from '@/hooks/use-api';
-import { getTypesVehicle } from '@/services/vehicle';
-import { usePaginationParams } from '@/utils/pagination';
+import { getVehicleTypeReport } from '@/services/vehicle';
 import { validationConfig } from '@/validations/vehicletTypeSchema';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import {
+  VehicleTypeReportFilters,
+  emptyVehicleTypeReportFilters,
+} from '@/interfaces/filters/vehicle-type-filters';
+import { stringParser, numberParser } from '@/hooks/url-parsers';
+
+const vehicleTypeFilterParsers = {
+  vehicleTypeId: numberParser,
+  name: stringParser,
+};
 
 export default function VehicleManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -39,14 +43,20 @@ export default function VehicleManagement() {
   const addForm = useFormValidation(emptyVehicleType, validationConfig);
   const editForm = useFormValidation(emptyVehicleType, validationConfig);
 
-  const params = usePaginationParams({
-    pageNumber: currentPage,
-    filters: { search: searchQuery },
-  });
-
-  const { loading, data, error, fetch } = useApi<VehicleType, PaginationParams>(getTypesVehicle, {
-    autoFetch: true,
-    params: params,
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<VehicleTypeReportFilters, VehicleType>({
+    defaults: emptyVehicleTypeReportFilters,
+    parsers: vehicleTypeFilterParsers,
+    apiCall: getVehicleTypeReport,
   });
   const submitAddTypeVehicle = async () => {
     addForm.handleSubmit(async (data) => {
@@ -59,7 +69,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetch(params); // Refresh the vehicle list
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -88,7 +98,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetch(params); // Refresh the vehicle list
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -130,11 +140,6 @@ export default function VehicleManagement() {
     setIsDeleteModalOpen(false);
     setCurrentVehicleTypeId(null);
     //fetchTypeVehicles();
-  };
-
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
   };
 
   const columns = [
@@ -195,8 +200,12 @@ export default function VehicleManagement() {
         <Card className="w-full">
           <CardContent className="pt-6 w-full">
             <div className="space-y-4 w-full">
-              <FilterBar onReset={resetFilters}>
-                <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+              <FilterBar onReset={reset} onApply={apply}>
+                <Input
+                  placeholder="Nombre"
+                  value={draft.name ?? ''}
+                  onChange={(e) => setDraftField('name', e.target.value)}
+                />
               </FilterBar>
 
               <div className="hidden md:block w-full">
@@ -211,11 +220,11 @@ export default function VehicleManagement() {
 
               {data?.Items?.length > 0 && (
                 <TablePagination
-                  currentPage={currentPage}
+                  currentPage={pageNumber}
                   totalPages={data?.TotalPages}
                   totalItems={data?.TotalRecords}
                   itemsPerPage={data?.PageSize}
-                  onPageChange={setCurrentPage}
+                  onPageChange={setPageNumber}
                   itemName="vehiculos"
                 />
               )}

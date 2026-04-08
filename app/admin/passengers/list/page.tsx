@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
 import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
@@ -26,21 +25,44 @@ import { toast } from '@/hooks/use-toast';
 import { PagedResponse, PaginationParams } from '@/services/types';
 import { emptyPassenger, Passenger } from '@/interfaces/passengers';
 import { useFormValidation } from '@/hooks/use-form-validation';
-import { useApi } from '@/hooks/use-api';
-import { usePaginationParams } from '@/utils/pagination';
-import { getPassengers } from '@/services/passenger';
+import { getCustomerReport } from '@/services/passenger';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import {
+  CustomerReportFilters,
+  emptyCustomerReportFilters,
+} from '@/interfaces/filters/customer-filters';
+import {
+  ENTITY_STATUS_OPTIONS,
+  EntityStatus,
+} from '@/interfaces/filters/common';
+import {
+  dateParser,
+  enumParser,
+  piiStringParser,
+  stringParser,
+} from '@/hooks/url-parsers';
+
+const customerFilterParsers = {
+  firstName: stringParser,
+  lastName: stringParser,
+  email: piiStringParser,
+  documentNumber: piiStringParser,
+  phone1: piiStringParser,
+  phone2: piiStringParser,
+  createdFrom: dateParser,
+  createdTo: dateParser,
+  status: enumParser<EntityStatus>([
+    EntityStatus.Active,
+    EntityStatus.Inactive,
+    EntityStatus.Deleted,
+    EntityStatus.Suspended,
+  ]),
+};
 import { getServicesList } from '@/services/serviceList';
 import { ServiceIdNameDto } from '@/interfaces/serviceList';
 import { validationConfigPassenger } from '@/validations/passengerSchema';
 
 export default function PassengersManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Separate state for current page to avoid double fetching
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -51,18 +73,23 @@ export default function PassengersManagement() {
   const [servicesLoading, setServicesLoading] = useState(false);
 
   const addForm = useFormValidation(emptyPassenger, validationConfigPassenger);
-
-  // Form state for editing a vehicle
   const editForm = useFormValidation(emptyPassenger, validationConfigPassenger);
 
-  const params = usePaginationParams({
-    pageNumber: currentPage,
-    filters: { search: searchQuery },
-  });
-
-  const { data, loading, error, fetch } = useApi<Passenger, PaginationParams>(getPassengers, {
-    autoFetch: true,
-    params: params,
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<CustomerReportFilters, Passenger>({
+    defaults: emptyCustomerReportFilters,
+    parsers: customerFilterParsers,
+    apiCall: getCustomerReport,
+    initialPageSize: 8,
   });
 
   // Fetch services on mount
@@ -92,7 +119,7 @@ export default function PassengersManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          refetch(); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -121,7 +148,7 @@ export default function PassengersManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          refetch(); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -171,15 +198,10 @@ export default function PassengersManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/customer-delete/${currentPassengersId}`);
+    await deleteLogic(`/customer-delete/${currentPassengersId}`);
     setIsDeleteModalOpen(false);
     setCurrentPassengersId(null);
-    fetch({ pageNumber: currentPage });
-  };
-
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
+    refetch();
   };
 
   const columns = [
@@ -259,8 +281,38 @@ export default function PassengersManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+            <FilterBar onReset={reset} onApply={apply}>
+              <Input
+                className="w-full sm:w-[160px]"
+                placeholder="Nombre"
+                value={draft.firstName ?? ''}
+                onChange={(e) => setDraftField('firstName', e.target.value)}
+              />
+              <Input
+                className="w-full sm:w-[160px]"
+                placeholder="Apellido"
+                value={draft.lastName ?? ''}
+                onChange={(e) => setDraftField('lastName', e.target.value)}
+              />
+              <Input
+                className="w-full sm:w-[160px]"
+                placeholder="Documento"
+                value={draft.documentNumber ?? ''}
+                onChange={(e) => setDraftField('documentNumber', e.target.value)}
+              />
+              <Input
+                className="w-full sm:w-[180px]"
+                placeholder="Email"
+                value={draft.email ?? ''}
+                onChange={(e) => setDraftField('email', e.target.value)}
+              />
+              <StatusFilter
+                value={draft.status != null ? String(draft.status) : ''}
+                onChange={(v) =>
+                  setDraftField('status', v ? (Number(v) as EntityStatus) : undefined)
+                }
+                options={ENTITY_STATUS_OPTIONS}
+              />
             </FilterBar>
 
             <div className="hidden md:block w-full">
@@ -275,11 +327,11 @@ export default function PassengersManagement() {
 
             {data?.Items?.length > 0 && (
               <TablePagination
-                currentPage={currentPage}
+                currentPage={pageNumber}
                 totalPages={data?.TotalPages}
                 totalItems={data?.TotalRecords}
                 itemsPerPage={data?.PageSize}
-                onPageChange={setCurrentPage}
+                onPageChange={setPageNumber}
                 itemName="pasajeros"
               />
             )}
@@ -289,7 +341,7 @@ export default function PassengersManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading && data?.Items?.length === 0 ? (
+        {loading && data?.Items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">

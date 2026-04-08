@@ -2,15 +2,14 @@
 
 import type React from 'react';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Edit, Trash, TruckIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
 import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
@@ -18,24 +17,34 @@ import { MobileCard } from '@/components/dashboard/mobile-card';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse, PaginationParams } from '@/services/types';
+import { PagedResponse } from '@/services/types';
 import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
 import { VehicleType } from '@/interfaces/vehicleType';
 import { emptyVehicle, Vehicle } from '@/interfaces/vehicle';
 import { useFormValidation } from '@/hooks/use-form-validation';
-import { useApi } from '@/hooks/use-api';
-import { getVehicles } from '@/services/vehicle';
-import { usePaginationParams, withDefaultPagination } from '@/utils/pagination';
+import { getVehicleReport } from '@/services/vehicle';
+import { withDefaultPagination } from '@/utils/pagination';
 import { validationConfigVehicle } from '@/validations/vehicleSchema';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import { VehicleReportFilters, emptyVehicleReportFilters } from '@/interfaces/filters/vehicle-filters';
+import { ENTITY_STATUS_OPTIONS, EntityStatus } from '@/interfaces/filters/common';
+import { stringParser, numberParser, enumParser } from '@/hooks/url-parsers';
+
+const vehicleFilterParsers = {
+  vehicleTypeId: numberParser,
+  internalNumber: stringParser,
+  status: enumParser<EntityStatus>([
+    EntityStatus.Active,
+    EntityStatus.Inactive,
+    EntityStatus.Deleted,
+    EntityStatus.Suspended,
+  ]),
+};
 
 export default function VehicleManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -46,15 +55,26 @@ export default function VehicleManagement() {
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
-  const params = usePaginationParams({
-    pageNumber: currentPage,
-    filters: { search: searchQuery },
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<VehicleReportFilters, Vehicle>({
+    defaults: emptyVehicleReportFilters,
+    parsers: vehicleFilterParsers,
+    apiCall: getVehicleReport,
   });
 
-  const { data, loading, error, fetch } = useApi<Vehicle, PaginationParams>(getVehicles, {
-    autoFetch: true,
-    params: params,
-  });
+  // Load vehicle types once on mount so the filter select always has options
+  useEffect(() => {
+    loadAllOptions();
+  }, []);
 
   const loadAllOptions = async () => {
     try {
@@ -88,7 +108,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -117,7 +137,7 @@ export default function VehicleManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -166,12 +186,7 @@ export default function VehicleManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentVehicleId(null);
-    fetch({ pageNumber: currentPage });
-  };
-
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
+    refetch();
   };
 
   const columns = [
@@ -240,8 +255,32 @@ export default function VehicleManagement() {
         <Card className="w-full">
           <CardContent className="pt-6 w-full">
             <div className="space-y-4 w-full">
-              <FilterBar onReset={resetFilters}>
-                <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+              <FilterBar onReset={reset} onApply={apply}>
+                <Input
+                  placeholder="Número interno"
+                  value={draft.internalNumber ?? ''}
+                  onChange={(e) => setDraftField('internalNumber', e.target.value)}
+                />
+                <ApiSelect
+                  value={draft.vehicleTypeId !== undefined ? String(draft.vehicleTypeId) : 'all'}
+                  onValueChange={(value) =>
+                    setDraftField('vehicleTypeId', value === 'all' ? undefined : Number(value))
+                  }
+                  placeholder="Todos los tipos"
+                  options={[{ id: 'all', value: 'all', label: 'Todos los tipos' }, ...vehicleTypes]}
+                  loading={isOptionsLoading}
+                  error={optionsError}
+                  loadingMessage="Cargando tipos..."
+                  errorMessage="Error al cargar los tipos"
+                  emptyMessage="No hay tipos disponibles"
+                />
+                <StatusFilter
+                  value={draft.status !== undefined ? String(draft.status) : 'all'}
+                  onChange={(v) =>
+                    setDraftField('status', v === 'all' ? undefined : (Number(v) as EntityStatus))
+                  }
+                  options={ENTITY_STATUS_OPTIONS}
+                />
               </FilterBar>
 
               <div className="hidden md:block w-full">
@@ -256,11 +295,11 @@ export default function VehicleManagement() {
 
               {data?.Items?.length > 0 && (
                 <TablePagination
-                  currentPage={currentPage}
+                  currentPage={pageNumber}
                   totalPages={data?.TotalPages}
                   totalItems={data?.TotalRecords}
                   itemsPerPage={data?.PageSize}
-                  onPageChange={setCurrentPage}
+                  onPageChange={setPageNumber}
                   itemName="vehiculos"
                 />
               )}

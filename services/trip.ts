@@ -4,10 +4,13 @@ import { PagedResponse, PaginationParams } from "./types";
 import { withDefaultPagination } from "@/utils/pagination";
 import { get, getPure } from "./api";
 import { Trip } from "@/interfaces/trip";
+import { TripReportFilters } from "@/interfaces/filters/trip-filters";
 
-export async function getTrips(params: Partial<PaginationParams>): Promise<PagedResponse<Trip>> {
+export async function getTrips(
+  params: Partial<PaginationParams> & { filters?: TripReportFilters }
+): Promise<PagedResponse<Trip>> {
   const finalParams = withDefaultPagination(params);
-  return await get<any, PagedResponse<Trip>>('/trip-report', finalParams);
+  return await get<TripReportFilters, PagedResponse<Trip>>('/trip-report', finalParams);
 }
 
 export async function getTripById(tripId: number, reserveId?: number): Promise<Trip> {

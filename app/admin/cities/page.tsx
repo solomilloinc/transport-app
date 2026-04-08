@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
 import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
@@ -24,34 +23,54 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { PagedResponse, PaginationParams } from '@/services/types';
 import { City, emptyCity } from '@/interfaces/city';
-import { useApi } from '@/hooks/use-api';
-import { usePaginationParams } from '@/utils/pagination';
-import { getCities } from '@/services/city';
+import { getCityReport } from '@/services/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { validationConfigCity } from '@/validations/citySchema';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import {
+  CityReportFilters,
+  emptyCityReportFilters,
+} from '@/interfaces/filters/city-filters';
+import {
+  ENTITY_STATUS_OPTIONS,
+  EntityStatus,
+} from '@/interfaces/filters/common';
+import { enumParser, stringParser, boolParser } from '@/hooks/url-parsers';
+
+const cityFilterParsers = {
+  name: stringParser,
+  code: stringParser,
+  status: enumParser<EntityStatus>([
+    EntityStatus.Active,
+    EntityStatus.Inactive,
+    EntityStatus.Deleted,
+    EntityStatus.Suspended,
+  ]),
+  withDirections: boolParser,
+};
 
 export default function CitiesManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
-  // Separate state for current page to avoid double fetching
-  const [currentPage, setCurrentPage] = useState(1);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentCityId, setCurrentCityId] = useState<number | null>(null);
   const addForm = useFormValidation(emptyCity, validationConfigCity);
-
-  // Form state for editing a vehicle
   const editForm = useFormValidation(emptyCity, validationConfigCity);
 
-  const params = usePaginationParams({
-    pageNumber: currentPage,
-    filters: { search: searchQuery },
-  });
-
-  const { data, loading, error, fetch } = useApi<City, PaginationParams>(getCities, {
-    autoFetch: true,
-    params: params,
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<CityReportFilters, City>({
+    defaults: emptyCityReportFilters,
+    parsers: cityFilterParsers,
+    apiCall: getCityReport,
   });
 
   const submitAddCity = async () => {
@@ -65,7 +84,7 @@ export default function CitiesManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetch(params);
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -94,7 +113,7 @@ export default function CitiesManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetch(params); // Refresh the city list
+          refetch(); // Refresh the city list
         } else {
           toast({
             title: 'Error',
@@ -129,12 +148,7 @@ export default function CitiesManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentCityId(null);
-    fetch(params);
-  };
-
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
+    refetch();
   };
 
   const columns = [
@@ -185,8 +199,24 @@ export default function CitiesManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+            <FilterBar onReset={reset} onApply={apply}>
+              <Input
+                placeholder="Nombre"
+                value={draft.name ?? ''}
+                onChange={(e) => setDraftField('name', e.target.value)}
+              />
+              <Input
+                placeholder="Código"
+                value={draft.code ?? ''}
+                onChange={(e) => setDraftField('code', e.target.value)}
+              />
+              <StatusFilter
+                value={draft.status !== undefined ? String(draft.status) : 'all'}
+                onChange={(v) =>
+                  setDraftField('status', v === 'all' ? undefined : (Number(v) as EntityStatus))
+                }
+                options={ENTITY_STATUS_OPTIONS}
+              />
             </FilterBar>
 
             <div className="hidden md:block w-full">
@@ -201,11 +231,11 @@ export default function CitiesManagement() {
 
             {data?.Items?.length > 0 && (
               <TablePagination
-                currentPage={currentPage}
+                currentPage={pageNumber}
                 totalPages={data?.TotalPages}
                 totalItems={data?.TotalRecords}
                 itemsPerPage={data?.PageSize}
-                onPageChange={setCurrentPage}
+                onPageChange={setPageNumber}
                 itemName="ciudades"
               />
             )}
