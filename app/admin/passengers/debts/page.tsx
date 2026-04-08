@@ -23,7 +23,6 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { useApi } from '@/hooks/use-api';
 import { getPassengers } from '@/services/passenger';
@@ -204,54 +203,58 @@ export default function DebtsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <div className="space-y-2">
               <Label htmlFor="customer-search">Pasajero</Label>
-              <Popover open={isCustomerPopoverOpen} onOpenChange={setIsCustomerPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <div className="relative cursor-pointer">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="customer-search"
-                      placeholder="Buscar por nombre..."
-                      className="pl-10"
-                      value={customerSearch}
-                      onChange={(e) => {
-                        setCustomerSearch(e.target.value);
-                        if (!isCustomerPopoverOpen) setIsCustomerPopoverOpen(true);
-                      }}
-                      onClick={() => setIsCustomerPopoverOpen(true)}
-                    />
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  <div className="max-h-60 overflow-y-auto">
-                    {searching ? (
-                      <div className="p-4 space-y-2">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                      </div>
-                    ) : (searchResults?.Items?.length ?? 0) > 0 ? (
-                      searchResults.Items.map((p) => (
-                        <div
-                          key={p.CustomerId}
-                          className="flex items-center p-3 hover:bg-blue-50 cursor-pointer transition-colors border-b last:border-0"
-                          onClick={() => handleSelectCustomer(p)}
-                        >
-                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                            <UserIcon className="h-4 w-4 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{p.FirstName} {p.LastName}</p>
-                            <p className="text-xs text-gray-500">DNI: {p.DocumentNumber}</p>
-                          </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                <Input
+                  id="customer-search"
+                  placeholder="Buscar por nombre..."
+                  className="pl-10"
+                  value={customerSearch}
+                  autoComplete="off"
+                  onFocus={() => setIsCustomerPopoverOpen(true)}
+                  onBlur={() => {
+                    // Delay so click on a result registers before the dropdown unmounts
+                    setTimeout(() => setIsCustomerPopoverOpen(false), 150);
+                  }}
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value);
+                    setIsCustomerPopoverOpen(true);
+                  }}
+                />
+                {isCustomerPopoverOpen && (
+                  <div className="absolute z-50 mt-1 w-[300px] rounded-md border bg-white shadow-md">
+                    <div className="max-h-60 overflow-y-auto">
+                      {searching ? (
+                        <div className="p-4 space-y-2">
+                          <Skeleton className="h-10 w-full" />
+                          <Skeleton className="h-10 w-full" />
                         </div>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        {customerSearch.length < 3 ? 'Escriba al menos 3 letras' : 'No se encontraron pasajeros'}
-                      </div>
-                    )}
+                      ) : (searchResults?.Items?.length ?? 0) > 0 ? (
+                        searchResults.Items.map((p) => (
+                          <div
+                            key={p.CustomerId}
+                            className="flex items-center p-3 hover:bg-blue-50 cursor-pointer transition-colors border-b last:border-0"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSelectCustomer(p)}
+                          >
+                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                              <UserIcon className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{p.FirstName} {p.LastName}</p>
+                              <p className="text-xs text-gray-500">DNI: {p.DocumentNumber}</p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-gray-500">
+                          {customerSearch.length < 3 ? 'Escriba al menos 3 letras' : 'No se encontraron pasajeros'}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </PopoverContent>
-              </Popover>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
