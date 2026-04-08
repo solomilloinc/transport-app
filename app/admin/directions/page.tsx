@@ -2,77 +2,83 @@
 
 import type React from 'react';
 
-import { useState, useEffect, useRef } from 'react';
-import { Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Edit, Trash, TruckIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
-import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
 import { MobileCard } from '@/components/dashboard/mobile-card';
-import { StatusBadge } from '@/components/dashboard/status-badge';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse, PaginationParams } from '@/services/types';
+import { PagedResponse } from '@/services/types';
+import { withDefaultPagination } from '@/utils/pagination';
 import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
 import { Direction, emptyDirection } from '@/interfaces/direction';
 import { City } from '@/interfaces/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
-import { usePaginationParams } from '@/utils/pagination';
-import { useApi } from '@/hooks/use-api';
-import { getDirections } from '@/services/direction';
+import { getDirectionReport } from '@/services/direction';
 import { validationConfigDirection } from '@/validations/directionSchema';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import {
+  DirectionReportFilters,
+  emptyDirectionReportFilters,
+} from '@/interfaces/filters/direction-filters';
+import { stringParser, numberParser } from '@/hooks/url-parsers';
+
+const directionFilterParsers = {
+  directionName: stringParser,
+  cityId: numberParser,
+};
 
 export default function DirectionManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Separate state for current page to avoid double fetching
-  const [currentPage, setCurrentPage] = useState(1);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentDirectionId, setCurrentDirectionId] = useState<number | null>(null);
 
   const addForm = useFormValidation(emptyDirection, validationConfigDirection);
-
-  // Form state for editing a direction
   const editForm = useFormValidation(emptyDirection, validationConfigDirection);
   const [cities, setCities] = useState<SelectOption[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
-  const params = usePaginationParams({
-    pageNumber: currentPage,
-    filters: { search: searchQuery },
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<DirectionReportFilters, Direction>({
+    defaults: emptyDirectionReportFilters,
+    parsers: directionFilterParsers,
+    apiCall: getDirectionReport,
   });
 
-  const { data, loading, error, fetch } = useApi<Direction, PaginationParams>(getDirections, {
-    autoFetch: true,
-    params: params,
-  });
+  // Load cities once on mount so the filter select always has options
+  useEffect(() => {
+    loadAllOptions();
+  }, []);
 
   const loadAllOptions = async () => {
     try {
       setIsOptionsLoading(true);
       setOptionsError(null);
-      const response = await get<any, PagedResponse<City>>('/city-report', {
+      const response = await get<any, PagedResponse<City>>('/city-report', withDefaultPagination({
         pageNumber: 1,
-        pageSize: 10,
-        sortBy: 'nombre',
-        sortDescending: true,
-        filters: searchQuery ? { search: searchQuery } : {},
-      });
+        pageSize: 100,
+      }));
       if (response) {
         const formattedTypes = response.Items.map((type: City) => ({
           id: type.Id.toString(),
@@ -99,7 +105,7 @@ export default function DirectionManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetch(params); // Refresh the directions list
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -128,7 +134,7 @@ export default function DirectionManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetch(params); // Refresh the directions list
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -175,12 +181,7 @@ export default function DirectionManagement() {
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentDirectionId(null);
-    fetch(params);
-  };
-
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
+    refetch();
   };
 
   const columns = [
@@ -230,8 +231,25 @@ export default function DirectionManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+            <FilterBar onReset={reset} onApply={apply}>
+              <Input
+                placeholder="Nombre"
+                value={draft.directionName ?? ''}
+                onChange={(e) => setDraftField('directionName', e.target.value)}
+              />
+              <ApiSelect
+                value={draft.cityId !== undefined ? String(draft.cityId) : 'all'}
+                onValueChange={(value) =>
+                  setDraftField('cityId', value === 'all' ? undefined : Number(value))
+                }
+                placeholder="Todas las ciudades"
+                options={[{ id: 'all', value: 'all', label: 'Todas las ciudades' }, ...cities]}
+                loading={isOptionsLoading}
+                error={optionsError}
+                loadingMessage="Cargando ciudades..."
+                errorMessage="Error al cargar las ciudades"
+                emptyMessage="No hay ciudades disponibles"
+              />
             </FilterBar>
 
             <div className="hidden md:block w-full">
@@ -246,11 +264,11 @@ export default function DirectionManagement() {
 
             {data?.Items?.length > 0 && (
               <TablePagination
-                currentPage={currentPage}
+                currentPage={pageNumber}
                 totalPages={data?.TotalPages}
                 totalItems={data?.TotalRecords}
                 itemsPerPage={data?.PageSize}
-                onPageChange={setCurrentPage}
+                onPageChange={setPageNumber}
                 itemName="direcciones"
               />
             )}

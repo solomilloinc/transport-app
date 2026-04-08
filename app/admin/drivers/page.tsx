@@ -2,15 +2,14 @@
 
 import type React from 'react';
 
-import { useState, useEffect, useRef } from 'react';
-import { Building, Bus, Edit, Plus, Search, Trash, TruckIcon, User, UserPlusIcon } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { useState } from 'react';
+import { Edit, Trash, User } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { deleteLogic, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
 import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
@@ -18,41 +17,62 @@ import { MobileCard } from '@/components/dashboard/mobile-card';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
-import { PagedResponse, PaginationParams } from '@/services/types';
-import { City } from '@/interfaces/city';
 import { Driver, emptyDriver } from '@/interfaces/driver';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { validationConfigDriver } from '@/validations/driverSchema';
-import { useApi } from '@/hooks/use-api';
-import { getDrivers } from '@/services/driver';
-import { usePaginationParams } from '@/utils/pagination';
+import { getDriverReport } from '@/services/driver';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import {
+  DriverReportFilters,
+  emptyDriverReportFilters,
+} from '@/interfaces/filters/driver-filters';
+import {
+  ENTITY_STATUS_OPTIONS,
+  EntityStatus,
+} from '@/interfaces/filters/common';
+import {
+  enumParser,
+  piiStringParser,
+  stringParser,
+} from '@/hooks/url-parsers';
+
+const driverFilterParsers = {
+  firstName: stringParser,
+  lastName: stringParser,
+  documentNumber: piiStringParser, // PII: no persistir en URL
+  status: enumParser<EntityStatus>([
+    EntityStatus.Active,
+    EntityStatus.Inactive,
+    EntityStatus.Deleted,
+    EntityStatus.Suspended,
+  ]),
+};
 
 export default function DriversManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentDriverId, setCurrentDriverId] = useState<number | null>(null);
   const addForm = useFormValidation(emptyDriver, validationConfigDriver);
-
-  // Form state for editing a vehicle
   const editForm = useFormValidation(emptyDriver, validationConfigDriver);
 
-  const params = usePaginationParams({
-    pageNumber: currentPage,
-    filters: { search: searchQuery },
-  });
-
-  const { data, loading, error, fetch } = useApi<Driver, PaginationParams>(getDrivers, {
-    autoFetch: true,
-    params: params,
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<DriverReportFilters, Driver>({
+    defaults: emptyDriverReportFilters,
+    parsers: driverFilterParsers,
+    apiCall: getDriverReport,
   });
 
   const submitAddDriver = async () => {
@@ -66,7 +86,7 @@ export default function DriversManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetch({ pageNumber: currentPage });
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -95,7 +115,7 @@ export default function DriversManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          refetch();
         } else {
           toast({
             title: 'Error',
@@ -127,16 +147,10 @@ export default function DriversManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/vehicle-delete/${currentDriverId}`);
-    // In a real app, you would delete the vehicle from the database
+    await deleteLogic(`/vehicle-delete/${currentDriverId}`);
     setIsDeleteModalOpen(false);
     setCurrentDriverId(null);
-    fetch(params);
-  };
-
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
+    refetch();
   };
 
   const columns = [
@@ -189,8 +203,32 @@ export default function DriversManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+            <FilterBar onReset={reset} onApply={apply}>
+              <Input
+                className="w-full sm:w-[180px]"
+                placeholder="Nombre"
+                value={draft.firstName ?? ''}
+                onChange={(e) => setDraftField('firstName', e.target.value)}
+              />
+              <Input
+                className="w-full sm:w-[180px]"
+                placeholder="Apellido"
+                value={draft.lastName ?? ''}
+                onChange={(e) => setDraftField('lastName', e.target.value)}
+              />
+              <Input
+                className="w-full sm:w-[180px]"
+                placeholder="Documento"
+                value={draft.documentNumber ?? ''}
+                onChange={(e) => setDraftField('documentNumber', e.target.value)}
+              />
+              <StatusFilter
+                value={draft.status != null ? String(draft.status) : ''}
+                onChange={(v) =>
+                  setDraftField('status', v ? (Number(v) as EntityStatus) : undefined)
+                }
+                options={ENTITY_STATUS_OPTIONS}
+              />
             </FilterBar>
 
             <div className="hidden md:block w-full">
@@ -205,11 +243,11 @@ export default function DriversManagement() {
 
             {data?.Items?.length > 0 && (
               <TablePagination
-                currentPage={currentPage}
+                currentPage={pageNumber}
                 totalPages={data?.TotalPages}
                 totalItems={data?.TotalRecords}
                 itemsPerPage={data?.PageSize}
-                onPageChange={setCurrentPage}
+                onPageChange={setPageNumber}
                 itemName="choferes"
               />
             )}

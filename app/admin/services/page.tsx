@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
-import { SearchFilter } from '@/components/dashboard/search-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
 import { MobileCard } from '@/components/dashboard/mobile-card';
@@ -31,9 +30,28 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 import { getOptionIdByValue } from '@/utils/form-options';
 import { emptyServiceSchedule, ServiceSchedule } from '@/interfaces/serviceSchedule';
 import { Label } from '@/components/ui/label';
-import { usePaginationParams } from '@/utils/pagination';
-import { useApi } from '@/hooks/use-api';
-import { getServices } from '@/services/service';
+import { getServiceReport } from '@/services/service';
+import { useReportFilters } from '@/hooks/use-report-filters';
+import {
+  ServiceReportFilters,
+  emptyServiceReportFilters,
+} from '@/interfaces/filters/service-filters';
+import {
+  ENTITY_STATUS_OPTIONS,
+  EntityStatus,
+} from '@/interfaces/filters/common';
+import { StatusFilter } from '@/components/dashboard/status-filter';
+import { enumParser, stringParser } from '@/hooks/url-parsers';
+
+const serviceFilterParsers = {
+  name: stringParser,
+  status: enumParser<EntityStatus>([
+    EntityStatus.Active,
+    EntityStatus.Inactive,
+    EntityStatus.Deleted,
+    EntityStatus.Suspended,
+  ]),
+};
 import { getTripsForSelect, getTripById } from '@/services/trip';
 import { Trip } from '@/interfaces/trip';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -93,12 +111,9 @@ const initialTripForm = {
   reserveDate: format(new Date(), 'yyyy-MM-dd'),
 };
 
+type ServiceFilterDraft = Pick<ServiceReportFilters, 'name' | 'status'>;
+
 export default function ServiceManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Separate state for current page to avoid double fetching
-  const [currentPage, setCurrentPage] = useState(1);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -130,14 +145,20 @@ export default function ServiceManagement() {
   const [isLoadingDirections, setIsLoadingDirections] = useState(false);
   const [isLoadingTripFormDirections, setIsLoadingTripFormDirections] = useState(false);
 
-  const params = usePaginationParams({
-    pageNumber: currentPage,
-    filters: { search: searchQuery },
-  });
-
-  const { data, loading, error, fetch } = useApi<Service, PaginationParams>(getServices, {
-    autoFetch: true,
-    params: params,
+  const {
+    draft,
+    setDraftField,
+    apply,
+    reset,
+    refetch,
+    pageNumber,
+    setPageNumber,
+    data,
+    loading,
+  } = useReportFilters<ServiceFilterDraft, Service>({
+    defaults: { name: '', status: undefined },
+    parsers: serviceFilterParsers,
+    apiCall: getServiceReport,
   });
 
   const loadAllOptions = async () => {
@@ -311,7 +332,7 @@ export default function ServiceManagement() {
             variant: 'success',
           });
           setIsAddModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          refetch(); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -363,7 +384,7 @@ export default function ServiceManagement() {
             variant: 'success',
           });
           setIsEditModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the vehicle list
+          refetch(); // Refresh the vehicle list
         } else {
           toast({
             title: 'Error',
@@ -512,13 +533,9 @@ export default function ServiceManagement() {
     const id = await deleteLogic(`/service-delete/${currentServiceId}`);
     setIsDeleteModalOpen(false);
     setCurrentServiceId(null);
-    fetch({ pageNumber: currentPage });
+    refetch();
   };
 
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
-  };
 
   const columns = [
     { header: 'Nombre', accessor: 'Name', width: '25%' },
@@ -607,8 +624,20 @@ export default function ServiceManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
-              <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
+            <FilterBar onReset={reset} onApply={apply}>
+              <Input
+                className="w-full sm:w-[180px]"
+                placeholder="Nombre"
+                value={draft.name ?? ''}
+                onChange={(e) => setDraftField('name', e.target.value)}
+              />
+              <StatusFilter
+                value={draft.status != null ? String(draft.status) : ''}
+                onChange={(v) =>
+                  setDraftField('status', v ? (Number(v) as EntityStatus) : undefined)
+                }
+                options={ENTITY_STATUS_OPTIONS}
+              />
             </FilterBar>
 
             <div className="hidden md:block w-full">
@@ -623,11 +652,11 @@ export default function ServiceManagement() {
 
             {data?.Items?.length > 0 && (
               <TablePagination
-                currentPage={currentPage}
+                currentPage={pageNumber}
                 totalPages={data?.TotalPages}
                 totalItems={data?.TotalRecords}
                 itemsPerPage={data?.PageSize}
-                onPageChange={setCurrentPage}
+                onPageChange={setPageNumber}
                 itemName="servicios"
               />
             )}
