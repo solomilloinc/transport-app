@@ -227,7 +227,7 @@ export function AddReservationFlow({
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (passengerSearchQuery.length >= 3) {
-        fetchPassenger({ filters: { documentNumber: passengerSearchQuery } });
+        fetchPassenger({ filters: { search: passengerSearchQuery } });
       }
     }, 500);
     return () => clearTimeout(delayDebounce);
