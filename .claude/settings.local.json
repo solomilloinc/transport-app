@@ -42,7 +42,13 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "Bash(node_modules/.bin/tsc --noEmit 2>&1 | head -30)",
-      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit 2>&1 | head -30)"
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit 2>&1 | head -30)",
+      "Bash(pnpm test *)",
+      "Bash(npx vitest *)",
+      "Bash(./node_modules/.bin/vitest run *)",
+      "Bash(npm --version)",
+      "PowerShell(pnpm test __tests__/hooks/use-reserve-quote.test.ts 2>&1)",
+      "PowerShell(npm test -- __tests__/hooks/use-reserve-quote.test.ts 2>&1 | Select-Object -Last 50)"
     ]
   }
 }

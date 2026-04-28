@@ -69,6 +69,7 @@ export interface DropoffCityOption {
   CityId: number;
   CityName: string;
   Price: number;
+  TripPriceId?: number;
   IsMainDestination?: boolean;
   Directions?: DropoffDirectionOption[];
 }

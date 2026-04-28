@@ -35,6 +35,7 @@ export interface PassengerReserve extends Auditable {
     IsRoundTrip: boolean
     Payments: Payment[]
     PaidAmount: number
+    Price?: number
 }
 
 export interface PassengerReserveCreate extends Omit<PassengerReserve, 'CustomerReserveId' | 'IsRoundTrip' | 'Payments' | 'Status' | 'HasTraveled' | 'PaidAmount' | 'PaymentMethods' | 'CreatedBy' | 'CreatedDate' | 'UpdatedBy' | 'UpdatedDate'> {

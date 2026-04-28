@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { post } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { FormDialog } from '@/components/dashboard/form-dialog';
@@ -15,6 +14,9 @@ import { emptyPaymentCreate, PassengerPaymentCreate, Payment } from '@/interface
 import { validationConfigPayment } from '@/validations/paymentSchema';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
 import { getApiErrorCode } from '@/utils/api-errors';
+import { getCurrentCashBox, openCashBox } from '@/services/cash-box';
+import { createReserveOrBookingPayments, getBookingPaymentSummary, getReservePaymentSummaryCompat } from '@/services/reserves';
+import { DUPLICATE_PAYMENT_METHOD_MESSAGE, hasDuplicatePaymentMethods } from '@/utils/payments';
 
 interface AddPaymentDialogProps {
   open: boolean;
@@ -28,12 +30,20 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   const { toast } = useToast();
   const form = useFormValidation(emptyPaymentCreate, validationConfigPayment);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [bookingId, setBookingId] = useState<number | null>(null);
+  const [summaryPaidAmount, setSummaryPaidAmount] = useState<number>(0);
+  const [hasOpenCashBox, setHasOpenCashBox] = useState<boolean>(true);
+  const [isCheckingCashBox, setIsCheckingCashBox] = useState(false);
+  const [isOpeningCashBox, setIsOpeningCashBox] = useState(false);
 
   // Reset state when the dialog is closed or the passenger changes
   useEffect(() => {
     if (!open) {
       form.resetForm();
       setPayments([]);
+      setBookingId(null);
+      setSummaryPaidAmount(0);
+      setHasOpenCashBox(true);
     } else if (passengerReserve) {
       // Preload remaining amount
       const remaining = getRemainingBalance();
@@ -43,12 +53,67 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     }
   }, [open, passengerReserve]);
 
-  const getTotalReserveAmount = () => {
-    return passengerReserve?.PaidAmount || 0;
+  const handleOpenCashBox = async () => {
+    setIsOpeningCashBox(true);
+    try {
+      await openCashBox().call;
+      setHasOpenCashBox(true);
+      toast({ title: 'Caja abierta', description: 'La caja fue abierta correctamente.', variant: 'success' });
+    } catch (error) {
+      const code = getApiErrorCode(error);
+      if (code === 'CashBox.AlreadyOpen') {
+        setHasOpenCashBox(true);
+        toast({ title: 'Caja abierta', description: 'Ya existe una caja abierta.', variant: 'success' });
+      } else {
+        toast({ title: 'Error', description: 'No se pudo abrir la caja.', variant: 'destructive' });
+      }
+    } finally {
+      setIsOpeningCashBox(false);
+    }
   };
 
-  const getAlreadyPaidAmount = () => {
-    return passengerReserve?.Payments?.reduce((total, p) => total + p.TransactionAmount, 0) || 0;
+  useEffect(() => {
+    const preloadData = async () => {
+      if (!open || !passengerReserve) return;
+      setIsCheckingCashBox(true);
+      try {
+        await getCurrentCashBox().call;
+        setHasOpenCashBox(true);
+      } catch {
+        setHasOpenCashBox(false);
+      } finally {
+        setIsCheckingCashBox(false);
+      }
+
+      try {
+        const reserveSummary = await getReservePaymentSummaryCompat(passengerReserve.ReserveId);
+        const foundBookingId = reserveSummary?.BookingId ?? null;
+        setBookingId(foundBookingId);
+        if (foundBookingId) {
+          try {
+            const bookingSummary = await getBookingPaymentSummary(foundBookingId);
+            setSummaryPaidAmount(bookingSummary?.TotalAmount ?? reserveSummary?.TotalAmount ?? 0);
+          } catch {
+            // Keep booking flow even if booking summary is temporarily unavailable.
+            setSummaryPaidAmount(reserveSummary?.TotalAmount ?? 0);
+          }
+        } else {
+          setSummaryPaidAmount(reserveSummary?.TotalAmount ?? 0);
+        }
+      } catch {
+        // Reserve can be legacy (without booking); payment will fallback by reserve endpoint.
+        setSummaryPaidAmount(0);
+      }
+    };
+    preloadData();
+  }, [open, passengerReserve]);
+
+  const getPassengerPriceAmount = () => {
+    return passengerReserve?.Price ?? passengerReserve?.PaidAmount ?? 0;
+  };
+
+  const getAttributedPaidAmount = () => {
+    return passengerReserve?.PaidAmount || 0;
   };
 
   const getCurrentAddedAmount = () => {
@@ -56,8 +121,8 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   };
 
   const getRemainingBalance = () => {
-    const total = getTotalReserveAmount();
-    const paid = getAlreadyPaidAmount() + getCurrentAddedAmount();
+    const total = getPassengerPriceAmount();
+    const paid = getAttributedPaidAmount() + getCurrentAddedAmount();
     return Math.max(0, total - paid);
   };
 
@@ -65,10 +130,19 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     // Basic validation before adding to the list
     if (Number(form.data.TransactionAmount) > 0 && form.data.PaymentMethod) {
       const methodId = Number(form.data.PaymentMethod);
-      if (payments.some((p) => p.PaymentMethod === methodId)) {
+      const amount = Number(form.data.TransactionAmount);
+      if (!bookingId && amount > getRemainingBalance()) {
+        toast({
+          title: 'Monto excedido',
+          description: 'El monto supera la deuda pendiente.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (hasDuplicatePaymentMethods([...payments, { PaymentMethod: methodId, TransactionAmount: amount }])) {
         toast({
           title: 'Método duplicado',
-          description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
+          description: DUPLICATE_PAYMENT_METHOD_MESSAGE,
           variant: 'destructive',
         });
         return;
@@ -78,7 +152,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
         ...payments,
         {
           PaymentMethod: methodId,
-          TransactionAmount: Number(form.data.TransactionAmount),
+          TransactionAmount: amount,
         },
       ]);
       // Reset form fields for the next payment entry
@@ -102,8 +176,8 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     }
 
     const totalNew = getCurrentAddedAmount();
-    const maxAllowed = getTotalReserveAmount() - getAlreadyPaidAmount();
-    if (totalNew > maxAllowed) {
+    const maxAllowed = getPassengerPriceAmount() - getAttributedPaidAmount();
+    if (!bookingId && totalNew > maxAllowed) {
       toast({
         title: 'Monto excedido',
         description: 'El monto supera la deuda pendiente.',
@@ -114,12 +188,31 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
 
     form.setIsSubmitting(true);
     try {
+      if (!hasOpenCashBox) {
+        toast({
+          title: 'Caja cerrada',
+          description: 'No hay caja abierta. Abra una caja para registrar pagos.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const payload: PassengerPaymentCreate[] = payments.map((p) => ({
         transactionAmount: p.TransactionAmount,
         paymentMethod: p.PaymentMethod,
       }));
 
-      const response = await post(`/reserve-payments-create/${passengerReserve?.ReserveId}/${passengerReserve?.CustomerId}`, payload);
+      if (hasDuplicatePaymentMethods(payments)) {
+        toast({ title: 'Método duplicado', description: DUPLICATE_PAYMENT_METHOD_MESSAGE, variant: 'destructive' });
+        return;
+      }
+
+      const response = await createReserveOrBookingPayments({
+        reserveId: passengerReserve!.ReserveId,
+        customerId: passengerReserve!.CustomerId,
+        bookingId,
+        payments: payload,
+      });
       if (response) {
         toast({ title: 'Pago cargado', description: 'El pago ha sido cargado exitosamente', variant: 'success' });
         onSuccess();
@@ -132,6 +225,8 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       const msgs: Record<string, string> = {
         'Reserve.AlreadyFullyPaid': 'Esta reserva ya esta completamente pagada.',
         'Reserve.OverPaymentNotAllowed': 'El monto pagado supera la deuda pendiente.',
+        'CashBox.NotFound': 'No hay caja abierta. Abra una caja para registrar pagos.',
+        'Payments.DuplicatedMethod': DUPLICATE_PAYMENT_METHOD_MESSAGE,
       };
       toast({ title: 'Error', description: msgs[code] || 'Error al crear el pago', variant: 'destructive' });
     } finally {
@@ -148,7 +243,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       onSubmit={handleSubmit}
       submitText={payments.length > 0 && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}
       isLoading={form.isSubmitting}
-      disabled={payments.length === 0}
+      disabled={payments.length === 0 || isCheckingCashBox || !hasOpenCashBox}
     >
       <div className="flex-1 overflow-y-auto py-4">
         <div className="space-y-6">
@@ -166,6 +261,16 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
 
           <div className="rounded-lg border p-4">
             <h3 className="font-semibold text-lg mb-3">Gestión de Pagos</h3>
+            {!hasOpenCashBox && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span>No hay caja abierta. Abra una caja para registrar pagos.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={handleOpenCashBox} disabled={isOpeningCashBox}>
+                    {isOpeningCashBox ? 'Abriendo...' : 'Abrir caja'}
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 mb-4 items-end">
               <FormField label="Medio de pago" required error={form.errors.PaymentMethod} className="flex-1">
                 <ApiSelect value={String(form.data.PaymentMethod)} onValueChange={(value) => form.setField('PaymentMethod', Number(value))} placeholder="Seleccionar medio" options={paymentMethodOptions} loading={false} error={null} />
@@ -182,7 +287,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
               <Button
                 size="icon"
                 onClick={handleAddPaymentToList}
-                disabled={!form.data.TransactionAmount || Number(form.data.TransactionAmount) <= 0}
+                disabled={!form.data.TransactionAmount || Number(form.data.TransactionAmount) <= 0 || !hasOpenCashBox || isCheckingCashBox}
               >
                 <PlusCircleIcon className="h-4 w-4" />
               </Button>
@@ -208,12 +313,20 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
 
             <div className="space-y-1 pt-4 mt-2 border-t">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Monto total de reserva:</span>
-                <span className="font-medium">${getTotalReserveAmount().toLocaleString()}</span>
+                <span className="text-gray-500">Precio:</span>
+                <span className="font-medium">${getPassengerPriceAmount().toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Pagado anteriormente:</span>
-                <span className="font-medium">${getAlreadyPaidAmount().toLocaleString()}</span>
+                <span className="text-gray-500">Pagado:</span>
+                <span className="font-medium">${getAttributedPaidAmount().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Pendiente:</span>
+                <span className="font-medium">${Math.max(0, getPassengerPriceAmount() - getAttributedPaidAmount()).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">{bookingId ? 'Pagado acumulado booking:' : 'Pagado acumulado reserva:'}</span>
+                <span className="font-medium">${summaryPaidAmount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
                 <span className="font-bold text-lg">Total a pagar ahora:</span>

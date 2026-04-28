@@ -22,9 +22,10 @@ export interface ReserveReport {
     TripId: number;
     ServiceId: number;
     ReserveDate: string;
-    OriginCityId: number;
+    // /reserve-report no devuelve los City IDs hoy — opcionales hasta que backend los incluya.
+    OriginCityId?: number;
     OriginName: string;
-    DestinationCityId: number;
+    DestinationCityId?: number;
     DestinationName: string;
     DepartureHour: string;
     VehicleId: number;
@@ -59,6 +60,9 @@ export interface ReserveSummaryItem {
     DepartureHour: string;
     DepartureDate: string;
     Price: number;
+    /** Backend may return camelCase or alternate field names; UI normalizes. */
+    unitPrice?: number;
+    UnitPrice?: number;
     AvailableQuantity: number;
     VehicleName: string;
     EstimatedDuration: string;
@@ -87,6 +91,7 @@ export interface PaymentMethodSummary {
 
 export interface ReservePaymentSummary {
     ReserveId: number;
+    BookingId?: number | null;
     CashBoxId: number;
     PaymentsByMethod: PaymentMethodSummary[];
     TotalAmount: number;

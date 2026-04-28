@@ -20,3 +20,12 @@ export const closeCashBox = ({ description }: { description: string }): UseApiCa
         call: post<any>(`/cashbox/close`, { Description: description }),
     };
 };
+
+/**
+ * Opens a new cash box.
+ */
+export const openCashBox = (): UseApiCall<any, number> => {
+    return {
+        call: post<any>(`/cashbox/open`, {}),
+    };
+};

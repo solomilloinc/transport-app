@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { TripSelectOption } from '@/app/page';
 import { MapPin } from 'lucide-react';
+import { formatClockHm } from '@/utils/pickup-display-time';
 import { useTenant } from '@/contexts/TenantContext';
 
 export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
@@ -194,6 +195,9 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                           <MapPin className="h-3.5 w-3.5" />
                           Punto de Subida
                         </label>
+                        <p className="text-xs text-gray-500 -mt-1 mb-1">
+                          El horario de cada parada es el que publica el servicio (llegada del micro a ese punto).
+                        </p>
                         <Select value={selectedPickupDirectionId} onValueChange={setSelectedPickupDirectionId}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona dónde subir (opcional)" />
@@ -206,6 +210,19 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                             ))}
                           </SelectContent>
                         </Select>
+                        {selectedPickupDirectionId && selectedTrip.stopSchedules.length > 0 ? (() => {
+                          const stop = selectedTrip.stopSchedules.find(
+                            (s) => s.DirectionId.toString() === selectedPickupDirectionId,
+                          );
+                          if (!stop?.PickupTime) return null;
+                          return (
+                            <p className="text-xs text-gray-600 mt-1.5">
+                              Subida en <span className="font-semibold text-blue-900">{stop.DirectionName}</span>:{' '}
+                              <span className="font-semibold text-blue-900">{formatClockHm(stop.PickupTime)}</span>
+                              <span className="text-gray-500"> (dato del servicio)</span>
+                            </p>
+                          );
+                        })() : null}
                       </div>
                     )}
 

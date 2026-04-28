@@ -28,12 +28,17 @@ import { Trip } from '@/interfaces/trip';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useApi } from '@/hooks/use-api';
 import { useToast } from '@/hooks/use-toast';
+import { useReserveQuote } from '@/hooks/use-reserve-quote';
 
 import { getPassengers } from '@/services/passenger';
 import { getReserves } from '@/services/reserves';
 import { getTripById } from '@/services/trip';
 import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 import { PaginationParams } from '@/services/types';
+import { ReserveQuoteRequestDto, ReserveQuoteItemRequest } from '@/interfaces/quote';
+import { QuoteWarningBanner } from '@/components/checkout/QuoteWarningBanner';
+import { getCurrentCashBox, openCashBox } from '@/services/cash-box';
+import { DUPLICATE_PAYMENT_METHOD_MESSAGE, hasDuplicatePaymentMethods } from '@/utils/payments';
 
 enum FlowStep {
   SELECT_PASSENGER,
@@ -80,6 +85,9 @@ export function AddReservationFlow({
   // Data aggregation state
   const [passengerReserves, setPassengerReserves] = useState<PassengerReserveCreate[]>([]);
   const [reservationPayments, setReservationPayments] = useState<Payment[]>([]);
+  const [hasOpenCashBox, setHasOpenCashBox] = useState(true);
+  const [isCheckingCashBox, setIsCheckingCashBox] = useState(false);
+  const [isOpeningCashBox, setIsOpeningCashBox] = useState(false);
 
   // Trip data state - enriched with pickup/dropoff options from API
   const [tripData, setTripData] = useState<Trip | null>(null);
@@ -100,13 +108,9 @@ export function AddReservationFlow({
       }));
   }, [tripData]);
 
-  // Dropoff CITY options based on reserve type
-  // Ida = DropoffOptionsIda, IdaVuelta = DropoffOptionsIdaVuelta
+  // Dropoff CITY options: always DropoffOptionsIda (quote endpoint is source of truth for pricing)
   const dropoffCityOptions = useMemo(() => {
-    const isRoundTrip = reserveForm.data.ReserveTypeId === 2;
-    const options = isRoundTrip
-      ? (tripData?.DropoffOptionsIdaVuelta || (tripData as any)?.dropoffOptionsIdaVuelta || [])
-      : (tripData?.DropoffOptionsIda || (tripData as any)?.dropoffOptionsIda || []);
+    const options = tripData?.DropoffOptionsIda || (tripData as any)?.dropoffOptionsIda || [];
     return options
       .filter((opt: any) => opt && (opt.cityId != null || opt.CityId != null))
       .map((opt: any) => ({
@@ -114,10 +118,11 @@ export function AddReservationFlow({
         value: String(opt.cityId || opt.CityId),
         label: `${opt.cityName || opt.CityName || 'Sin nombre'} - $${(opt.price ?? opt.Price ?? 0).toLocaleString()}`,
         price: opt.price ?? opt.Price ?? 0,
+        tripPriceId: opt.tripPriceId ?? opt.TripPriceId ?? opt.priceId ?? opt.PriceId ?? opt.id ?? opt.Id ?? null,
         isMainDestination: opt.isMainDestination ?? opt.IsMainDestination,
         directions: opt.directions || opt.Directions || []
       }));
-  }, [tripData, reserveForm.data.ReserveTypeId]);
+  }, [tripData]);
 
   // Get directions for selected dropoff city
   const dropoffDirectionOptions = useMemo(() => {
@@ -170,9 +175,127 @@ export function AddReservationFlow({
     return selected?.price || 0;
   };
 
+  const selectedDropoffCityOption = useMemo(() => {
+    if (!selectedDropoffCityId) return null;
+    return dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId)) ?? null;
+  }, [selectedDropoffCityId, dropoffCityOptions]);
+
+  const selectedDropoffFallbackDirectionId = useMemo(() => {
+    const first = selectedDropoffCityOption?.directions?.[0];
+    if (!first) return undefined;
+    const raw = first.directionId ?? first.DirectionId;
+    if (raw == null) return undefined;
+    return Number(raw);
+  }, [selectedDropoffCityOption]);
+
   // Payment form state
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
+
+  // Quote hook - source of truth for pricing
+  const {
+    data: quoteData,
+    loading: quoteLoading,
+    error: quoteError,
+    quote: fireQuote,
+    requote: refireQuote,
+    reset: resetQuote,
+  } = useReserveQuote();
+
+  // Build quote request from current admin state (null if not ready)
+  const buildAdminQuoteRequest = (): ReserveQuoteRequestDto | null => {
+    if (!initialTrip) return null;
+    const isRoundTrip = reserveForm.data.ReserveTypeId === 2;
+    const outboundLocationIdRaw =
+      selectedDropoffCityOption?.tripPriceId ??
+      (reserveForm.data.DropoffLocationId && reserveForm.data.DropoffLocationId !== 0
+        ? reserveForm.data.DropoffLocationId
+        : undefined) ??
+      selectedDropoffFallbackDirectionId;
+    const outboundLocationId =
+      outboundLocationIdRaw != null && Number(outboundLocationIdRaw) > 0
+        ? Number(outboundLocationIdRaw)
+        : undefined;
+    const outboundCityId = selectedDropoffCityId ?? undefined;
+    if (!outboundLocationId && !outboundCityId) return null;
+
+    const items: ReserveQuoteItemRequest[] = [
+      {
+        tripId: initialTrip.TripId,
+        reserveDate: initialTrip.ReserveDate,
+        reserveTypeId: 1,
+        dropoffLocationId: outboundLocationId,
+        dropoffDirectionId: outboundLocationId,
+        dropoffCityId: outboundCityId,
+        passengerCount: 1,
+      },
+    ];
+
+    if (isRoundTrip) {
+      if (!returnTrip || !reserveForm.data.PickupLocationId) return null;
+      items.push({
+        tripId: returnTrip.TripId,
+        reserveDate: returnTrip.ReserveDate,
+        reserveTypeId: 2,
+        dropoffLocationId: reserveForm.data.PickupLocationId,
+        dropoffDirectionId: reserveForm.data.PickupLocationId,
+        passengerCount: 1,
+      });
+    }
+
+    return { items };
+  };
+
+  // Fire quote whenever relevant selections change
+  useEffect(() => {
+    const request = buildAdminQuoteRequest();
+    if (!request) {
+      resetQuote();
+      return;
+    }
+    console.log('[quote] request items:', request.items.map(i => ({
+      tripId: i.tripId,
+      reserveDate: i.reserveDate,
+      reserveTypeId: i.reserveTypeId,
+    })));
+    fireQuote(request)
+      .then((res) => {
+        if (!res) return;
+        console.log('[quote] response total:', res.total);
+        console.log('[quote] response items:', res.items.map(i => ({
+          tripId: i.tripId,
+          requestedReserveTypeId: i.requestedReserveTypeId,
+          appliedReserveTypeId: i.appliedReserveTypeId,
+          unitPrice: i.unitPrice,
+          subtotal: i.subtotal,
+          reasonCode: i.reasonCode,
+        })));
+        console.log('[quote] discountsLost:', res.discountsLost);
+      })
+      .catch((err) => console.error('[quote] error:', err));
+  }, [
+    initialTrip?.ReserveId,
+    initialTrip?.ReserveDate,
+    returnTrip?.ReserveId,
+    returnTrip?.ReserveDate,
+    reserveForm.data.ReserveTypeId,
+    reserveForm.data.DropoffLocationId,
+    reserveForm.data.PickupLocationId,
+    selectedDropoffCityId,
+  ]);
+
+  // Quote-derived unit prices matched by tripId
+  const outboundQuoteItem = useMemo(() => {
+    if (!quoteData || !initialTrip) return null;
+    return quoteData.items?.find((i) => i.tripId === initialTrip.TripId) ?? null;
+  }, [quoteData, initialTrip]);
+
+  const returnQuoteItem = useMemo(() => {
+    if (!quoteData || !returnTrip) return null;
+    return quoteData.items?.find((i) => i.tripId === returnTrip.TripId) ?? null;
+  }, [quoteData, returnTrip]);
+
+  const isQuoteReady = !quoteLoading && !quoteError && quoteData !== null;
 
   // API Hooks
   const {
@@ -181,6 +304,30 @@ export function AddReservationFlow({
     reset: resetDataPassenger,
   } = useApi<Passenger, PaginationParams>(getPassengers, { autoFetch: false });
   const { data: dataReturnReserves, fetch: fetchReturnReserves } = useApi<ReserveReport, string>(getReserves, { autoFetch: false });
+
+  // Return trips: only the reverse route of the outbound (Origin↔Destination swapped),
+  // excluding the outbound reserve itself. Matches by City ID when present;
+  // falls back to Origin/Destination Name because /reserve-report omits the IDs.
+  // TODO: pedir al backend que incluya OriginCityId/DestinationCityId en /reserve-report
+  // y eliminar el fallback por nombre (frágil contra acentos/etiquetas).
+  const returnTripCandidates = useMemo(() => {
+    if (!initialTrip || !dataReturnReserves?.Items) return [];
+    const idaOriginId = initialTrip.OriginCityId;
+    const idaDestId = initialTrip.DestinationCityId;
+    const idaOriginName = initialTrip.OriginName;
+    const idaDestName = initialTrip.DestinationName;
+
+    return dataReturnReserves.Items.filter((trip) => {
+      if (trip.ReserveId === initialTrip.ReserveId) return false;
+      const idsAvailable =
+        trip.OriginCityId != null && trip.DestinationCityId != null &&
+        idaOriginId != null && idaDestId != null;
+      if (idsAvailable) {
+        return trip.OriginCityId === idaDestId && trip.DestinationCityId === idaOriginId;
+      }
+      return trip.OriginName === idaDestName && trip.DestinationName === idaOriginName;
+    });
+  }, [dataReturnReserves, initialTrip]);
 
   // Effect to fetch trip details when dialog opens
   useEffect(() => {
@@ -247,6 +394,41 @@ export function AddReservationFlow({
     }
   }, [step]);
 
+  const handleOpenCashBox = async () => {
+    setIsOpeningCashBox(true);
+    try {
+      await openCashBox().call;
+      setHasOpenCashBox(true);
+      toast({ title: 'Caja abierta', description: 'La caja fue abierta correctamente.', variant: 'success' });
+    } catch (error) {
+      const code = getApiErrorCode(error);
+      if (code === 'CashBox.AlreadyOpen') {
+        setHasOpenCashBox(true);
+        toast({ title: 'Caja abierta', description: 'Ya existe una caja abierta.', variant: 'success' });
+      } else {
+        toast({ title: 'Error', description: 'No se pudo abrir la caja.', variant: 'destructive' });
+      }
+    } finally {
+      setIsOpeningCashBox(false);
+    }
+  };
+
+  useEffect(() => {
+    const checkCashBox = async () => {
+      if (step !== FlowStep.CONFIRM_PAYMENT) return;
+      setIsCheckingCashBox(true);
+      try {
+        await getCurrentCashBox().call;
+        setHasOpenCashBox(true);
+      } catch {
+        setHasOpenCashBox(false);
+      } finally {
+        setIsCheckingCashBox(false);
+      }
+    };
+    checkCashBox();
+  }, [step]);
+
   const resetFlow = () => {
     setStep(null);
     reserveForm.resetForm();
@@ -256,6 +438,7 @@ export function AddReservationFlow({
     setReturnTrip(null);
     setPassengerReserves([]);
     setReservationPayments([]);
+    setHasOpenCashBox(true);
     setTripData(null);
     setSelectedDropoffCityId(null);
     onOpenChange(false);
@@ -294,18 +477,22 @@ export function AddReservationFlow({
         return;
       }
 
-      // Use direction if selected, otherwise use city ID as fallback
-      const dropoffLocationId = data.DropoffLocationId || selectedDropoffCityId;
+      // Persist city pricing id to keep backend price aligned with the selected city.
+      const dropoffLocationId =
+        selectedDropoffCityOption?.tripPriceId ??
+        (data.DropoffLocationId || selectedDropoffCityId);
 
       // Get the outbound ReserveId from initialTrip
       const outboundReserveId = initialTrip!.ReserveId;
 
+      // Price is a provisional placeholder; final value is overwritten from fresh quote in finalizeReservation
+      const outboundProvisionalPrice = outboundQuoteItem?.unitPrice ?? 0;
       const reserveData: PassengerReserveCreate = {
         ...data,
         ReserveId: outboundReserveId,
         CustomerId: selectedPassenger!.CustomerId,
         DropoffLocationId: dropoffLocationId,
-        Price: getSelectedDropoffPrice(),
+        Price: outboundProvisionalPrice,
       };
 
       console.log('[handleSubmitDetails] Outbound ReserveId:', outboundReserveId);
@@ -329,8 +516,8 @@ export function AddReservationFlow({
           return;
         }
 
-        // Both items use the same price (IdaVuelta price from selected dropoff city)
-        const idaVueltaPrice = getSelectedDropoffPrice();
+        // Provisional per-leg prices from the current quote — overwritten pre-submit
+        const returnProvisionalPrice = returnQuoteItem?.unitPrice ?? 0;
 
         const returnReserveData: PassengerReserveCreate = {
           ...data,
@@ -338,7 +525,7 @@ export function AddReservationFlow({
           CustomerId: selectedPassenger!.CustomerId,
           PickupLocationId: dropoffLocationId, // Pickup en vuelta = dropoff de ida
           DropoffLocationId: data.PickupLocationId, // Dropoff en vuelta = pickup de ida
-          Price: idaVueltaPrice, // Same price as outbound
+          Price: returnProvisionalPrice,
         };
 
         console.log('[handleSubmitDetails] Return reserve data:', returnReserveData);
@@ -368,10 +555,10 @@ export function AddReservationFlow({
       }
 
       const methodId = Number(selectedPaymentMethod);
-      if (reservationPayments.some((p) => p.PaymentMethod === methodId)) {
+      if (hasDuplicatePaymentMethods([...reservationPayments, { PaymentMethod: methodId, TransactionAmount: amount }])) {
         toast({
           title: 'Método duplicado',
-          description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
+          description: DUPLICATE_PAYMENT_METHOD_MESSAGE,
           variant: 'destructive',
         });
         return;
@@ -393,10 +580,8 @@ export function AddReservationFlow({
   };
 
   const getTotalReserveAmount = () => {
-    // Para IdaVuelta, el precio ya incluye ambos viajes (no sumar)
-    // Solo tomar el precio del primer item
-    if (passengerReserves.length === 0) return 0;
-    return passengerReserves[0].Price;
+    // Quote endpoint is the source of truth for pricing
+    return quoteData?.total ?? 0;
   };
 
   const getRemainingBalance = () => {
@@ -409,6 +594,24 @@ export function AddReservationFlow({
     let paymentsToSend: Payment[] = [];
 
     if (reservationPayments.length > 0) {
+      if (!hasOpenCashBox) {
+        toast({
+          title: 'Caja cerrada',
+          description: 'No hay caja abierta. Abra una caja para registrar pagos.',
+          variant: 'destructive',
+        });
+        reserveForm.setIsSubmitting(false);
+        return;
+      }
+      if (hasDuplicatePaymentMethods(reservationPayments)) {
+        toast({
+          title: 'Método duplicado',
+          description: DUPLICATE_PAYMENT_METHOD_MESSAGE,
+          variant: 'destructive',
+        });
+        reserveForm.setIsSubmitting(false);
+        return;
+      }
       const totalPaymentAmount = getTotalPaymentAmount();
       const totalReserveAmount = getTotalReserveAmount();
 
@@ -426,7 +629,36 @@ export function AddReservationFlow({
     // payments vacio = PendingPayment en backend
 
     try {
-      const response = await post('/passenger-reserves-create', { items: passengerReserves, payments: paymentsToSend });
+      // Pre-submit re-quote to guarantee server-side price is current
+      const fresh = await refireQuote();
+      if (!fresh) {
+        toast({ title: 'Error', description: 'No se pudo confirmar el precio. Intenta de nuevo.', variant: 'destructive' });
+        reserveForm.setIsSubmitting(false);
+        return;
+      }
+
+      const previousTotal = getTotalReserveAmount();
+      if (Math.abs(fresh.total - previousTotal) > 0.01) {
+        toast({
+          title: 'El precio cambió',
+          description: 'Verificá el nuevo total antes de confirmar la reserva.',
+          variant: 'destructive',
+        });
+        reserveForm.setIsSubmitting(false);
+        return;
+      }
+
+      // Overwrite Price of each passengerReserve entry with matched unitPrice from fresh quote
+      const itemsToSend = passengerReserves.map((reserve, idx) => {
+        const tripId = idx === 0 ? initialTrip!.TripId : returnTrip?.TripId;
+        const match = fresh.items.find((i) => i.tripId === tripId);
+        return {
+          ...reserve,
+          Price: match?.unitPrice ?? reserve.Price,
+        };
+      });
+
+      const response = await post('/passenger-reserves-create', { items: itemsToSend, payments: paymentsToSend });
       if (response) {
         toast({ title: 'Reserva creada', description: 'La reserva ha sido creada exitosamente.', variant: 'success' });
         onSuccess();
@@ -438,6 +670,8 @@ export function AddReservationFlow({
       const code = getApiErrorCode(error);
       const msgs: Record<string, string> = {
         'Reserve.OverPaymentNotAllowed': 'El monto pagado supera el total de la reserva.',
+        'CashBox.NotFound': 'No hay caja abierta. Abra una caja para registrar pagos.',
+        'Payments.DuplicatedMethod': DUPLICATE_PAYMENT_METHOD_MESSAGE,
       };
       toast({ title: 'Error', description: msgs[code] || 'Ocurrió un error al crear la reserva.', variant: 'destructive' });
     } finally {
@@ -506,6 +740,7 @@ export function AddReservationFlow({
         onSubmit={handleSubmitDetails}
         submitText="Siguiente"
         isLoading={reserveForm.isSubmitting}
+        disabled={!isQuoteReady}
         className={reserveForm.data.ReserveTypeId === 2 ? "sm:max-w-3xl" : ""}
       >
         <FormField label="Dirección de subida" required error={reserveForm.errors.PickupLocationId}>
@@ -526,9 +761,10 @@ export function AddReservationFlow({
               const cityId = Number(v);
               setSelectedDropoffCityId(cityId);
               // Reset direction when city changes
-              reserveForm.setField('DropoffLocationId', 0);
-              // Update price from selected city
               const selected = dropoffCityOptions.find((opt: any) => opt.id === v);
+              const fallbackDir = selected?.directions?.[0]?.directionId ?? selected?.directions?.[0]?.DirectionId ?? 0;
+              reserveForm.setField('DropoffLocationId', Number(selected?.tripPriceId ?? fallbackDir ?? 0));
+              // Update price from selected city
               if (selected) {
                 reserveForm.setField('Price', selected.price);
               }
@@ -551,10 +787,18 @@ export function AddReservationFlow({
           </FormField>
         )}
 
+        {/* Quote warnings (combo lost, etc.) */}
+        <QuoteWarningBanner discountsLost={quoteData?.discountsLost ?? []} />
+
         {/* Helper to show current price - only show for Ida (one-way) */}
         {reserveForm.data.ReserveTypeId === 1 && (
           <div className="text-right text-sm font-medium text-blue-600">
-            Precio: ${getSelectedDropoffPrice().toLocaleString()}
+            Precio: {(() => {
+              if (quoteLoading) return 'Calculando...';
+              const fallbackPrice = getSelectedDropoffPrice();
+              const displayPrice = outboundQuoteItem?.unitPrice ?? quoteData?.total ?? fallbackPrice;
+              return `$${displayPrice.toLocaleString()}`;
+            })()}
           </div>
         )}
 
@@ -572,14 +816,13 @@ export function AddReservationFlow({
               setReturnTrip(null);
               setReturnDate(undefined);
 
-              // Auto-select city if IdaVuelta has only one option
+              // Auto-select city if DropoffOptionsIda has only one option
               if (newType === 2) {
-                const idaVueltaOptions = tripData?.DropoffOptionsIdaVuelta || (tripData as any)?.dropoffOptionsIdaVuelta || [];
-                if (idaVueltaOptions.length === 1) {
-                  const opt = idaVueltaOptions[0];
+                const idaOptions = tripData?.DropoffOptionsIda || (tripData as any)?.dropoffOptionsIda || [];
+                if (idaOptions.length === 1) {
+                  const opt = idaOptions[0];
                   const cityId = opt.cityId || opt.CityId;
                   setSelectedDropoffCityId(cityId);
-                  reserveForm.setField('Price', opt.price ?? opt.Price ?? 0);
                 }
                 // Set initial return date to trip date
                 const tripDate = new Date(initialTrip!.ReserveDate);
@@ -618,26 +861,24 @@ export function AddReservationFlow({
                       Viajes para {format(returnDate, "d 'de' MMMM", { locale: es })}
                     </Label>
                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
-                      {dataReturnReserves?.Items
-                        ?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId)
-                        .map((trip) => (
-                          <button
-                            key={trip.ReserveId}
-                            type="button"
-                            className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'hover:bg-gray-50'
-                              }`}
-                            onClick={() => setReturnTrip(trip)}
-                          >
-                            <span className="font-medium">{trip.DepartureHour}</span>
-                            <span className="text-gray-600">
-                              {trip.OriginName} → {trip.DestinationName}
-                            </span>
-                          </button>
-                        ))}
-                      {dataReturnReserves?.Items?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId).length === 0 && (
-                        <p className="text-center text-sm text-gray-500 p-4">No hay viajes disponibles.</p>
+                      {returnTripCandidates.map((trip) => (
+                        <button
+                          key={trip.ReserveId}
+                          type="button"
+                          className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'hover:bg-gray-50'
+                            }`}
+                          onClick={() => setReturnTrip(trip)}
+                        >
+                          <span className="font-medium">{trip.DepartureHour}</span>
+                          <span className="text-gray-600">
+                            {trip.OriginName} → {trip.DestinationName}
+                          </span>
+                        </button>
+                      ))}
+                      {returnTripCandidates.length === 0 && (
+                        <p className="text-center text-sm text-gray-500 p-4">No hay viajes de vuelta disponibles para esta ruta.</p>
                       )}
                     </div>
                   </div>
@@ -651,10 +892,25 @@ export function AddReservationFlow({
                 )}
               </div>
             </div>
-            {/* Total price for round trip (price already includes both legs) */}
+            {/* Total price from quote endpoint */}
             <div className="text-right text-lg font-bold text-blue-600 pt-2 border-t">
-              Total Ida y Vuelta: ${getSelectedDropoffPrice().toLocaleString()}
+              Total Ida y Vuelta:{' '}
+              {quoteLoading
+                ? 'Calculando...'
+                : isQuoteReady
+                  ? `$${(quoteData?.total ?? 0).toLocaleString()}`
+                  : '—'}
             </div>
+            {outboundQuoteItem && returnQuoteItem && (
+              <div className="text-right text-xs text-gray-500">
+                Ida: ${outboundQuoteItem.unitPrice.toLocaleString()} · Vuelta: ${returnQuoteItem.unitPrice.toLocaleString()}
+                {returnQuoteItem.appliedReserveTypeId !== returnQuoteItem.requestedReserveTypeId && (
+                  <span className="ml-2 inline-block rounded bg-yellow-100 px-2 py-0.5 text-yellow-800 font-medium">
+                    Sin descuento combo
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
       </FormDialog>
@@ -668,9 +924,10 @@ export function AddReservationFlow({
         onSubmit={finalizeReservation}
         submitText="Confirmar Reserva"
         isLoading={reserveForm.isSubmitting}
-        disabled={getTotalPaymentAmount() > getTotalReserveAmount()}
+        disabled={getTotalPaymentAmount() > getTotalReserveAmount() || (reservationPayments.length > 0 && (isCheckingCashBox || !hasOpenCashBox))}
       >
         <div className="space-y-6 py-4">
+          <QuoteWarningBanner discountsLost={quoteData?.discountsLost ?? []} />
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
             <h3 className="font-semibold">Resumen de la Reserva</h3>
             <p className="text-sm">
@@ -689,9 +946,20 @@ export function AddReservationFlow({
                 ? dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId))?.label?.split(' - ')[0]
                 : pickupOptions.find((opt: any) => opt.id === String(r.DropoffLocationId))?.label;
 
+              const quoteItem = i === 0 ? outboundQuoteItem : returnQuoteItem;
+              const displayPrice = quoteItem?.unitPrice ?? r.Price ?? 0;
+              const isDegraded = quoteItem && quoteItem.appliedReserveTypeId !== quoteItem.requestedReserveTypeId;
+
               return (
                 <div key={i} className="text-sm pt-2 mt-2 border-t first:border-t-0 first:pt-0 first:mt-0">
-                  <p className="font-medium mb-1">{i === 0 ? 'Viaje de Ida' : 'Viaje de Vuelta'}</p>
+                  <p className="font-medium mb-1">
+                    {i === 0 ? 'Viaje de Ida' : 'Viaje de Vuelta'}
+                    {isDegraded && (
+                      <span className="ml-2 inline-block rounded bg-yellow-100 px-2 py-0.5 text-yellow-800 font-medium text-xs">
+                        Sin descuento combo
+                      </span>
+                    )}
+                  </p>
                   <p>
                     <strong>Ruta:</strong> {trip?.DepartureHour} - {trip?.OriginName} → {trip?.DestinationName}
                   </p>
@@ -702,7 +970,7 @@ export function AddReservationFlow({
                     <strong>Bajada:</strong> {dropoffLabel || 'No especificada'}
                   </p>
                   <p>
-                    <strong>Precio:</strong> ${r.Price?.toLocaleString() || 0}
+                    <strong>Precio:</strong> ${displayPrice.toLocaleString()}
                   </p>
                 </div>
               );
@@ -710,6 +978,16 @@ export function AddReservationFlow({
           </div>
           <div className="rounded-lg border p-4 space-y-4">
             <h3 className="font-semibold">Pagos</h3>
+            {!hasOpenCashBox && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span>No hay caja abierta. Puedes confirmar sin pago (queda pendiente) o abrir caja para cobrar ahora.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={handleOpenCashBox} disabled={isOpeningCashBox}>
+                    {isOpeningCashBox ? 'Abriendo...' : 'Abrir caja'}
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 items-end">
               <FormField label="Método de Pago" className="flex-1">
                 <ApiSelect
@@ -727,7 +1005,7 @@ export function AddReservationFlow({
                   onChange={(e) => setPaymentAmount(e.target.value)}
                 />
               </FormField>
-              <Button size="icon" onClick={handleAddPayment} disabled={getRemainingBalance() <= 0}>
+              <Button size="icon" onClick={handleAddPayment} disabled={getRemainingBalance() <= 0 || isCheckingCashBox || !hasOpenCashBox}>
                 <PlusCircleIcon className="h-4 w-4" />
               </Button>
             </div>

@@ -90,7 +90,7 @@ export function PassengerListTable({
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('paidAmount')}
               >
-                Monto {renderSortIndicator('paidAmount')}
+                Pagado {renderSortIndicator('paidAmount')}
               </button>
             </th>
             <th className="py-3 pl-4 text-right w-[25%]">Acciones</th>
@@ -131,7 +131,7 @@ export function PassengerListTable({
               </td>
               <td className="py-3 pr-4 text-center">
                 {(() => {
-                  const status = passenger.Status ?? passenger.StatusPaymentId;
+                  const status = passenger.StatusPaymentId ?? passenger.Status;
                   const label = PaymentStatusLabels[status] || 'Desconocido';
                   let badgeClass = 'bg-gray-100 text-gray-700';
                   if (status === PaymentStatusEnum.PendingPayment) badgeClass = 'bg-yellow-100 text-yellow-800';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlusCircleIcon, TrashIcon, ChevronDown, ChevronUp } from 'lucide-react';
@@ -22,6 +22,8 @@ import { PaymentStatusLabels } from '@/interfaces/passengerReserve';
 import { Payment } from '@/interfaces/payment';
 import { getCustomerPendingReserves, settleCustomerDebt } from '@/services/customerAccount';
 import { getApiErrorCode } from '@/utils/api-errors';
+import { getCurrentCashBox, openCashBox } from '@/services/cash-box';
+import { DUPLICATE_PAYMENT_METHOD_MESSAGE, hasDuplicatePaymentMethods } from '@/utils/payments';
 
 interface DebtSettlementDialogProps {
   open: boolean;
@@ -41,10 +43,14 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedReserves, setExpandedReserves] = useState<number[]>([]);
+  const [hasOpenCashBox, setHasOpenCashBox] = useState(true);
+  const [isCheckingCashBox, setIsCheckingCashBox] = useState(false);
+  const [isOpeningCashBox, setIsOpeningCashBox] = useState(false);
 
   useEffect(() => {
     if (open && customer) {
       fetchPendingReserves();
+      checkCashBox();
     }
     if (!open) {
       setPendingReserves([]);
@@ -52,6 +58,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
       setPayments([]);
       setPaymentAmount('');
       setExpandedReserves([]);
+      setHasOpenCashBox(true);
     }
   }, [open, customer]);
 
@@ -71,6 +78,37 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
       toast({ title: 'Error', description: 'Error al cargar reservas pendientes.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkCashBox = async () => {
+    setIsCheckingCashBox(true);
+    try {
+      await getCurrentCashBox().call;
+      setHasOpenCashBox(true);
+    } catch {
+      setHasOpenCashBox(false);
+    } finally {
+      setIsCheckingCashBox(false);
+    }
+  };
+
+  const handleOpenCashBox = async () => {
+    setIsOpeningCashBox(true);
+    try {
+      await openCashBox().call;
+      setHasOpenCashBox(true);
+      toast({ title: 'Caja abierta', description: 'La caja fue abierta correctamente.', variant: 'success' });
+    } catch (error) {
+      const code = getApiErrorCode(error);
+      if (code === 'CashBox.AlreadyOpen') {
+        setHasOpenCashBox(true);
+        toast({ title: 'Caja abierta', description: 'Ya existe una caja abierta.', variant: 'success' });
+      } else {
+        toast({ title: 'Error', description: 'No se pudo abrir la caja.', variant: 'destructive' });
+      }
+    } finally {
+      setIsOpeningCashBox(false);
     }
   };
 
@@ -116,10 +154,10 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
     }
 
     const methodId = Number(selectedPaymentMethod);
-    if (payments.some((p) => p.PaymentMethod === methodId)) {
+    if (hasDuplicatePaymentMethods([...payments, { PaymentMethod: methodId, TransactionAmount: amount }])) {
       toast({
         title: 'Método duplicado',
-        description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
+        description: DUPLICATE_PAYMENT_METHOD_MESSAGE,
         variant: 'destructive',
       });
       return;
@@ -146,6 +184,14 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
       toast({ title: 'Sin pagos', description: 'Agrega al menos un pago para continuar.', variant: 'destructive' });
       return;
     }
+    if (!hasOpenCashBox) {
+      toast({ title: 'Caja cerrada', description: 'No hay caja abierta. Abra una caja para continuar.', variant: 'destructive' });
+      return;
+    }
+    if (hasDuplicatePaymentMethods(payments)) {
+      toast({ title: 'Método duplicado', description: DUPLICATE_PAYMENT_METHOD_MESSAGE, variant: 'destructive' });
+      return;
+    }
 
     const totalPayment = getTotalPaymentAmount();
     const totalDebt = getSelectedDebt();
@@ -160,9 +206,18 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
 
     setIsSubmitting(true);
     try {
+      const orderedReserveIds = pendingReserves
+        .filter((r) => selectedReserveIds.includes(r.ReserveId))
+        .sort((a, b) => {
+          const dateDiff = new Date(a.ReserveDate).getTime() - new Date(b.ReserveDate).getTime();
+          if (dateDiff !== 0) return dateDiff;
+          return a.ReserveId - b.ReserveId;
+        })
+        .map((r) => r.ReserveId);
+
       await settleCustomerDebt({
         customerId: customer.CustomerId,
-        reserveIds: selectedReserveIds,
+        reserveIds: orderedReserveIds,
         payments: payments.map((p) => ({ transactionAmount: p.TransactionAmount, paymentMethod: p.PaymentMethod })),
       });
 
@@ -181,7 +236,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
         'Reserve.NoDebtToSettle': 'No hay deuda pendiente para saldar.',
         'Reserve.OverPaymentNotAllowed': 'El monto supera la deuda pendiente.',
         'Payments.InvalidAmount': 'Monto de pago inválido.',
-        'Payments.DuplicatedMethod': 'Método de pago duplicado.',
+        'Payments.DuplicatedMethod': DUPLICATE_PAYMENT_METHOD_MESSAGE,
         'CashBox.NotFound': 'Caja no encontrada. Abra una caja antes de continuar.',
       };
       toast({ title: 'Error', description: msgs[code] || 'Error al saldar la deuda.', variant: 'destructive' });
@@ -210,12 +265,23 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
           <div className="text-center py-10 text-gray-500">Este cliente no tiene reservas con deuda pendiente.</div>
         ) : (
           <div className="space-y-6 py-4">
+            {!hasOpenCashBox && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span>No hay caja abierta. Abra una caja para registrar pagos.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={handleOpenCashBox} disabled={isOpeningCashBox}>
+                    {isOpeningCashBox ? 'Abriendo...' : 'Abrir caja'}
+                  </Button>
+                </div>
+              </div>
+            )}
             {/* Reserves table */}
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <th className="p-3 w-8"></th>
+                    <th className="p-3">Prioridad</th>
                     <th className="p-3">Fecha</th>
                     <th className="p-3">Ruta</th>
                     <th className="p-3">Hora</th>
@@ -227,13 +293,26 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                 </thead>
                 <tbody>
                   {pendingReserves.map((reserve) => (
-                    <>
-                      <tr key={reserve.ReserveId} className="border-b hover:bg-gray-50">
+                    <Fragment key={reserve.ReserveId}>
+                      <tr className="border-b hover:bg-gray-50">
                         <td className="p-3">
                           <Checkbox
                             checked={selectedReserveIds.includes(reserve.ReserveId)}
                             onCheckedChange={() => toggleReserveSelection(reserve.ReserveId)}
                           />
+                        </td>
+                        <td className="p-3 text-xs font-semibold text-blue-700">
+                          {(() => {
+                            const priority = pendingReserves
+                              .filter((r) => selectedReserveIds.includes(r.ReserveId))
+                              .sort((a, b) => {
+                                const dateDiff = new Date(a.ReserveDate).getTime() - new Date(b.ReserveDate).getTime();
+                                if (dateDiff !== 0) return dateDiff;
+                                return a.ReserveId - b.ReserveId;
+                              })
+                              .findIndex((r) => r.ReserveId === reserve.ReserveId);
+                            return priority >= 0 ? `#${priority + 1}` : '—';
+                          })()}
                         </td>
                         <td className="p-3">
                           {format(new Date(reserve.ReserveDate), 'dd/MM/yyyy', { locale: es })}
@@ -258,6 +337,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                       {expandedReserves.includes(reserve.ReserveId) && reserve.Passengers?.map((p) => (
                         <tr key={`${reserve.ReserveId}-${p.PassengerId}`} className="border-b bg-gray-50/50">
                           <td className="p-2"></td>
+                          <td className="p-2"></td>
                           <td className="p-2" colSpan={3}>
                             <span className="text-xs text-gray-500 ml-4">{p.FullName}</span>
                           </td>
@@ -272,7 +352,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                           <td className="p-2" colSpan={2}></td>
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -306,7 +386,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                     onChange={(e) => setPaymentAmount(e.target.value)}
                   />
                 </FormField>
-                <Button size="icon" onClick={handleAddPayment} disabled={getRemainingBalance() <= 0 || selectedReserveIds.length === 0}>
+                <Button size="icon" onClick={handleAddPayment} disabled={getRemainingBalance() <= 0 || selectedReserveIds.length === 0 || isCheckingCashBox || !hasOpenCashBox}>
                   <PlusCircleIcon className="h-4 w-4" />
                 </Button>
               </div>
@@ -352,7 +432,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || payments.length === 0 || selectedReserveIds.length === 0}
+            disabled={isSubmitting || isCheckingCashBox || !hasOpenCashBox || payments.length === 0 || selectedReserveIds.length === 0}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {payments.length > 0 && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}

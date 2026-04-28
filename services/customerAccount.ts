@@ -21,9 +21,27 @@ export const getCustomerAccountSummary = (customerId: number, params?: Partial<P
 }
 
 export const getCustomerPendingReserves = async (customerId: number) => {
-    return getPure<PendingReserve[]>(
+    const response = await getPure<any>(
         `/customer-pending-reserves/${customerId}`
     );
+    const rawItems = response?.value ?? response?.Value ?? response;
+    if (!Array.isArray(rawItems)) return [];
+    return rawItems.map((item: any) => ({
+        ReserveId: item.ReserveId ?? item.reserveId,
+        ReserveDate: item.ReserveDate ?? item.reserveDate,
+        OriginName: item.OriginName ?? item.originName,
+        DestinationName: item.DestinationName ?? item.destinationName,
+        DepartureHour: item.DepartureHour ?? item.departureHour,
+        TotalPrice: item.TotalPrice ?? item.totalPrice ?? 0,
+        TotalPaid: item.TotalPaid ?? item.totalPaid ?? 0,
+        PendingDebt: item.PendingDebt ?? item.pendingDebt ?? 0,
+        Passengers: (item.Passengers ?? item.passengers ?? []).map((p: any) => ({
+            PassengerId: p.PassengerId ?? p.passengerId,
+            FullName: p.FullName ?? p.fullName,
+            Price: p.Price ?? p.price ?? 0,
+            Status: p.Status ?? p.status ?? 0,
+        })),
+    })) as PendingReserve[];
 };
 
 export const settleCustomerDebt = async (request: CustomerDebtSettleRequest) => {
