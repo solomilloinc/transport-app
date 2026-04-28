@@ -1,23 +1,22 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DateCarousel } from '@/components/date-carousel';
 import { format } from 'date-fns';
-import { ArrowRight, Bus, ChevronLeft, Calendar, Info, RefreshCw, Users, MapPin, CreditCard } from 'lucide-react';
+import { ArrowRight, ChevronLeft, Calendar, Info, RefreshCw, Users, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { formatWithTimezone } from '@/utils/dates';
 import { ReserveSummaryItem } from '@/interfaces/reserve';
 import { PagedReserveResponse } from '@/services/types';
-import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter } from '../ui/card';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { useTenant } from '@/contexts/TenantContext';
+import type { LocationSelectionData } from '@/components/checkout/LocationSelector';
+import { ResultsTripRow } from '@/components/results/ResultsTripRow';
 
-// 1. Definimos las props que el componente de cliente recibirá del Server Component.
 interface ResultsClientProps {
   initialReserves: PagedReserveResponse<ReserveSummaryItem>;
   searchParams: {
@@ -45,7 +44,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     setLoading(false);
   }, [initialReserves]);
 
-  // Leer los parámetros de búsqueda desde las props
   const {
     tripId = '',
     originName = 'Origen',
@@ -54,25 +52,71 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     departureDate = format(new Date(), 'yyyy-MM-dd'),
     returnDate = '',
     passengers = '1',
+    pickupDirectionId: pickupDirectionIdParam = '',
   } = searchParams;
 
-  // Formatear fechas para mostrar en la UI
   const formattedDepartureDate = departureDate ? formatWithTimezone(departureDate) : '';
   const formattedReturnDate = returnDate ? formatWithTimezone(returnDate) : '';
 
-  // Estado para la selección de viajes
   const [activeTab, setActiveTab] = useState('outbound');
   const [selectedOutboundTrip, setSelectedOutboundTrip] = useState<ReserveSummaryItem | null>(null);
+  const [outboundLocByReserve, setOutboundLocByReserve] = useState<Record<number, LocationSelectionData>>({});
+  const [returnLocByReserve, setReturnLocByReserve] = useState<Record<number, LocationSelectionData>>({});
+
+  const { setCheckout } = useCheckout();
+
+  const pickupFromUrl = useMemo(() => {
+    const parsed = Number.parseInt(pickupDirectionIdParam, 10);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [pickupDirectionIdParam]);
+
+  useEffect(() => {
+    setSelectedOutboundTrip(null);
+    setActiveTab('outbound');
+    setOutboundLocByReserve({});
+    setReturnLocByReserve({});
+  }, [departureDate, returnDate, tripId, tripType, pickupDirectionIdParam]);
+
+  const isRoundTrip = tripType === 'RoundTrip' && !!returnDate;
+
+  /** Carrusel: en pestaña Vuelta edita la fecha de vuelta elegida en el home, no la de ida. */
+  const carouselSelectedDate = useMemo(() => {
+    if (isRoundTrip && activeTab === 'return' && returnDate) {
+      return returnDate;
+    }
+    return departureDate;
+  }, [isRoundTrip, activeTab, returnDate, departureDate]);
 
   const handleDateSelect = (date: string) => {
     setLoading(true);
     const params = new URLSearchParams(searchParamsHook.toString());
-    params.set('departureDate', date);
+    if (isRoundTrip && activeTab === 'return') {
+      params.set('returnDate', date);
+    } else {
+      params.set('departureDate', date);
+      if (isRoundTrip && returnDate && date > returnDate) {
+        params.set('returnDate', date);
+      }
+    }
     router.push(`/results?${params.toString()}`);
   };
 
+  const handleCheckout = (outboundTrip: ReserveSummaryItem, returnTrip?: ReserveSummaryItem) => {
+    const obLoc = outboundLocByReserve[outboundTrip.ReserveId];
+    const retLoc = returnTrip ? returnLocByReserve[returnTrip.ReserveId] : undefined;
+    setCheckout({
+      outboundTrip,
+      returnTrip: returnTrip || null,
+      passengers: Number.parseInt(passengers, 10) || 1,
+      ...(obLoc ? { outboundLocation: obLoc } : {}),
+      ...(retLoc ? { returnLocation: retLoc } : {}),
+      ...(pickupFromUrl != null && obLoc?.pickupDirectionId == null ? { initialPickupDirectionId: pickupFromUrl } : {}),
+    });
+    router.push('/checkout');
+  };
+
   const handleSelectOutbound = (trip: ReserveSummaryItem) => {
-    if (tripType === 'RoundTrip') {
+    if (isRoundTrip) {
       setSelectedOutboundTrip(trip);
       setActiveTab('return');
     } else {
@@ -88,17 +132,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
     handleCheckout(selectedOutboundTrip, returnTrip);
   };
 
-  const { setCheckout } = useCheckout();
-
-  const handleCheckout = (outboundTrip: ReserveSummaryItem, returnTrip?: ReserveSummaryItem) => {
-    setCheckout({
-      outboundTrip,
-      returnTrip: returnTrip || null,
-      passengers: Number(passengers),
-    });
-    router.push(`/checkout`);
-  };
-
   function formatLocation(location: string): string {
     if (!location) return '';
     return location.charAt(0).toUpperCase() + location.slice(1);
@@ -106,7 +139,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
 
   return (
     <>
-      {/* Resumen de búsqueda y botón de volver */}
       <div className="mb-6 sm:mb-8">
         <Link href="/" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-3 sm:mb-4 text-sm sm:text-base">
           <ChevronLeft className="h-4 w-4 mr-1" />
@@ -114,7 +146,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
         </Link>
         <div className="bg-white rounded-lg border p-3 sm:p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Ruta */}
             <div className="flex items-center justify-center sm:justify-start">
               <h1 className="flex flex-wrap justify-center items-center gap-x-1 text-sm sm:text-xl md:text-2xl font-bold text-blue-800 font-display text-center leading-tight">
                 <span>{formatLocation(originName)}</span>
@@ -123,7 +154,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
               </h1>
             </div>
 
-            {/* Info badges */}
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600">
               <div className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -136,7 +166,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                   {passengers} {Number.parseInt(passengers) === 1 ? 'Pasajero' : 'Pasajeros'}
                 </span>
               </div>
-              {tripType === 'RoundTrip' && returnDate && (
+              {isRoundTrip && (
                 <>
                   <span className="hidden sm:inline">•</span>
                   <div className="flex items-center gap-1">
@@ -150,20 +180,41 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
         </div>
       </div>
 
-      {/* Carrusel de fechas */}
       <div className="mb-6">
-        <DateCarousel selectedDate={departureDate} onDateSelect={handleDateSelect} className="bg-white rounded-lg border shadow-sm p-4" />
+        {isRoundTrip && (
+          <p className="mb-2 text-center text-xs text-slate-600 sm:text-left">
+            {activeTab === 'return' ? (
+              <>
+                Cambiando fechas acá se ajusta la <span className="font-semibold text-blue-800">vuelta</span> (ida:{' '}
+                {formattedDepartureDate}).
+              </>
+            ) : (
+              <>
+                Cambiando fechas acá se ajusta la <span className="font-semibold text-blue-800">ida</span>
+                {returnDate ? (
+                  <>
+                    {' '}
+                    (vuelta: {formattedReturnDate}).
+                  </>
+                ) : null}
+              </>
+            )}
+          </p>
+        )}
+        <DateCarousel
+          selectedDate={carouselSelectedDate}
+          onDateSelect={handleDateSelect}
+          className="bg-white rounded-lg border shadow-sm p-4"
+        />
       </div>
 
-      {/* Resultados de viajes */}
       <div className="mb-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="outbound">Ida</TabsTrigger>
-            {tripType === 'RoundTrip' && returnDate && <TabsTrigger value="return">Vuelta</TabsTrigger>}
+            {isRoundTrip && <TabsTrigger value="return">Vuelta</TabsTrigger>}
           </TabsList>
 
-          {/* Pestaña de Ida */}
           <TabsContent value="outbound" className="mt-0">
             <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
               <div className="p-4 bg-blue-50 border-b">
@@ -186,28 +237,25 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                 </div>
               ) : (
                 <ScrollArea className="h-[600px]">
-                  <div className="divide-y">
+                  <div className="space-y-2 p-2.5 sm:p-3">
                     {reserves.Outbound.Items.map((trip) => (
-                      <div key={trip.ReserveId} className={cn('p-4 hover:bg-gray-50 transition-colors', selectedOutboundTrip?.ReserveId === trip.ReserveId && 'bg-blue-50')}>
-                        <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
-                          <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
-                          <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                          <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                          <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
-                          <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectOutbound(trip)}>Reservar</Button>
-                        </div>
-                        {trip.StopSchedules && trip.StopSchedules.length > 0 && (
-                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                            <MapPin className="h-3 w-3" />
-                            {trip.StopSchedules.map((stop, idx) => (
-                              <span key={stop.DirectionId}>
-                                {stop.DirectionName}: {stop.PickupTime}
-                                {idx < trip.StopSchedules!.length - 1 && ' |'}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <ResultsTripRow
+                        key={trip.ReserveId}
+                        trip={trip}
+                        variant="outbound"
+                        isRoundTrip={isRoundTrip}
+                        passengerCount={Number.parseInt(passengers, 10) || 1}
+                        initialPickupDirectionId={pickupFromUrl}
+                        selectedOutboundTrip={selectedOutboundTrip}
+                        outboundLocationForReturnQuote={undefined}
+                        location={outboundLocByReserve[trip.ReserveId]}
+                        onLocationChange={(data) =>
+                          setOutboundLocByReserve((prev) => ({ ...prev, [trip.ReserveId]: data }))
+                        }
+                        highlight={selectedOutboundTrip?.ReserveId === trip.ReserveId}
+                        onContinue={() => handleSelectOutbound(trip)}
+                        continueLabel="Reservar"
+                      />
                     ))}
                   </div>
                 </ScrollArea>
@@ -215,14 +263,13 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
             </div>
           </TabsContent>
 
-          {/* Pestaña de Vuelta */}
-          {tripType === 'RoundTrip' && returnDate && (
+          {isRoundTrip && (
             <TabsContent value="return" className="mt-0">
               {!selectedOutboundTrip ? (
                 <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px] bg-white rounded-lg border shadow-sm">
                   <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Selecciona un viaje de ida</h3>
-                  <p className="text-gray-600">Primero debes seleccionar un viaje de ida para poder elegir tu vuelta.</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Seleccioná un viaje de ida</h3>
+                  <p className="text-gray-600">Primero elegí un horario de ida (botón Reservar) para poder elegir tu vuelta.</p>
                 </div>
               ) : (
                 <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
@@ -240,28 +287,28 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                     </div>
                   ) : (
                     <ScrollArea className="h-[600px]">
-                      <div className="divide-y">
+                      <div className="space-y-2 p-2.5 sm:p-3">
                         {reserves.Return.Items.map((trip) => (
-                          <div key={trip.ReserveId} className="p-4 hover:bg-gray-50 transition-colors">
-                            <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
-                              <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
-                              <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                              <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                              <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
-                              <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectReturn(trip)}>Seleccionar Vuelta</Button>
-                            </div>
-                            {trip.StopSchedules && trip.StopSchedules.length > 0 && (
-                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                                <MapPin className="h-3 w-3" />
-                                {trip.StopSchedules.map((stop, idx) => (
-                                  <span key={stop.DirectionId}>
-                                    {stop.DirectionName}: {stop.PickupTime}
-                                    {idx < trip.StopSchedules!.length - 1 && ' |'}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          <ResultsTripRow
+                            key={trip.ReserveId}
+                            trip={trip}
+                            variant="return"
+                            isRoundTrip={isRoundTrip}
+                            passengerCount={Number.parseInt(passengers, 10) || 1}
+                            initialPickupDirectionId={pickupFromUrl}
+                            selectedOutboundTrip={selectedOutboundTrip}
+                            outboundLocationForReturnQuote={
+                              selectedOutboundTrip
+                                ? outboundLocByReserve[selectedOutboundTrip.ReserveId]
+                                : undefined
+                            }
+                            location={returnLocByReserve[trip.ReserveId]}
+                            onLocationChange={(data) =>
+                              setReturnLocByReserve((prev) => ({ ...prev, [trip.ReserveId]: data }))
+                            }
+                            onContinue={() => handleSelectReturn(trip)}
+                            continueLabel="Seleccionar Vuelta"
+                          />
                         ))}
                       </div>
                     </ScrollArea>
@@ -273,7 +320,6 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
         </Tabs>
       </div>
 
-      {/* Información de la reserva */}
       <Card className="mb-8">
         <CardContent className="p-6">
           <h2 className="text-xl font-bold text-blue-800 font-display mb-4">
@@ -304,8 +350,8 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
         </CardContent>
         <CardFooter className="bg-gray-50 px-6 py-4 border-t">
           <div className="text-sm text-gray-600">
-            ¿Necesitas ayuda? Llámanos al{" "}
-            <span className="font-medium">{contact.phone}</span> o envíanos un correo electrónico a{" "}
+            ¿Necesitas ayuda? Llámanos al{' '}
+            <span className="font-medium">{contact.phone}</span> o envíanos un correo electrónico a{' '}
             <span className="font-medium">{contact.bookingsEmail}</span>
           </div>
         </CardFooter>

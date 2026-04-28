@@ -27,9 +27,17 @@ export const formatWithTimezone = (
 };
 */
 
+/**
+ * Formatea fechas para UI. `yyyy-MM-dd` no debe parsearse con `new Date(str)` (UTC medianoche →
+ * puede mostrarse el día anterior en America/Argentina/Buenos_Aires).
+ */
 export function formatWithTimezone(dateIso?: string, tz = 'America/Argentina/Buenos_Aires') {
   if (!dateIso) return '';
-  const d = new Date(dateIso);
+  const trimmed = dateIso.trim();
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+    ? parseISO(trimmed)
+    : parseISO(trimmed.includes('T') ? trimmed : `${trimmed}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '';
   return new Intl.DateTimeFormat('es-AR', {
     dateStyle: 'medium',
     timeStyle: undefined,

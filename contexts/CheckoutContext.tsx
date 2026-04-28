@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { ReserveSummaryItem } from '@/interfaces/reserve';
+import type { LocationSelectionData } from '@/components/checkout/LocationSelector';
 
 export interface LockState {
   lockToken: string;
@@ -14,6 +15,11 @@ export interface CheckoutState {
   returnTrip?: ReserveSummaryItem | null;
   passengers: number;
   lockState?: LockState | null;
+  /** Filled on /results before /checkout so the wizard does not ask again */
+  outboundLocation?: LocationSelectionData | null;
+  returnLocation?: LocationSelectionData | null;
+  /** Pickup direction from search URL when /results does not pass full location objects */
+  initialPickupDirectionId?: number | null;
 }
 
 interface CheckoutContextProps {
