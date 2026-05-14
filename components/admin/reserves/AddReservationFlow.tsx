@@ -12,7 +12,6 @@ import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { NewClientDialog } from '@/components/admin/reserves/NewClientDialog';
@@ -20,14 +19,18 @@ import { NewClientDialog } from '@/components/admin/reserves/NewClientDialog';
 import { post } from '@/services/api';
 import { ReserveReport } from '@/interfaces/reserve';
 import { Passenger } from '@/interfaces/passengers';
-import { emptyPassengerCreate, PassengerReserveCreate } from '@/interfaces/passengerReserve';
 import { Payment } from '@/interfaces/payment';
-import { getApiErrorCode } from '@/utils/api-errors';
+import { RESERVE_ERROR, getApiErrorCode, withPriceRetry } from '@/utils/api-errors';
 import { Trip } from '@/interfaces/trip';
+import { RESERVE_TYPE } from '@/constants/reserveType';
+import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
+import { buildAdminReservePayloadWithPayments } from '@/utils/bookingPayload';
+import type { PassengerBooking } from '@/interfaces/passengerReserve';
 
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useApi } from '@/hooks/use-api';
 import { useToast } from '@/hooks/use-toast';
+import { useTenant } from '@/contexts/TenantContext';
 
 import { getPassengers } from '@/services/passenger';
 import { getReserves } from '@/services/reserves';
@@ -41,6 +44,25 @@ enum FlowStep {
   CONFIRM_PAYMENT,
 }
 
+interface ReserveFormState {
+  reserveTypeId: 1 | 2;
+  pickupLocationId: number;
+  dropoffLocationId: number;
+  isPayment: boolean;
+  paymentMethod: number;
+  statusPaymentId: number;
+  price: number;
+}
+
+const emptyReserveForm: ReserveFormState = {
+  reserveTypeId: RESERVE_TYPE.IDA,
+  pickupLocationId: 0,
+  dropoffLocationId: 0,
+  isPayment: true,
+  paymentMethod: 1,
+  statusPaymentId: 1,
+  price: 0,
+};
 
 interface AddReservationFlowProps {
   open: boolean;
@@ -58,123 +80,114 @@ export function AddReservationFlow({
   onOpenChange,
   onSuccess,
   initialTrip,
-  directions,
   paymentMethods,
-  isLoadingOptions,
-  optionsError,
 }: AddReservationFlowProps) {
   const { toast } = useToast();
+  const { businessRules } = useTenant();
   const [step, setStep] = useState<FlowStep | null>(null);
 
-  // Form and data state
-  const reserveForm = useFormValidation(emptyPassengerCreate, reserveValidationSchema);
+  const reserveForm = useFormValidation<ReserveFormState>(emptyReserveForm, reserveValidationSchema);
   const [passengerSearchQuery, setPassengerSearchQuery] = useState('');
   const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
 
-  // Round-trip state
   const [month, setMonth] = useState<Date>(new Date());
   const [returnDate, setReturnDate] = useState<Date | undefined>(undefined);
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
 
-  // Data aggregation state
-  const [passengerReserves, setPassengerReserves] = useState<PassengerReserveCreate[]>([]);
+  // Holds the passenger leg(s) ready to send. Built from form state on submit.
+  const [bookingPassengers, setBookingPassengers] = useState<PassengerBooking[]>([]);
   const [reservationPayments, setReservationPayments] = useState<Payment[]>([]);
 
-  // Trip data state - enriched with pickup/dropoff options from API
   const [tripData, setTripData] = useState<Trip | null>(null);
   const [isTripLoading, setIsTripLoading] = useState(false);
-
-  // Selected dropoff city (to show directions if available)
   const [selectedDropoffCityId, setSelectedDropoffCityId] = useState<number | null>(null);
 
-  // Pickup options from Trip API (ready to use)
+  const isRoundTrip = reserveForm.data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP;
+
+  // Decides which dropoff price table to display, accounting for the tenant's
+  // same-day rule. Until a return trip is picked, we treat the booking as
+  // not-yet-IdaVuelta and fall back to Ida pricing so the user doesn't see a
+  // discount that the server will later reject.
+  const useIdaVueltaTariff = shouldUseIdaVueltaTariff({
+    isRoundTrip,
+    outboundDate: initialTrip?.reserveDate ?? null,
+    returnDate: returnTrip?.reserveDate ?? null,
+    roundTripRequiresSameDay: businessRules.roundTripRequiresSameDay,
+  });
+
   const pickupOptions = useMemo(() => {
-    const options = tripData?.PickupOptions || (tripData as any)?.pickupOptions || [];
+    const options = tripData?.pickupOptions || [];
     return options
-      .filter((opt: any) => opt && (opt.directionId != null || opt.DirectionId != null))
-      .map((opt: any) => ({
-        id: String(opt.directionId || opt.DirectionId),
-        value: String(opt.directionId || opt.DirectionId),
-        label: opt.displayName || opt.DisplayName || 'Sin nombre'
+      .filter((opt) => opt && opt.directionId != null)
+      .map((opt) => ({
+        id: String(opt.directionId),
+        value: String(opt.directionId),
+        label: opt.displayName || 'Sin nombre',
       }));
   }, [tripData]);
 
-  // Dropoff CITY options based on reserve type
-  // Ida = DropoffOptionsIda, IdaVuelta = DropoffOptionsIdaVuelta
   const dropoffCityOptions = useMemo(() => {
-    const isRoundTrip = reserveForm.data.ReserveTypeId === 2;
-    const options = isRoundTrip
-      ? (tripData?.DropoffOptionsIdaVuelta || (tripData as any)?.dropoffOptionsIdaVuelta || [])
-      : (tripData?.DropoffOptionsIda || (tripData as any)?.dropoffOptionsIda || []);
+    const options = useIdaVueltaTariff
+      ? tripData?.dropoffOptionsIdaVuelta || []
+      : tripData?.dropoffOptionsIda || [];
     return options
-      .filter((opt: any) => opt && (opt.cityId != null || opt.CityId != null))
-      .map((opt: any) => ({
-        id: String(opt.cityId || opt.CityId),
-        value: String(opt.cityId || opt.CityId),
-        label: `${opt.cityName || opt.CityName || 'Sin nombre'} - $${(opt.price ?? opt.Price ?? 0).toLocaleString()}`,
-        price: opt.price ?? opt.Price ?? 0,
-        isMainDestination: opt.isMainDestination ?? opt.IsMainDestination,
-        directions: opt.directions || opt.Directions || []
+      .filter((opt) => opt && opt.cityId != null)
+      .map((opt) => ({
+        id: String(opt.cityId),
+        value: String(opt.cityId),
+        label: `${opt.cityName || 'Sin nombre'} - $${(opt.price ?? 0).toLocaleString()}`,
+        price: opt.price ?? 0,
+        isMainDestination: opt.isMainDestination,
+        directions: opt.directions || [],
       }));
-  }, [tripData, reserveForm.data.ReserveTypeId]);
+  }, [tripData, useIdaVueltaTariff]);
 
-  // Get directions for selected dropoff city
   const dropoffDirectionOptions = useMemo(() => {
     if (!selectedDropoffCityId) return [];
-
-    // First: try nested directions from the selected DropoffCityOption
-    const city = dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId));
+    const city = dropoffCityOptions.find((opt) => opt.id === String(selectedDropoffCityId));
     if (city?.directions?.length) {
       return city.directions
-        .filter((dir: any) => dir && (dir.directionId != null || dir.DirectionId != null))
-        .map((dir: any) => ({
-          id: String(dir.directionId || dir.DirectionId),
-          value: String(dir.directionId || dir.DirectionId),
-          label: dir.displayName || dir.DisplayName || 'Sin nombre'
+        .filter((dir) => dir && dir.directionId != null)
+        .map((dir) => ({
+          id: String(dir.directionId),
+          value: String(dir.directionId),
+          label: dir.displayName || 'Sin nombre',
         }));
     }
-
-    // Fallback: get directions from tripData.RelevantCities
-    if (tripData?.RelevantCities) {
-      const relevantCity = tripData.RelevantCities.find(
-        (c) => c.CityId?.toString() === String(selectedDropoffCityId)
+    if (tripData?.relevantCities) {
+      const relevantCity = tripData.relevantCities.find(
+        (c) => c.cityId?.toString() === String(selectedDropoffCityId),
       );
-      if (relevantCity?.Directions?.length) {
-        return relevantCity.Directions.map((dir) => ({
-          id: String(dir.DirectionId),
-          value: String(dir.DirectionId),
-          label: dir.Name || 'Sin nombre'
+      if (relevantCity?.directions?.length) {
+        return relevantCity.directions.map((dir) => ({
+          id: String(dir.directionId),
+          value: String(dir.directionId),
+          label: dir.name || 'Sin nombre',
         }));
       }
     }
-
     return [];
   }, [selectedDropoffCityId, dropoffCityOptions, tripData]);
 
-  // Auto-select first dropoff direction when options are available and none is selected
   useEffect(() => {
-    if (dropoffDirectionOptions.length > 0 && !reserveForm.data.DropoffLocationId) {
-      reserveForm.setField('DropoffLocationId', Number(dropoffDirectionOptions[0].id));
+    if (dropoffDirectionOptions.length > 0 && !reserveForm.data.dropoffLocationId) {
+      reserveForm.setField('dropoffLocationId', Number(dropoffDirectionOptions[0].id));
     }
   }, [dropoffDirectionOptions]);
 
-  // Get price for selected dropoff city
-  const getSelectedDropoffPrice = () => {
+  const getSelectedDropoffPrice = (): number => {
     if (!selectedDropoffCityId) {
-      // Return main destination price if nothing selected
-      const mainDest = dropoffCityOptions.find((opt: any) => opt.isMainDestination);
+      const mainDest = dropoffCityOptions.find((opt) => opt.isMainDestination);
       return mainDest?.price || 0;
     }
-    const selected = dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId));
+    const selected = dropoffCityOptions.find((opt) => opt.id === String(selectedDropoffCityId));
     return selected?.price || 0;
   };
 
-  // Payment form state
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
 
-  // API Hooks
   const {
     data: dataPassenger,
     fetch: fetchPassenger,
@@ -182,24 +195,31 @@ export function AddReservationFlow({
   } = useApi<Passenger, PaginationParams>(getPassengers, { autoFetch: false });
   const { data: dataReturnReserves, fetch: fetchReturnReserves } = useApi<ReserveReport, string>(getReserves, { autoFetch: false });
 
-  // Effect to fetch trip details when dialog opens
+  const refetchTrip = async () => {
+    if (!initialTrip?.tripId) return;
+    setIsTripLoading(true);
+    try {
+      const data = await getTripById(initialTrip.tripId, initialTrip.reserveId);
+      setTripData(data);
+    } catch (error) {
+      console.error('[AddReservationFlow] Error refetching trip:', error);
+    } finally {
+      setIsTripLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchTripDetails = async () => {
-      if (!initialTrip?.TripId) return;
-
-      console.log('[AddReservationFlow] Fetching trip details for TripId:', initialTrip.TripId, 'ReserveId:', initialTrip.ReserveId);
+      if (!initialTrip?.tripId) return;
       setIsTripLoading(true);
       try {
-        const data = await getTripById(initialTrip.TripId, initialTrip.ReserveId);
-        console.log('[AddReservationFlow] Trip data received:', data);
+        const data = await getTripById(initialTrip.tripId, initialTrip.reserveId);
         setTripData(data);
 
-        // Auto-select main destination price
-        const dropoffIda = data?.DropoffOptionsIda || [];
-        const mainDest = dropoffIda.find((opt: any) => opt.IsMainDestination);
+        const dropoffIda = data?.dropoffOptionsIda || [];
+        const mainDest = dropoffIda.find((opt) => opt.isMainDestination);
         if (mainDest) {
-          reserveForm.setField('DropoffLocationId', mainDest.TripPriceId);
-          reserveForm.setField('Price', mainDest.Price);
+          reserveForm.setField('price', mainDest.price);
         }
       } catch (error) {
         console.error('[AddReservationFlow] Error fetching trip details:', error);
@@ -212,9 +232,8 @@ export function AddReservationFlow({
     if (open && initialTrip) {
       fetchTripDetails();
     }
-  }, [open, initialTrip?.TripId]);
+  }, [open, initialTrip?.tripId]);
 
-  // Effect to start the flow
   useEffect(() => {
     if (open && initialTrip) {
       setStep(FlowStep.SELECT_PASSENGER);
@@ -223,7 +242,6 @@ export function AddReservationFlow({
     }
   }, [open, initialTrip]);
 
-  // Effect to handle passenger search debounce
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (passengerSearchQuery.length >= 3) {
@@ -233,14 +251,12 @@ export function AddReservationFlow({
     return () => clearTimeout(delayDebounce);
   }, [passengerSearchQuery]);
 
-  // Effect to fetch return trips when return date changes
   useEffect(() => {
     if (returnDate) {
       fetchReturnReserves(format(returnDate, 'yyyyMMdd'));
     }
   }, [returnDate]);
 
-  // Effect to preload paymentAmount when entering CONFIRM_PAYMENT step
   useEffect(() => {
     if (step === FlowStep.CONFIRM_PAYMENT && !paymentAmount && reservationPayments.length === 0) {
       setPaymentAmount(getRemainingBalance().toString());
@@ -254,7 +270,7 @@ export function AddReservationFlow({
     setSelectedPassenger(null);
     setReturnDate(undefined);
     setReturnTrip(null);
-    setPassengerReserves([]);
+    setBookingPassengers([]);
     setReservationPayments([]);
     setTripData(null);
     setSelectedDropoffCityId(null);
@@ -276,79 +292,56 @@ export function AddReservationFlow({
 
   const handleSubmitDetails = () => {
     reserveForm.handleSubmit(async (data) => {
-      // Validate pickup location
-      if (!data.PickupLocationId || data.PickupLocationId === 0) {
+      if (!data.pickupLocationId || data.pickupLocationId === 0) {
         toast({ title: 'Error', description: 'Por favor, selecciona una dirección de subida.', variant: 'destructive' });
         return;
       }
-
-      // Validate dropoff city is selected
       if (!selectedDropoffCityId) {
         toast({ title: 'Error', description: 'Por favor, selecciona una ciudad de bajada.', variant: 'destructive' });
         return;
       }
-
-      // Validate return trip if IdaVuelta
-      if (data.ReserveTypeId === 2 && !returnTrip) {
+      if (data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP && !returnTrip) {
         toast({ title: 'Error', description: 'Por favor, selecciona un viaje de vuelta.', variant: 'destructive' });
         return;
       }
 
-      // Use direction if selected, otherwise use city ID as fallback
-      const dropoffLocationId = data.DropoffLocationId || selectedDropoffCityId;
+      const dropoffLocationId = data.dropoffLocationId || selectedDropoffCityId;
+      const legPrice = getSelectedDropoffPrice();
 
-      // Get the outbound ReserveId from initialTrip
-      const outboundReserveId = initialTrip!.ReserveId;
-
-      const reserveData: PassengerReserveCreate = {
-        ...data,
-        ReserveId: outboundReserveId,
-        CustomerId: selectedPassenger!.CustomerId,
-        DropoffLocationId: dropoffLocationId,
-        Price: getSelectedDropoffPrice(),
+      const outboundLeg = {
+        pickupLocationId: data.pickupLocationId,
+        dropoffLocationId,
+        price: legPrice,
       };
 
-      console.log('[handleSubmitDetails] Outbound ReserveId:', outboundReserveId);
-      console.log('[handleSubmitDetails] Reserve data:', reserveData);
+      const passenger: PassengerBooking = {
+        customerId: selectedPassenger!.customerId,
+        isPayment: data.isPayment,
+        hasTraveled: false,
+        outbound: outboundLeg,
+        return:
+          data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP
+            ? {
+                // Return leg swaps the outbound endpoints: pickup ← dropoff, dropoff ← pickup.
+                pickupLocationId: dropoffLocationId,
+                dropoffLocationId: data.pickupLocationId,
+                price: legPrice,
+              }
+            : null,
+      };
 
-      if (data.ReserveTypeId === 2) {
-        // Round trip - create both reserves
-
-        // Get the return ReserveId from returnTrip
-        const returnReserveId = returnTrip!.ReserveId;
-
-        console.log('[handleSubmitDetails] Return ReserveId:', returnReserveId);
-
-        if (outboundReserveId === returnReserveId) {
-          console.warn('[handleSubmitDetails] Outbound and Return ReserveId are the same - blocking submission');
+      if (data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP) {
+        if (initialTrip!.reserveId === returnTrip!.reserveId) {
           toast({
             title: 'Error',
-            description: 'El viaje de ida y vuelta no pueden ser el mismo. Por favor selecciona un viaje de vuelta diferente.',
-            variant: 'destructive'
+            description: 'El viaje de ida y vuelta no pueden ser el mismo.',
+            variant: 'destructive',
           });
           return;
         }
-
-        // Both items use the same price (IdaVuelta price from selected dropoff city)
-        const idaVueltaPrice = getSelectedDropoffPrice();
-
-        const returnReserveData: PassengerReserveCreate = {
-          ...data,
-          ReserveId: returnReserveId,
-          CustomerId: selectedPassenger!.CustomerId,
-          PickupLocationId: dropoffLocationId, // Pickup en vuelta = dropoff de ida
-          DropoffLocationId: data.PickupLocationId, // Dropoff en vuelta = pickup de ida
-          Price: idaVueltaPrice, // Same price as outbound
-        };
-
-        console.log('[handleSubmitDetails] Return reserve data:', returnReserveData);
-        setPassengerReserves([reserveData, returnReserveData]);
-      } else {
-        // One way
-        setPassengerReserves([reserveData]);
       }
 
-      // Go directly to payment
+      setBookingPassengers([passenger]);
       setStep(FlowStep.CONFIRM_PAYMENT);
     });
   };
@@ -368,7 +361,7 @@ export function AddReservationFlow({
       }
 
       const methodId = Number(selectedPaymentMethod);
-      if (reservationPayments.some((p) => p.PaymentMethod === methodId)) {
+      if (reservationPayments.some((p) => p.paymentMethod === methodId)) {
         toast({
           title: 'Método duplicado',
           description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
@@ -377,8 +370,7 @@ export function AddReservationFlow({
         return;
       }
 
-      const newPayment = { PaymentMethod: methodId, TransactionAmount: amount };
-      setReservationPayments((prev) => [...prev, newPayment]);
+      setReservationPayments((prev) => [...prev, { paymentMethod: methodId, transactionAmount: amount }]);
       setSelectedPaymentMethod('1');
       setPaymentAmount('');
     }
@@ -388,20 +380,20 @@ export function AddReservationFlow({
     setReservationPayments((payments) => payments.filter((_, i) => i !== index));
   };
 
-  const getTotalPaymentAmount = () => {
-    return reservationPayments.reduce((total, payment) => total + payment.TransactionAmount, 0);
-  };
+  const getTotalPaymentAmount = () =>
+    reservationPayments.reduce((total, payment) => total + payment.transactionAmount, 0);
 
-  const getTotalReserveAmount = () => {
-    // Para IdaVuelta, el precio ya incluye ambos viajes (no sumar)
-    // Solo tomar el precio del primer item
-    if (passengerReserves.length === 0) return 0;
-    return passengerReserves[0].Price;
-  };
+  // Total of all legs of all passengers. With the new wire shape the discount
+  // (when active) is already baked into each leg's `price`, so a straight sum
+  // matches what the server expects.
+  const getTotalReserveAmount = () =>
+    bookingPassengers.reduce(
+      (total, p) => total + p.outbound.price + (p.return?.price ?? 0),
+      0,
+    );
 
-  const getRemainingBalance = () => {
-    return Math.max(0, getTotalReserveAmount() - getTotalPaymentAmount());
-  };
+  const getRemainingBalance = () =>
+    Math.max(0, getTotalReserveAmount() - getTotalPaymentAmount());
 
   const finalizeReservation = async () => {
     reserveForm.setIsSubmitting(true);
@@ -423,10 +415,29 @@ export function AddReservationFlow({
       }
       paymentsToSend = reservationPayments;
     }
-    // payments vacio = PendingPayment en backend
+
+    const outboundReserveId = initialTrip!.reserveId;
+    const returnReserveId =
+      reserveForm.data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP
+        ? returnTrip?.reserveId ?? null
+        : null;
 
     try {
-      const response = await post('/passenger-reserves-create', { items: passengerReserves, payments: paymentsToSend });
+      const response = await withPriceRetry(
+        (payload) => post('/passenger-reserves-create', payload),
+        () =>
+          buildAdminReservePayloadWithPayments({
+            reserveTypeId: reserveForm.data.reserveTypeId,
+            outboundReserveId,
+            returnReserveId,
+            passengers: bookingPassengers,
+            payments: paymentsToSend.map((p) => ({
+              transactionAmount: p.transactionAmount,
+              paymentMethod: p.paymentMethod,
+            })),
+          }),
+        refetchTrip,
+      );
       if (response) {
         toast({ title: 'Reserva creada', description: 'La reserva ha sido creada exitosamente.', variant: 'success' });
         onSuccess();
@@ -436,10 +447,13 @@ export function AddReservationFlow({
       }
     } catch (error) {
       const code = getApiErrorCode(error);
-      const msgs: Record<string, string> = {
-        'Reserve.OverPaymentNotAllowed': 'El monto pagado supera el total de la reserva.',
-      };
-      toast({ title: 'Error', description: msgs[code] || 'Ocurrió un error al crear la reserva.', variant: 'destructive' });
+      const description =
+        code === RESERVE_ERROR.OVERPAYMENT_NOT_ALLOWED
+          ? 'El monto pagado supera el total de la reserva.'
+          : code === RESERVE_ERROR.PRICE_NOT_AVAILABLE
+          ? 'El precio cambió mientras armabas la reserva. Volvé al paso anterior y revisá los importes.'
+          : 'Ocurrió un error al crear la reserva.';
+      toast({ title: 'Error', description, variant: 'destructive' });
     } finally {
       reserveForm.setIsSubmitting(false);
     }
@@ -459,17 +473,17 @@ export function AddReservationFlow({
           <div className="space-y-4 py-4">
             <Input placeholder="Buscar por nombre o DNI..." value={passengerSearchQuery} onChange={(e) => setPassengerSearchQuery(e.target.value)} />
             <div className="max-h-60 overflow-y-auto border rounded-md">
-              {dataPassenger?.Items?.map((p) => (
+              {dataPassenger?.items?.map((p) => (
                 <div
-                  key={p.CustomerId}
+                  key={p.customerId}
                   className="flex items-center justify-between p-2 hover:bg-blue-50 cursor-pointer"
                   onClick={() => handleSelectPassenger(p)}
                 >
                   <div>
                     <span className="font-medium">
-                      {p.FirstName} {p.LastName}
+                      {p.firstName} {p.lastName}
                     </span>
-                    <span className="text-xs text-gray-500 ml-2">DNI: {p.DocumentNumber}</span>
+                    <span className="text-xs text-gray-500 ml-2">DNI: {p.documentNumber}</span>
                   </div>
                   <Button variant="ghost" size="sm">
                     Seleccionar
@@ -482,11 +496,7 @@ export function AddReservationFlow({
             <Button variant="outline" onClick={resetFlow}>
               Cancelar
             </Button>
-            <Button
-              onClick={() => {
-                setIsNewClientModalOpen(true);
-              }}
-            >
+            <Button onClick={() => setIsNewClientModalOpen(true)}>
               <PlusCircleIcon className="mr-2 h-4 w-4" />
               Nuevo Cliente
             </Button>
@@ -494,7 +504,6 @@ export function AddReservationFlow({
         </DialogContent>
       </Dialog>
 
-      {/* New Client Dialog (part of Step 1) */}
       <NewClientDialog open={isNewClientModalOpen} onOpenChange={setIsNewClientModalOpen} onSuccess={handleNewClientSuccess} />
 
       {/* Step 2: Add Details */}
@@ -502,16 +511,16 @@ export function AddReservationFlow({
         open={step === FlowStep.ADD_DETAILS}
         onOpenChange={(isOpen) => !isOpen && resetFlow()}
         title="Añadir Pasajero al Viaje"
-        description={`Añadiendo a ${selectedPassenger?.FirstName} ${selectedPassenger?.LastName}`}
+        description={`Añadiendo a ${selectedPassenger?.firstName} ${selectedPassenger?.lastName}`}
         onSubmit={handleSubmitDetails}
         submitText="Siguiente"
         isLoading={reserveForm.isSubmitting}
-        className={reserveForm.data.ReserveTypeId === 2 ? "sm:max-w-3xl" : ""}
+        className={reserveForm.data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP ? 'sm:max-w-3xl' : ''}
       >
-        <FormField label="Dirección de subida" required error={reserveForm.errors.PickupLocationId}>
+        <FormField label="Dirección de subida" required error={reserveForm.errors.pickupLocationId}>
           <ApiSelect
-            value={String(reserveForm.data.PickupLocationId || '')}
-            onValueChange={(v) => reserveForm.setField('PickupLocationId', Number(v))}
+            value={String(reserveForm.data.pickupLocationId || '')}
+            onValueChange={(v) => reserveForm.setField('pickupLocationId', Number(v))}
             placeholder="Seleccionar..."
             options={pickupOptions}
             loading={isTripLoading}
@@ -525,12 +534,10 @@ export function AddReservationFlow({
             onValueChange={(v) => {
               const cityId = Number(v);
               setSelectedDropoffCityId(cityId);
-              // Reset direction when city changes
-              reserveForm.setField('DropoffLocationId', 0);
-              // Update price from selected city
-              const selected = dropoffCityOptions.find((opt: any) => opt.id === v);
+              reserveForm.setField('dropoffLocationId', 0);
+              const selected = dropoffCityOptions.find((opt) => opt.id === v);
               if (selected) {
-                reserveForm.setField('Price', selected.price);
+                reserveForm.setField('price', selected.price);
               }
             }}
             placeholder="Seleccionar ciudad..."
@@ -543,16 +550,15 @@ export function AddReservationFlow({
         {dropoffDirectionOptions.length > 0 && (
           <FormField label="Parada específica (opcional)">
             <ApiSelect
-              value={String(reserveForm.data.DropoffLocationId || '')}
-              onValueChange={(v) => reserveForm.setField('DropoffLocationId', Number(v))}
+              value={String(reserveForm.data.dropoffLocationId || '')}
+              onValueChange={(v) => reserveForm.setField('dropoffLocationId', Number(v))}
               placeholder="Seleccionar parada..."
               options={dropoffDirectionOptions}
             />
           </FormField>
         )}
 
-        {/* Helper to show current price - only show for Ida (one-way) */}
-        {reserveForm.data.ReserveTypeId === 1 && (
+        {reserveForm.data.reserveTypeId === RESERVE_TYPE.IDA && (
           <div className="text-right text-sm font-medium text-blue-600">
             Precio: ${getSelectedDropoffPrice().toLocaleString()}
           </div>
@@ -561,28 +567,19 @@ export function AddReservationFlow({
         <FormField label="Ida y Vuelta">
           <Checkbox
             id="round-trip"
-            checked={reserveForm.data.ReserveTypeId === 2}
+            checked={reserveForm.data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP}
             onCheckedChange={(c) => {
-              const newType = c ? 2 : 1;
-              reserveForm.setField('ReserveTypeId', newType);
-              // Reset dropoff selections when type changes
+              const newType = c ? RESERVE_TYPE.ROUND_TRIP : RESERVE_TYPE.IDA;
+              reserveForm.setField('reserveTypeId', newType);
               setSelectedDropoffCityId(null);
-              reserveForm.setField('DropoffLocationId', 0);
-              // Reset return trip selection
+              reserveForm.setField('dropoffLocationId', 0);
               setReturnTrip(null);
               setReturnDate(undefined);
 
-              // Auto-select city if IdaVuelta has only one option
-              if (newType === 2) {
-                const idaVueltaOptions = tripData?.DropoffOptionsIdaVuelta || (tripData as any)?.dropoffOptionsIdaVuelta || [];
-                if (idaVueltaOptions.length === 1) {
-                  const opt = idaVueltaOptions[0];
-                  const cityId = opt.cityId || opt.CityId;
-                  setSelectedDropoffCityId(cityId);
-                  reserveForm.setField('Price', opt.price ?? opt.Price ?? 0);
-                }
-                // Set initial return date to trip date
-                const tripDate = new Date(initialTrip!.ReserveDate);
+              if (newType === RESERVE_TYPE.ROUND_TRIP) {
+                // Same-day discount needs both dates; pre-fill the return-date
+                // picker with the outbound date so the discounted table shows.
+                const tripDate = new Date(initialTrip!.reserveDate);
                 setReturnDate(tripDate);
                 setMonth(tripDate);
               }
@@ -593,8 +590,7 @@ export function AddReservationFlow({
           </Label>
         </FormField>
 
-        {/* Return trip selection - shown when IdaVuelta is checked */}
-        {reserveForm.data.ReserveTypeId === 2 && (
+        {reserveForm.data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP && (
           <div className="mt-4 pt-4 border-t space-y-4">
             <h4 className="font-medium text-blue-600">Viaje de Vuelta</h4>
             <div className="grid md:grid-cols-2 gap-4">
@@ -618,25 +614,25 @@ export function AddReservationFlow({
                       Viajes para {format(returnDate, "d 'de' MMMM", { locale: es })}
                     </Label>
                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
-                      {dataReturnReserves?.Items
-                        ?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId)
+                      {dataReturnReserves?.items
+                        ?.filter((trip) => trip.reserveId !== initialTrip?.reserveId)
                         .map((trip) => (
                           <button
-                            key={trip.ReserveId}
+                            key={trip.reserveId}
                             type="button"
-                            className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.ReserveId === trip.ReserveId
+                            className={`flex w-full items-center justify-between rounded-md border p-2 text-left text-sm ${returnTrip?.reserveId === trip.reserveId
                               ? 'border-blue-500 bg-blue-50'
                               : 'hover:bg-gray-50'
                               }`}
                             onClick={() => setReturnTrip(trip)}
                           >
-                            <span className="font-medium">{trip.DepartureHour}</span>
+                            <span className="font-medium">{trip.departureHour}</span>
                             <span className="text-gray-600">
-                              {trip.OriginName} → {trip.DestinationName}
+                              {trip.originName} → {trip.destinationName}
                             </span>
                           </button>
                         ))}
-                      {dataReturnReserves?.Items?.filter((trip) => trip.ReserveId !== initialTrip?.ReserveId).length === 0 && (
+                      {dataReturnReserves?.items?.filter((trip) => trip.reserveId !== initialTrip?.reserveId).length === 0 && (
                         <p className="text-center text-sm text-gray-500 p-4">No hay viajes disponibles.</p>
                       )}
                     </div>
@@ -645,15 +641,15 @@ export function AddReservationFlow({
                 {returnTrip && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-md">
                     <p className="text-sm font-medium text-green-800">
-                      Vuelta seleccionada: {returnTrip.DepartureHour} - {returnTrip.OriginName} → {returnTrip.DestinationName}
+                      Vuelta seleccionada: {returnTrip.departureHour} - {returnTrip.originName} → {returnTrip.destinationName}
                     </p>
                   </div>
                 )}
               </div>
             </div>
-            {/* Total price for round trip (price already includes both legs) */}
             <div className="text-right text-lg font-bold text-blue-600 pt-2 border-t">
-              Total Ida y Vuelta: ${getSelectedDropoffPrice().toLocaleString()}
+              {useIdaVueltaTariff ? 'Total Ida y Vuelta (descuento aplicado)' : 'Total Ida y Vuelta (días distintos: 2× precio Ida)'}
+              : ${(getSelectedDropoffPrice() * 2).toLocaleString()}
             </div>
           </div>
         )}
@@ -674,39 +670,40 @@ export function AddReservationFlow({
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
             <h3 className="font-semibold">Resumen de la Reserva</h3>
             <p className="text-sm">
-              <span className="font-medium">Pasajero:</span> {selectedPassenger?.FirstName} {selectedPassenger?.LastName}
+              <span className="font-medium">Pasajero:</span> {selectedPassenger?.firstName} {selectedPassenger?.lastName}
             </p>
-            {passengerReserves.map((r, i) => {
-              const trip = i === 0 ? initialTrip : returnTrip;
-
-              // For outbound: pickup from options, dropoff from city/direction
-              // For return: pickup = outbound dropoff, dropoff = outbound pickup (swapped)
-              const pickupLabel = i === 0
-                ? pickupOptions.find((opt: any) => opt.id === String(r.PickupLocationId))?.label
-                : dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId))?.label?.split(' - ')[0];
-
-              const dropoffLabel = i === 0
-                ? dropoffCityOptions.find((opt: any) => opt.id === String(selectedDropoffCityId))?.label?.split(' - ')[0]
-                : pickupOptions.find((opt: any) => opt.id === String(r.DropoffLocationId))?.label;
-
-              return (
-                <div key={i} className="text-sm pt-2 mt-2 border-t first:border-t-0 first:pt-0 first:mt-0">
-                  <p className="font-medium mb-1">{i === 0 ? 'Viaje de Ida' : 'Viaje de Vuelta'}</p>
+            {bookingPassengers[0] && (
+              <>
+                <div className="text-sm pt-2 mt-2 border-t">
+                  <p className="font-medium mb-1">Viaje de Ida</p>
                   <p>
-                    <strong>Ruta:</strong> {trip?.DepartureHour} - {trip?.OriginName} → {trip?.DestinationName}
+                    <strong>Ruta:</strong> {initialTrip?.departureHour} - {initialTrip?.originName} → {initialTrip?.destinationName}
                   </p>
                   <p>
-                    <strong>Subida:</strong> {pickupLabel || 'No especificada'}
+                    <strong>Subida:</strong>{' '}
+                    {pickupOptions.find((opt) => opt.id === String(bookingPassengers[0].outbound.pickupLocationId))?.label || 'No especificada'}
                   </p>
                   <p>
-                    <strong>Bajada:</strong> {dropoffLabel || 'No especificada'}
+                    <strong>Bajada:</strong>{' '}
+                    {dropoffCityOptions.find((opt) => opt.id === String(selectedDropoffCityId))?.label?.split(' - ')[0] || 'No especificada'}
                   </p>
                   <p>
-                    <strong>Precio:</strong> ${r.Price?.toLocaleString() || 0}
+                    <strong>Precio:</strong> ${bookingPassengers[0].outbound.price.toLocaleString()}
                   </p>
                 </div>
-              );
-            })}
+                {bookingPassengers[0].return && (
+                  <div className="text-sm pt-2 mt-2 border-t">
+                    <p className="font-medium mb-1">Viaje de Vuelta</p>
+                    <p>
+                      <strong>Ruta:</strong> {returnTrip?.departureHour} - {returnTrip?.originName} → {returnTrip?.destinationName}
+                    </p>
+                    <p>
+                      <strong>Precio:</strong> ${bookingPassengers[0].return.price.toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <div className="rounded-lg border p-4 space-y-4">
             <h3 className="font-semibold">Pagos</h3>
@@ -738,7 +735,7 @@ export function AddReservationFlow({
                   {reservationPayments.map((payment, index) => (
                     <div key={index} className="flex items-center justify-between p-1 bg-white rounded">
                       <span className="text-sm">
-                        {paymentMethods.find((pm) => String(pm.id) === String(payment.PaymentMethod))?.label || 'Pago'}: ${payment.TransactionAmount.toLocaleString()}
+                        {paymentMethods.find((pm) => String(pm.id) === String(payment.paymentMethod))?.label || 'Pago'}: ${payment.transactionAmount.toLocaleString()}
                       </span>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => handleRemovePayment(index)}>
                         <TrashIcon className="h-3 w-3" />
@@ -758,7 +755,6 @@ export function AddReservationFlow({
                 <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
               </div>
             </div>
-            {/* Status preview banner */}
             {(() => {
               const total = getTotalReserveAmount();
               const paid = getTotalPaymentAmount();

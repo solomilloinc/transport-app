@@ -22,8 +22,8 @@ interface ResultsSearchParams {
 
 // 2. Creamos una respuesta vacía para usar en caso de error o parámetros faltantes.
 const emptyResponse: PagedReserveResponse<ReserveSummaryItem> = {
-  Outbound: { Items: [], PageNumber: 1, PageSize: 10, TotalRecords: 0, TotalPages: 0 },
-  Return: { Items: [], PageNumber: 1, PageSize: 10, TotalRecords: 0, TotalPages: 0 },
+  outbound: { items: [], pageNumber: 1, pageSize: 10, totalRecords: 0, totalPages: 0 },
+  return: { items: [], pageNumber: 1, pageSize: 10, totalRecords: 0, totalPages: 0 },
 };
 
 // 3. La función de carga de datos ahora se ejecuta en el servidor.

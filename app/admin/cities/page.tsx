@@ -132,9 +132,9 @@ export default function CitiesManagement() {
   };
 
   const handleEditCity = (city: City) => {
-    setCurrentCityId(city.Id);
-    editForm.setField('name', city.Name);
-    editForm.setField('code', city.Code.toString());
+    setCurrentCityId(city.id);
+    editForm.setField('name', city.name);
+    editForm.setField('code', city.code.toString());
     setIsEditModalOpen(true);
   };
 
@@ -159,7 +159,7 @@ export default function CitiesManagement() {
       accessor: 'status',
       className: 'text-center',
       width: '20%',
-      cell: (city: City) => <StatusBadge status={city.Status} />,
+      cell: (city: City) => <StatusBadge status={city.status} />,
     },
     {
       header: 'Acciones',
@@ -171,7 +171,7 @@ export default function CitiesManagement() {
           <Button size="sm" variant="outline" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleEditCity(city)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300" onClick={() => handleDeleteCity(city.Id)}>
+          <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300" onClick={() => handleDeleteCity(city.id)}>
             <Trash className="h-4 w-4" />
           </Button>
         </div>
@@ -191,7 +191,7 @@ export default function CitiesManagement() {
           </Button>
         }
       />
-{loading && data?.Items?.length === 0 ? (
+{loading && data?.items?.length === 0 ? (
         <div className="flex justify-center items-center h-64">
           <Skeleton className="h-8 w-48" />
         </div>
@@ -222,19 +222,19 @@ export default function CitiesManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data?.Items || []}
+                data={data?.items || []}
                 emptyMessage="No se encontraron ciudades."
                 isLoading={loading}
-                skeletonRows={data?.PageSize}
+                skeletonRows={data?.pageSize}
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {data?.items?.length > 0 && (
               <TablePagination
                 currentPage={pageNumber}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.totalPages}
+                totalItems={data?.totalRecords}
+                itemsPerPage={data?.pageSize}
                 onPageChange={setPageNumber}
                 itemName="ciudades"
               />
@@ -268,16 +268,16 @@ export default function CitiesManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((city: City) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((city: City) => (
             <MobileCard
-              key={city.Id}
-              title={city.Name}
-              subtitle={city.Code.toString()}
-              badge={<StatusBadge status={city.Status ? 'Activo' : 'Inactivo'} />}
+              key={city.id}
+              title={city.name}
+              subtitle={city.code.toString()}
+              badge={<StatusBadge status={city.status ? 'Activo' : 'Inactivo'} />}
               fields={[]}
               onEdit={() => handleEditCity(city)}
-              onDelete={() => handleDeleteCity(city.Id)}
+              onDelete={() => handleDeleteCity(city.id)}
             />
           ))
         ) : (

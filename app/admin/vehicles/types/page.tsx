@@ -123,9 +123,9 @@ export default function VehicleManagement() {
   };
 
   const handleEditTypeVehicle = (vehicle: VehicleType) => {
-    setCurrentVehicleTypeId(vehicle.VehicleTypeId);
-    editForm.setField('Name', vehicle.Name);
-    editForm.setField('Quantity', vehicle.Quantity);
+    setCurrentVehicleTypeId(vehicle.vehicleTypeId);
+    editForm.setField('Name', vehicle.name);
+    editForm.setField('Quantity', vehicle.quantity);
     setIsEditModalOpen(true);
   };
 
@@ -171,7 +171,7 @@ export default function VehicleManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeleteTypeVehicle(vehicle.VehicleTypeId)}
+            onClick={() => handleDeleteTypeVehicle(vehicle.vehicleTypeId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -192,7 +192,7 @@ export default function VehicleManagement() {
           </Button>
         }
       />
-      {loading && data?.Items?.length === 0 ? (
+      {loading && data?.items?.length === 0 ? (
         <div className="flex justify-center items-center h-64">
           <Skeleton className="h-8 w-48" />
         </div>
@@ -211,19 +211,19 @@ export default function VehicleManagement() {
               <div className="hidden md:block w-full">
                 <DashboardTable
                   columns={columns}
-                  data={data?.Items ?? []}
+                  data={data?.items ?? []}
                   emptyMessage="No se encontraron tipos de vehiculos."
                   isLoading={loading}
-                  skeletonRows={data?.PageSize}
+                  skeletonRows={data?.pageSize}
                 />
               </div>
 
-              {data?.Items?.length > 0 && (
+              {data?.items?.length > 0 && (
                 <TablePagination
                   currentPage={pageNumber}
-                  totalPages={data?.TotalPages}
-                  totalItems={data?.TotalRecords}
-                  itemsPerPage={data?.PageSize}
+                  totalPages={data?.totalPages}
+                  totalItems={data?.totalRecords}
+                  itemsPerPage={data?.pageSize}
                   onPageChange={setPageNumber}
                   itemName="vehiculos"
                 />
@@ -255,16 +255,16 @@ export default function VehicleManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((vehicle) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((vehicle) => (
             <MobileCard
-              key={vehicle.VehicleTypeId}
-              title={vehicle.Name}
-              subtitle={vehicle.VehicleTypeId.toString()}
+              key={vehicle.vehicleTypeId}
+              title={vehicle.name}
+              subtitle={vehicle.vehicleTypeId.toString()}
               badge={<StatusBadge status={vehicle.status ? 'Activo' : 'Inactivo'} />}
-              fields={[{ label: 'Cantidad', value: vehicle.Quantity }]}
+              fields={[{ label: 'Cantidad', value: vehicle.quantity }]}
               onEdit={() => handleEditTypeVehicle(vehicle)}
-              onDelete={() => handleDeleteTypeVehicle(vehicle.VehicleTypeId)}
+              onDelete={() => handleDeleteTypeVehicle(vehicle.vehicleTypeId)}
             />
           ))
         ) : (
@@ -281,19 +281,19 @@ export default function VehicleManagement() {
         onSubmit={() => submitAddTypeVehicle()}
         submitText="Crear Vehiculo"
       >
-        <FormField label="Nombre" required error={addForm.errors.Name}>
+        <FormField label="Nombre" required error={addForm.errors.name}>
           <Input
             id="name"
             placeholder="Nombre"
-            value={addForm.data.Name}
+            value={addForm.data.name}
             onChange={(e) => addForm.setField('Name', e.target.value)}
           />
         </FormField>
-        <FormField label="Capacidad" required error={addForm.errors.Quantity}>
+        <FormField label="Capacidad" required error={addForm.errors.quantity}>
           <Input
             id="quantity"
             placeholder="Capacidad"
-            value={addForm.data.Quantity}
+            value={addForm.data.quantity}
             onChange={(e) => addForm.setField('Quantity', Number(e.target.value))}
           />
         </FormField>
@@ -308,17 +308,17 @@ export default function VehicleManagement() {
         onSubmit={() => submitEditTypeVehicle()}
         submitText="Guardar Cambios"
       >
-        <FormField label="Nombre" required error={editForm.errors.Name}>
+        <FormField label="Nombre" required error={editForm.errors.name}>
           <Input
             id="edit-name"
-            value={editForm.data.Name}
+            value={editForm.data.name}
             onChange={(e) => editForm.setField('Name', e.target.value)}
           />
         </FormField>
-        <FormField label="Capacidad" required error={editForm.errors.Quantity}>
+        <FormField label="Capacidad" required error={editForm.errors.quantity}>
           <Input
             id="edit-capacidad"
-            value={editForm.data.Quantity}
+            value={editForm.data.quantity}
             onChange={(e) => editForm.setField('Quantity', Number(e.target.value))}
           />
         </FormField>

@@ -71,35 +71,35 @@ export default function DebtsPage() {
   });
 
   const { data: rawSummary, loading, fetch: fetchSummary } = useApi<any, PaginationParams, any>(
-    (p) => selectedCustomer ? getCustomerAccountSummary(selectedCustomer.CustomerId, p) : { call: Promise.resolve(null) } as any,
+    (p) => selectedCustomer ? getCustomerAccountSummary(selectedCustomer.customerId, p) : { call: Promise.resolve(null) } as any,
     { autoFetch: false }
   );
 
   const summary = useMemo((): CustomerAccountSummary | null => {
     if (!rawSummary) return null;
-    // Unwrap { isSuccess, value } wrapper if present
+    // Unwrap { isSuccess, value } wrapper if the API still returns it.
     const val = rawSummary?.isSuccess !== undefined ? rawSummary.value : rawSummary;
     if (!val) return null;
-    const txns = val.transactions || val.Transactions;
+    const txns = val.transactions;
     if (!txns) return null;
-    const items = txns.items || txns.Items || [];
+    const items = txns.items || [];
     return {
-      CustomerId: val.customerId ?? val.CustomerId ?? 0,
-      CustomerFullName: val.customerFullName ?? val.CustomerFullName ?? '',
-      CurrentBalance: val.currentBalance ?? val.CurrentBalance ?? 0,
-      Transactions: {
-        Items: items.map((t: any) => ({
-          Id: t.id ?? t.Id,
-          CustomerId: t.customerId ?? t.CustomerId,
-          Description: t.description ?? t.Description ?? '',
-          TransactionType: t.transactionType ?? t.TransactionType ?? '',
-          Amount: t.amount ?? t.Amount ?? 0,
-          Date: t.date ?? t.Date ?? '',
+      customerId: val.customerId ?? 0,
+      customerFullName: val.customerFullName ?? '',
+      currentBalance: val.currentBalance ?? 0,
+      transactions: {
+        items: items.map((t: any) => ({
+          id: t.id,
+          customerId: t.customerId,
+          description: t.description ?? '',
+          transactionType: t.transactionType ?? '',
+          amount: t.amount ?? 0,
+          date: t.date ?? '',
         })),
-        PageNumber: txns.pageNumber ?? txns.PageNumber ?? 1,
-        PageSize: txns.pageSize ?? txns.PageSize ?? 10,
-        TotalRecords: txns.totalRecords ?? txns.TotalRecords ?? 0,
-        TotalPages: txns.totalPages ?? txns.TotalPages ?? 0,
+        pageNumber: txns.pageNumber ?? 1,
+        pageSize: txns.pageSize ?? 10,
+        totalRecords: txns.totalRecords ?? 0,
+        totalPages: txns.totalPages ?? 0,
       },
     };
   }, [rawSummary]);
@@ -127,7 +127,7 @@ export default function DebtsPage() {
 
   const handleSelectCustomer = (customer: Passenger) => {
     setSelectedCustomer(customer);
-    setCustomerSearch(`${customer.FirstName} ${customer.LastName}`);
+    setCustomerSearch(`${customer.firstName} ${customer.lastName}`);
     setIsCustomerPopoverOpen(false);
     setCurrentPage(1);
   };
@@ -159,7 +159,7 @@ export default function DebtsPage() {
       header: 'Fecha',
       accessor: 'Date',
       width: '15%',
-      cell: (t: Transaction) => format(new Date(t.Date), 'dd/MM/yyyy HH:mm', { locale: es })
+      cell: (t: Transaction) => format(new Date(t.date), 'dd/MM/yyyy HH:mm', { locale: es })
     },
     { header: 'Descripción', accessor: 'Description', width: '45%' },
     {
@@ -167,8 +167,8 @@ export default function DebtsPage() {
       accessor: 'TransactionType',
       width: '15%',
       cell: (t: Transaction) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTransactionTypeStyle(t.TransactionType)}`}>
-          {TransactionTypeLabels[t.TransactionType] || t.TransactionType}
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTransactionTypeStyle(t.transactionType)}`}>
+          {TransactionTypeLabels[t.transactionType] || t.transactionType}
         </span>
       )
     },
@@ -178,8 +178,8 @@ export default function DebtsPage() {
       className: 'text-right',
       width: '15%',
       cell: (t: Transaction) => (
-        <span className={`font-semibold ${t.Amount < 0 ? 'text-green-600' : 'text-red-600'}`}>
-          $ {Math.abs(t.Amount).toLocaleString()}
+        <span className={`font-semibold ${t.amount < 0 ? 'text-green-600' : 'text-red-600'}`}>
+          $ {Math.abs(t.amount).toLocaleString()}
         </span>
       )
     },
@@ -229,10 +229,10 @@ export default function DebtsPage() {
                           <Skeleton className="h-10 w-full" />
                           <Skeleton className="h-10 w-full" />
                         </div>
-                      ) : (searchResults?.Items?.length ?? 0) > 0 ? (
-                        searchResults.Items.map((p) => (
+                      ) : (searchResults?.items?.length ?? 0) > 0 ? (
+                        searchResults.items.map((p) => (
                           <div
-                            key={p.CustomerId}
+                            key={p.customerId}
                             className="flex items-center p-3 hover:bg-blue-50 cursor-pointer transition-colors border-b last:border-0"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handleSelectCustomer(p)}
@@ -241,8 +241,8 @@ export default function DebtsPage() {
                               <UserIcon className="h-4 w-4 text-blue-600" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium">{p.FirstName} {p.LastName}</p>
-                              <p className="text-xs text-gray-500">DNI: {p.DocumentNumber}</p>
+                              <p className="text-sm font-medium">{p.firstName} {p.lastName}</p>
+                              <p className="text-xs text-gray-500">DNI: {p.documentNumber}</p>
                             </div>
                           </div>
                         ))
@@ -307,14 +307,14 @@ export default function DebtsPage() {
                   <Wallet className="h-5 w-5 text-blue-200" />
                 </div>
                 <h3 className="text-3xl font-bold">
-                  $ {summary?.CurrentBalance?.toLocaleString() ?? 0}
+                  $ {summary?.currentBalance?.toLocaleString() ?? 0}
                 </h3>
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-xs text-blue-200">Total acumulado a la fecha</p>
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={!summary || (summary.CurrentBalance ?? 0) <= 0}
+                    disabled={!summary || (summary.currentBalance ?? 0) <= 0}
                     onClick={() => setIsDebtSettlementOpen(true)}
                   >
                     <DollarSign className="mr-1 h-3.5 w-3.5" />
@@ -331,7 +331,7 @@ export default function DebtsPage() {
                   <ArrowUpRight className="h-5 w-5 text-green-500" />
                 </div>
                 <h3 className="text-3xl font-bold text-green-600">
-                  $ {summary?.Transactions?.Items?.filter((t: any) => t.TransactionType === 'Payment').reduce((acc: number, t: any) => acc + Math.abs(t.Amount), 0).toLocaleString() ?? 0}
+                  $ {summary?.transactions?.items?.filter((t: any) => t.transactionType === 'Payment').reduce((acc: number, t: any) => acc + Math.abs(t.amount), 0).toLocaleString() ?? 0}
                 </h3>
               </CardContent>
             </Card>
@@ -343,7 +343,7 @@ export default function DebtsPage() {
                   <ArrowDownLeft className="h-5 w-5 text-red-500" />
                 </div>
                 <h3 className="text-3xl font-bold text-red-600">
-                  $ {summary?.Transactions?.Items?.filter((t: any) => t.TransactionType === 'Charge').reduce((acc: number, t: any) => acc + t.Amount, 0).toLocaleString() ?? 0}
+                  $ {summary?.transactions?.items?.filter((t: any) => t.transactionType === 'Charge').reduce((acc: number, t: any) => acc + t.amount, 0).toLocaleString() ?? 0}
                 </h3>
               </CardContent>
             </Card>
@@ -356,18 +356,18 @@ export default function DebtsPage() {
             <CardContent>
               <DashboardTable
                 columns={columns}
-                data={summary?.Transactions?.Items ?? []}
+                data={summary?.transactions?.items ?? []}
                 emptyMessage="No se encontraron transacciones para este periodo."
                 isLoading={loading}
                 skeletonRows={pageSize}
               />
               
-              {(summary?.Transactions?.TotalRecords ?? 0) > 0 && (
+              {(summary?.transactions?.totalRecords ?? 0) > 0 && (
                 <div className="mt-4">
                   <TablePagination
                     currentPage={currentPage}
-                    totalPages={summary?.Transactions?.TotalPages}
-                    totalItems={summary?.Transactions?.TotalRecords}
+                    totalPages={summary?.transactions?.totalPages ?? 0}
+                    totalItems={summary?.transactions?.totalRecords ?? 0}
                     itemsPerPage={pageSize}
                     onPageChange={setCurrentPage}
                     itemName="transacciones"

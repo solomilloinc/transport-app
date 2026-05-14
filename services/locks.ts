@@ -9,21 +9,18 @@ export interface LockReserveSlotsRequest {
 
 // Exact match with Transport.SharedKernel.Contracts.Reserve.LockReserveSlotsResponseDto
 export interface LockReserveSlotsResponse {
-  LockToken: string;
-  ExpiresAt: string; // DateTime from API
-  TimeoutMinutes: number;
+  lockToken: string;
+  expiresAt: string; // DateTime from API
+  timeoutMinutes: number;
 }
 
 export const lockReserveSlots = async (
-  request: LockReserveSlotsRequest
+  request: LockReserveSlotsRequest,
 ): Promise<LockReserveSlotsResponse> => {
   const response = await postWithResponse<LockReserveSlotsRequest, LockReserveSlotsResponse>(
     '/reserve-slots-lock',
-    request
+    request,
   );
-
-  // Handle response the same way as other endpoints in the app
   const responseData = typeof response === 'string' ? JSON.parse(response) : response;
-
   return responseData;
 };

@@ -1,93 +1,91 @@
-import { TripPrice, CityDirectionsDto } from "./trip";
-import { Auditable } from "./auditable";
-import { PassengerReserve } from "./passengerReserve";
+import { TripPrice, CityDirectionsDto } from './trip';
+import { Auditable } from './auditable';
+import { PassengerReserve } from './passengerReserve';
 
 export enum ReserveStatusEnum {
-    Available = 0,
-    Confirmed = 1,
-    Cancelled = 2,
-    Completed = 3,
-    Rejected = 4,
-    Expired = 5
+  Available = 0,
+  Confirmed = 1,
+  Cancelled = 2,
+  Completed = 3,
+  Rejected = 4,
+  Expired = 5,
 }
 
 export interface Reserve extends Auditable {
-    // ... (lines 15-22 unchanged)
-    PassengersReserve: PassengerReserve[];
-
+  passengersReserve: PassengerReserve[];
 }
 
 export interface ReserveReport {
-    ReserveId: number;
-    TripId: number;
-    ServiceId: number;
-    ReserveDate: string;
-    OriginCityId: number;
-    OriginName: string;
-    DestinationCityId: number;
-    DestinationName: string;
-    DepartureHour: string;
-    VehicleId: number;
-    DriverId: number;
-    VehicleName: string;
-    DriverName: string;
-    AvailableQuantity: number;
-    ReservedQuantity: number;
-    Prices: TripPrice[];
-    RelevantCities: CityDirectionsDto[];
-    Status: number;
+  reserveId: number;
+  tripId: number;
+  serviceId: number;
+  reserveDate: string;
+  originCityId: number;
+  originName: string;
+  destinationCityId: number;
+  destinationName: string;
+  departureHour: string;
+  vehicleId: number;
+  driverId: number;
+  vehicleName: string;
+  driverName: string;
+  availableQuantity: number;
+  reservedQuantity: number;
+  prices: TripPrice[];
+  relevantCities: CityDirectionsDto[];
+  status: number;
 }
 
 export const emptyEditReserve = {
-    VehicleId: 0,
-    DriverId: 0,
-    DepartureHour: ''
-}
+  vehicleId: 0,
+  driverId: 0,
+  departureHour: '',
+};
 
 export interface ReserveStopScheduleDto {
-    DirectionId: number;
-    DirectionName: string;
-    Order: number;
-    PickupTime: string;
+  directionId: number;
+  directionName: string;
+  order: number;
+  pickupTime: string;
 }
 
 export interface ReserveSummaryItem {
-    ReserveId: number;
-    TripId: number;
-    OriginName: string;
-    DestinationName: string;
-    DepartureHour: string;
-    DepartureDate: string;
-    Price: number;
-    AvailableQuantity: number;
-    VehicleName: string;
-    EstimatedDuration: string;
-    ArrivalHour: string;
-    StopSchedules: ReserveStopScheduleDto[] | null;
+  reserveId: number;
+  tripId: number;
+  originName: string;
+  destinationName: string;
+  departureHour: string;
+  departureDate: string;
+  price: number;
+  availableQuantity: number;
+  vehicleName: string;
+  estimatedDuration: string;
+  arrivalHour: string;
+  stopSchedules: ReserveStopScheduleDto[] | null;
 }
 
 export interface CreateReserveExternalResult {
-    Status: string;
-    PreferenceId: string | null;
+  status: string;
+  preferenceId: string | null;
 }
 
 export interface ReserveUpdate {
-    vehicleId?: number | null;
-    driverId?: number | null;
-    reserveDate?: string | null;
-    departureHour?: string | null;
-    status: number;
+  vehicleId?: number | null;
+  driverId?: number | null;
+  reserveDate?: string | null;
+  departureHour?: string | null;
+  status: number;
 }
 
 export interface PaymentMethodSummary {
-    PaymentMethodId: number;
-    PaymentMethodName: string;
-    Amount: number;
+  paymentMethodId: number;
+  paymentMethodName: string;
+  amount: number;
 }
 
 export interface ReservePaymentSummary {
-    ReserveId: number;
-    CashBoxId: number;
-    PaymentsByMethod: PaymentMethodSummary[];
-    TotalAmount: number;
+  reserveId: number;
+  cashBoxId: number;
+  paymentsByMethod: PaymentMethodSummary[];
+  totalAmount: number;
 }

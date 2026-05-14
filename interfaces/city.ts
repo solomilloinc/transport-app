@@ -1,11 +1,11 @@
 export interface City {
-    Id: number;
-    Code: string;   
-    Name: string;
-    Status: string;
+  id: number;
+  code: string;
+  name: string;
+  status: string;
 }
 
 export const emptyCity = {
-    code: '',
-    name: '',
+  code: '',
+  name: '',
 };

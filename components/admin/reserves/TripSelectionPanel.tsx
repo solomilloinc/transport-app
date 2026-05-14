@@ -49,25 +49,25 @@ export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, o
               {isLoading && <div className="text-center py-4 text-gray-500">Cargando viajes...</div>}
               {!isLoading &&
                 trips?.map((trip) => (
-                  <div key={trip.ReserveId} className="relative group">
+                  <div key={trip.reserveId} className="relative group">
                     <button
                       className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
-                        selectedTrip?.ReserveId === trip.ReserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                        selectedTrip?.reserveId === trip.reserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
                       }`}
                       onClick={() => onTripSelect(trip)}
                     >
                       <div className="flex flex-col items-center gap-2">
-                        <span className="font-medium">{trip.DepartureHour}</span>
+                        <span className="font-medium">{trip.departureHour}</span>
                         <span
                           className={`text-xs px-1.5 py-0.5 rounded-md ${
-                            trip.ReservedQuantity >= trip.AvailableQuantity ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                            trip.reservedQuantity >= trip.availableQuantity ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                           }`}
                         >
-                          {trip.ReservedQuantity}/{trip.AvailableQuantity}
+                          {trip.reservedQuantity}/{trip.availableQuantity}
                         </span>
                       </div>
                       <div className="text-gray-600">
-                        {trip.OriginName} → {trip.DestinationName}
+                        {trip.originName} → {trip.destinationName}
                       </div>
                     </button>
                     <button

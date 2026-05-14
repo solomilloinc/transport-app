@@ -21,13 +21,18 @@ import { post } from '@/services/api';
 import { CreateReserveExternalResult } from '@/interfaces/reserve';
 import { LocationSelector, LocationSelectionData } from '@/components/checkout/LocationSelector';
 import { useTenant } from '@/contexts/TenantContext';
+import { RESERVE_TYPE } from '@/constants/reserveType';
+import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
+import { buildPublicReservePayload } from '@/utils/bookingPayload';
+import type { PassengerBookingExternal, ExternalPayment } from '@/interfaces/passengerReserve';
+import { withPriceRetry, getApiErrorCode, RESERVE_ERROR } from '@/utils/api-errors';
+import { toast } from '@/components/ui/use-toast';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { checkout, setLockState, isLockValid, clearCheckout } = useCheckout();
-  const { identity, legal } = useTenant();
+  const { identity, legal, businessRules } = useTenant();
 
-  // If there's no outbound trip, there's nothing to check out. Redirect to home.
   useEffect(() => {
     if (!checkout.outboundTrip) {
       router.replace('/');
@@ -46,7 +51,6 @@ export default function CheckoutPage() {
   const [formattedDepartureDate, setFormattedDepartureDate] = useState('');
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
 
-  // Location selection state
   const [outboundLocation, setOutboundLocation] = useState<LocationSelectionData>({
     pickupDirectionId: null,
     dropoffCityId: null,
@@ -62,27 +66,32 @@ export default function CheckoutPage() {
     dropoffPrice: 0,
   });
 
-  // Check if it's a round trip
   const isRoundTrip = !!checkout.returnTrip;
 
-
+  // True when the booking qualifies for the round-trip discount under the
+  // tenant's same-day rule. Drives which dropoff price table to show + send.
+  const useIdaVueltaTariff = shouldUseIdaVueltaTariff({
+    isRoundTrip,
+    outboundDate: checkout.outboundTrip?.departureDate,
+    returnDate: checkout.returnTrip?.departureDate ?? null,
+    roundTripRequiresSameDay: businessRules.roundTripRequiresSameDay,
+  });
 
   useEffect(() => {
     if (checkout.outboundTrip) {
-      setFormattedDepartureDate(formatWithTimezone(checkout.outboundTrip.DepartureDate ?? ''));
+      setFormattedDepartureDate(formatWithTimezone(checkout.outboundTrip.departureDate ?? ''));
     }
     if (checkout.returnTrip) {
-      setFormattedReturnDate(formatWithTimezone(checkout.returnTrip.DepartureDate ?? ''));
+      setFormattedReturnDate(formatWithTimezone(checkout.returnTrip.departureDate ?? ''));
     }
   }, [checkout.outboundTrip, checkout.returnTrip]);
 
-  // Use dynamic dropoff price if selected, otherwise use default trip price
   const outboundPrice = outboundLocation.dropoffPrice > 0
     ? outboundLocation.dropoffPrice
-    : (checkout.outboundTrip?.Price || 0);
+    : (checkout.outboundTrip?.price || 0);
   const returnPrice = returnLocation.dropoffPrice > 0
     ? returnLocation.dropoffPrice
-    : (checkout.returnTrip?.Price || 0);
+    : (checkout.returnTrip?.price || 0);
   const totalPrice = (outboundPrice + returnPrice) * checkout.passengers;
   const serviceFee = 0;
   const finalTotal = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
@@ -93,68 +102,55 @@ export default function CheckoutPage() {
     }
   };
 
-  const createWalletPayload = useMemo(() => {
-    const items = passengerData.map((p) => ({
-      reserveId: checkout.outboundTrip?.ReserveId ?? 0,
-      reserveTypeId: isRoundTrip ? 2 : 1, // 1 = Ida, 2 = IdaVuelta
+  // Builds the external Passengers[] for the public reservation endpoint.
+  // `outbound` and `return` carry shared pickup/dropoff/price for every pax
+  // (the public flow doesn't support per-pax variations).
+  const buildExternalPassengers = useCallback((): PassengerBookingExternal[] => {
+    return passengerData.map((p) => ({
       customerId: null,
       isPayment: true,
-      pickupLocationId: outboundLocation.pickupDirectionId,
-      dropoffLocationId: outboundLocation.dropoffDirectionId,
-      dropoffCityId: outboundLocation.dropoffCityId,
       hasTraveled: false,
-      price: Number(outboundPrice.toFixed(2)),
-      firstName: p.firstName,
-      lastName: p.lastName,
-      email: p.email || '',
-      phone1: p.phone,
-      documentNumber: p.documentNumber,
+      firstName: p.firstName ?? '',
+      lastName: p.lastName ?? '',
+      email: p.email ?? null,
+      phone1: p.phone ?? '',
+      documentNumber: p.documentNumber ?? '',
+      outbound: {
+        pickupLocationId: outboundLocation.pickupDirectionId,
+        dropoffLocationId: outboundLocation.dropoffDirectionId,
+        price: Number(outboundPrice.toFixed(2)),
+      },
+      return: checkout.returnTrip
+        ? {
+            pickupLocationId: returnLocation.pickupDirectionId,
+            dropoffLocationId: returnLocation.dropoffDirectionId,
+            price: Number(returnPrice.toFixed(2)),
+          }
+        : null,
     }));
+  }, [
+    passengerData,
+    outboundLocation,
+    returnLocation,
+    outboundPrice,
+    returnPrice,
+    checkout.returnTrip,
+  ]);
 
-    if (checkout.returnTrip) {
-      items.push(
-        ...passengerData.map((p) => ({
-          reserveId: checkout.returnTrip?.ReserveId ?? 0,
-          reserveTypeId: 2, // Vuelta siempre es tipo 2
-          customerId: null,
-          isPayment: true,
-          pickupLocationId: returnLocation.pickupDirectionId,
-          dropoffLocationId: returnLocation.dropoffDirectionId,
-          dropoffCityId: returnLocation.dropoffCityId,
-          hasTraveled: false,
-          price: Number(returnPrice.toFixed(2)),
-          firstName: p.firstName,
-          lastName: p.lastName,
-          email: p.email || '',
-          phone1: p.phone,
-          documentNumber: p.documentNumber,
-        })),
-      );
-    }
-
-    return {
-      Payment: null,
-      Items: items,
-    };
-  }, [passengerData, checkout.outboundTrip, checkout.returnTrip, finalTotal]);
-
-  // Función para bloquear slots
   const lockSlots = async (): Promise<boolean> => {
     try {
       setLockError(null);
       const lockResponse = await lockReserveSlots({
-        outboundReserveId: checkout.outboundTrip?.ReserveId || 0,
-        returnReserveId: checkout.returnTrip?.ReserveId || null,
+        outboundReserveId: checkout.outboundTrip?.reserveId || 0,
+        returnReserveId: checkout.returnTrip?.reserveId || null,
         passengerCount: checkout.passengers,
       });
 
-      const lockState = {
-        lockToken: lockResponse.LockToken,
-        expiresAt: lockResponse.ExpiresAt,
-        timeoutMinutes: lockResponse.TimeoutMinutes,
-      };
-
-      setLockState(lockState);
+      setLockState({
+        lockToken: lockResponse.lockToken,
+        expiresAt: lockResponse.expiresAt,
+        timeoutMinutes: lockResponse.timeoutMinutes,
+      });
       return true;
     } catch (error) {
       console.error('Error locking slots:', error);
@@ -167,11 +163,9 @@ export default function CheckoutPage() {
     if (currentStep === 'passengers') {
       setCurrentStep('review');
     } else if (currentStep === 'review') {
-      // Verificar si tenemos un lock válido
       if (checkout.lockState && isLockValid()) {
         setCurrentStep('payment');
       } else {
-        // Lock slots antes de proceder al pago
         const success = await lockSlots();
         if (success) {
           setCurrentStep('payment');
@@ -195,47 +189,70 @@ export default function CheckoutPage() {
     return true;
   };
 
-  // Procesar el pago con Wallet - devuelve preference_id para MP
-  const handleWalletSubmit = useCallback(async (data: {
-    payload: {
-      Payment: null;
-      Items: Array<any>;
-    };
-  }): Promise<string> => {
-    if (!finalTotal || finalTotal <= 0) {
-      throw new Error('El total debe ser mayor a 0.');
-    }
+  // POST helper shared by wallet and card flows. Submits the booking once,
+  // retries once on Reserve.PriceNotAvailable after refetching trip data.
+  // The "refetch" hook is a no-op here because LocationSelector owns trip
+  // data fetching; the retry still rebuilds the payload from current state,
+  // which is the point — current outboundLocation/returnLocation prices are
+  // what get sent again. If the price genuinely diverges, the second attempt
+  // will fail and the caller surfaces the error to the user.
+  const submitBooking = useCallback(
+    async (payment: ExternalPayment | null) => {
+      if (!checkout.lockState?.lockToken || !isLockValid()) {
+        throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
+      }
 
-    if (!checkout.lockState?.lockToken || !isLockValid()) {
-      throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
-    }
+      const responseRaw = await withPriceRetry(
+        (payload) => post('/passenger-reserves-create-with-lock', payload),
+        () =>
+          buildPublicReservePayload({
+            lockToken: checkout.lockState!.lockToken,
+            reserveTypeId: isRoundTrip ? RESERVE_TYPE.ROUND_TRIP : RESERVE_TYPE.IDA,
+            outboundReserveId: checkout.outboundTrip?.reserveId ?? 0,
+            returnReserveId: checkout.returnTrip?.reserveId ?? null,
+            passengers: buildExternalPassengers(),
+            payment,
+          }),
+        async () => {
+          // No top-level trip refetch — LocationSelector owns it.
+        },
+      );
 
-    const payloadWithLock = {
-      lockToken: checkout.lockState.lockToken,
-      items: createWalletPayload.Items,
-      payment: null,
-    };
+      const responseData: CreateReserveExternalResult =
+        typeof responseRaw === 'string' ? JSON.parse(responseRaw as unknown as string) : (responseRaw as unknown as CreateReserveExternalResult);
+      return responseData;
+    },
+    [
+      checkout.lockState,
+      checkout.outboundTrip,
+      checkout.returnTrip,
+      isRoundTrip,
+      buildExternalPassengers,
+      isLockValid,
+    ],
+  );
 
-    const response = await post('/passenger-reserves-create-with-lock', payloadWithLock);
-    const responseData = typeof response === 'string' ? JSON.parse(response) : response;
+  const handleWalletSubmit = useCallback(
+    async (): Promise<string> => {
+      if (!finalTotal || finalTotal <= 0) {
+        throw new Error('El total debe ser mayor a 0.');
+      }
+      const responseData = await submitBooking(null);
+      if (!responseData.preferenceId) {
+        throw new Error('No se recibió preferenceId del servidor');
+      }
+      return responseData.preferenceId;
+    },
+    [finalTotal, submitBooking],
+  );
 
-    // La API debe devolver PreferenceId cuando Payment es null
-    if (!responseData.PreferenceId) {
-      throw new Error('No se recibió PreferenceId del servidor');
-    }
-
-    // Devolver el PreferenceId para que MP abra el wallet
-    return responseData.PreferenceId;
-  }, [finalTotal, createWalletPayload]);
-
-  // Procesar el pago con tarjeta (el Brick llama esto y espera una Promise)
   const handleCardSubmit = async (data: {
     amount: number;
     email: string;
     installments: number;
     token: string;
     identification?: { type?: string; number?: string };
-    paymentMethodId: string
+    paymentMethodId: string;
   }) => {
     setIsSubmitting(true);
     try {
@@ -243,83 +260,46 @@ export default function CheckoutPage() {
         throw new Error('El total debe ser mayor a 0.');
       }
 
-      if (!checkout.lockState?.lockToken || !isLockValid()) {
-        throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
-      }
-
       const compraDescripcion = checkout.returnTrip ? 'Pasaje ida y vuelta' : 'Pasaje de ida';
 
-      const items = passengerData.map((p) => ({
-        reserveId: checkout.outboundTrip?.ReserveId ?? 0,
-        reserveTypeId: isRoundTrip ? 2 : 1, // 1 = Ida, 2 = IdaVuelta
-        customerId: null,
-        isPayment: true,
-        pickupLocationId: outboundLocation.pickupDirectionId,
-        dropoffLocationId: outboundLocation.dropoffDirectionId,
-        dropoffCityId: outboundLocation.dropoffCityId,
-        hasTraveled: false,
-        price: Number(outboundPrice.toFixed(2)),
-        firstName: p.firstName,
-        lastName: p.lastName,
-        email: p.email,
-        phone1: p.phone,
-        documentNumber: p.documentNumber,
-      }));
-
-      if (checkout.returnTrip) {
-        items.push(
-          ...passengerData.map((p) => ({
-            reserveId: checkout.returnTrip?.ReserveId ?? 0,
-            reserveTypeId: 2, // Vuelta siempre es tipo 2
-            customerId: null,
-            isPayment: true,
-            pickupLocationId: returnLocation.pickupDirectionId,
-            dropoffLocationId: returnLocation.dropoffDirectionId,
-            dropoffCityId: returnLocation.dropoffCityId,
-            hasTraveled: false,
-            price: Number(returnPrice.toFixed(2)),
-            firstName: p.firstName,
-            lastName: p.lastName,
-            email: p.email,
-            phone1: p.phone,
-            documentNumber: p.documentNumber,
-          })),
-        );
-      }
-
-      const payload = {
-        lockToken: checkout.lockState.lockToken,
-        items: items,
-        payment: {
-          transactionAmount: Number(finalTotal.toFixed(2)),
-          token: data.token,
-          description: compraDescripcion,
-          installments: data.installments,
-          paymentMethodId: data.paymentMethodId,
-          payerEmail: data.email,
-          identificationType: data?.identification?.type,
-          identificationNumber: data?.identification?.number,
-        },
+      const payment: ExternalPayment = {
+        transactionAmount: Number(finalTotal.toFixed(2)),
+        token: data.token,
+        description: compraDescripcion,
+        installments: data.installments,
+        paymentMethodId: data.paymentMethodId,
+        payerEmail: data.email,
+        identificationType: data?.identification?.type,
+        identificationNumber: data?.identification?.number,
       };
 
-      const response = await post('/passenger-reserves-create-with-lock', payload);
-      const responseData: CreateReserveExternalResult =
-        typeof response === 'string' ? JSON.parse(response) : response;
+      const responseData = await submitBooking(payment);
 
-      if (responseData.Status === 'approved') {
-        const reserveId = checkout.outboundTrip?.ReserveId;
+      if (responseData.status === 'approved') {
+        const reserveId = checkout.outboundTrip?.reserveId;
         router.push(`/booking-confirmation?success=true&reserveId=${reserveId}`);
       } else {
-        router.push(`/booking-confirmation?status=${encodeURIComponent(responseData.Status || 'unknown')}`);
+        router.push(
+          `/booking-confirmation?status=${encodeURIComponent(responseData.status || 'unknown')}`,
+        );
       }
+    } catch (err) {
+      const code = getApiErrorCode(err);
+      const description =
+        code === RESERVE_ERROR.PRICE_NOT_AVAILABLE
+          ? 'El precio cambió mientras finalizabas la compra. Volvé a revisar e intentá de nuevo.'
+          : code === RESERVE_ERROR.OVERPAYMENT_NOT_ALLOWED
+          ? 'El monto pagado supera el total de la reserva.'
+          : 'Ocurrió un error procesando el pago. Intentá nuevamente.';
+      toast({ title: 'Error', description, variant: 'destructive' });
+      throw err;
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // If there's no trip, don't render the checkout form to prevent errors while redirecting
   if (!checkout.outboundTrip) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
@@ -341,7 +321,6 @@ export default function CheckoutPage() {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-lg border shadow-sm p-4 sm:p-6 relative w-full">
 
-              {/* Overlay de loading durante el pago */}
               {isSubmitting && (
                 <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center rounded-lg z-10">
                   <span className="text-sm text-gray-700">Procesando pago…</span>
@@ -350,14 +329,10 @@ export default function CheckoutPage() {
 
               <h1 className="text-xl sm:text-2xl font-bold text-blue-800 font-display mb-4">Complete su reserva</h1>
 
-              {/* Timer Component - Aislado para evitar re-renders */}
               <LockTimer
                 lockToken={checkout.lockState?.lockToken}
                 expiresAt={checkout.lockState?.expiresAt}
-                onExpire={() => {
-                  // No limpiar inmediatamente para permitir mostrar el mensaje de expiración
-                  console.log('Timer expired');
-                }}
+                onExpire={() => {}}
                 onRestart={() => {
                   setLockState(null);
                   setCurrentStep('passengers');
@@ -365,7 +340,6 @@ export default function CheckoutPage() {
                 }}
               />
 
-              {/* Lock Error Display */}
               {lockError && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                   <div className="flex items-center">
@@ -374,7 +348,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Steps */}
               <div className="mb-8">
                 <div className="flex items-center justify-between">
                   <div className={`flex flex-col items-center ${currentStep === 'passengers' ? 'text-blue-600' : 'text-gray-500'}`}>
@@ -415,11 +388,9 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Contenido */}
               <div>
                 {currentStep === 'passengers' && (
                   <div className="space-y-8">
-                    {/* Passenger Information */}
                     <div>
                       <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Información de los Pasajeros</h2>
                       <p className="text-gray-600 mb-6 text-sm sm:text-base">Por favor ingrese los detalles de cada pasajero.</p>
@@ -430,10 +401,7 @@ export default function CheckoutPage() {
                       />
                     </div>
 
-                    {/* Location Selection - Outbound */}
-                    {/* Debug log */}
-                    {console.log('[Checkout] outboundTrip:', checkout.outboundTrip, 'TripId:', checkout.outboundTrip?.TripId, 'ReserveId:', checkout.outboundTrip?.ReserveId)}
-                    {checkout.outboundTrip?.TripId && checkout.outboundTrip?.ReserveId && (
+                    {checkout.outboundTrip?.tripId && checkout.outboundTrip?.reserveId && (
                       <div className="border-t pt-6">
                         <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4 flex items-center gap-2">
                           <MapPin className="h-5 w-5" />
@@ -443,18 +411,18 @@ export default function CheckoutPage() {
                           Seleccione dónde desea subir y bajar del vehículo.
                         </p>
                         <LocationSelector
-                          tripId={checkout.outboundTrip.TripId}
-                          reserveId={checkout.outboundTrip.ReserveId}
+                          tripId={checkout.outboundTrip.tripId}
+                          reserveId={checkout.outboundTrip.reserveId}
                           isRoundTrip={isRoundTrip}
+                          useIdaVueltaTariff={useIdaVueltaTariff}
                           onSelectionChange={setOutboundLocation}
                           initialData={outboundLocation}
-                          departureHour={checkout.outboundTrip.DepartureHour}
+                          departureHour={checkout.outboundTrip.departureHour}
                         />
                       </div>
                     )}
 
-                    {/* Location Selection - Return (only for round trips) */}
-                    {isRoundTrip && checkout.returnTrip?.TripId && (
+                    {isRoundTrip && checkout.returnTrip?.tripId && (
                       <div className="border-t pt-6">
                         <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4 flex items-center gap-2">
                           <MapPin className="h-5 w-5" />
@@ -464,12 +432,13 @@ export default function CheckoutPage() {
                           Seleccione dónde desea subir y bajar en el viaje de vuelta.
                         </p>
                         <LocationSelector
-                          tripId={checkout.returnTrip.TripId}
-                          reserveId={checkout.returnTrip.ReserveId}
+                          tripId={checkout.returnTrip.tripId}
+                          reserveId={checkout.returnTrip.reserveId}
                           isRoundTrip={isRoundTrip}
+                          useIdaVueltaTariff={useIdaVueltaTariff}
                           onSelectionChange={setReturnLocation}
                           initialData={returnLocation}
-                          departureHour={checkout.returnTrip?.DepartureHour}
+                          departureHour={checkout.returnTrip?.departureHour}
                         />
                       </div>
                     )}
@@ -484,18 +453,17 @@ export default function CheckoutPage() {
                     </p>
 
                     <div className="space-y-6">
-                      {/* Ida */}
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <h3 className="font-medium text-blue-800 mb-2">Detalle del Viaje de Ida</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                           <div className="text-gray-600">Ruta:</div>
                           <div className="font-medium flex items-center">
-                            {checkout.outboundTrip?.OriginName}
+                            {checkout.outboundTrip?.originName}
                             <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
-                            {checkout.outboundTrip?.DestinationName}
+                            {checkout.outboundTrip?.destinationName}
                           </div>
                           {!isRoundTrip && outboundLocation.dropoffCityName &&
-                           outboundLocation.dropoffCityName !== checkout.outboundTrip?.DestinationName && (
+                           outboundLocation.dropoffCityName !== checkout.outboundTrip?.destinationName && (
                             <>
                               <div className="text-gray-600">Bajada:</div>
                               <div className="font-medium text-amber-600">{outboundLocation.dropoffCityName}</div>
@@ -504,30 +472,28 @@ export default function CheckoutPage() {
                           <div className="text-gray-600">Fecha:</div>
                           <div className="font-medium">{formattedDepartureDate}</div>
                           <div className="text-gray-600">Hora de Salida:</div>
-                          <div className="font-medium">{checkout.outboundTrip?.DepartureHour}</div>
+                          <div className="font-medium">{checkout.outboundTrip?.departureHour}</div>
                         </div>
                       </div>
 
-                      {/* Vuelta */}
                       {checkout.returnTrip && (
                         <div className="bg-blue-50 p-4 rounded-lg">
                           <h3 className="font-medium text-blue-800 mb-2">Detalle del Viaje de Vuelta</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                             <div className="text-gray-600">Ruta:</div>
                             <div className="font-medium flex items-center">
-                              {checkout.returnTrip?.OriginName}
+                              {checkout.returnTrip?.originName}
                               <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
-                              {checkout.returnTrip?.DestinationName}
+                              {checkout.returnTrip?.destinationName}
                             </div>
                             <div className="text-gray-600">Fecha:</div>
                             <div className="font-medium">{formattedReturnDate}</div>
                             <div className="text-gray-600">Hora de Salida:</div>
-                            <div className="font-medium">{checkout.returnTrip?.DepartureHour}</div>
+                            <div className="font-medium">{checkout.returnTrip?.departureHour}</div>
                           </div>
                         </div>
                       )}
 
-                      {/* Pasajeros */}
                       <div>
                         <h3 className="font-medium text-blue-800 mb-2">Información de Pasajeros</h3>
                         <div className="space-y-3">
@@ -547,7 +513,6 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
-                      {/* Términos */}
                       <div className="bg-yellow-50 p-4 rounded-lg text-sm">
                         <h3 className="font-medium text-yellow-800 mb-2">Términos y Condiciones</h3>
                         <p className="text-yellow-700 mb-2">
@@ -557,7 +522,7 @@ export default function CheckoutPage() {
                           {legal.cancellationPolicy}
                         </p>
                       </div>
-                      {/* Resumen de Precio - SOLO MOBILE */}
+
                       <div className="lg:hidden bg-white p-4 rounded-lg border border-gray-200 mt-4 shadow-sm">
                         <h3 className="font-medium text-blue-800 mb-3">Resumen de Precio</h3>
                         <div className="space-y-2 mb-4 text-sm">
@@ -586,7 +551,6 @@ export default function CheckoutPage() {
                     <h2 className="text-lg sm:text-xl font-medium text-blue-800 mb-4">Detalles del Pago</h2>
                     <p className="text-gray-600 mb-6 text-sm sm:text-base">Su información de pago es segura y está encriptada.</p>
 
-                    {/* Payment Method Selector */}
                     <div className="mb-6">
                       <h3 className="font-medium text-gray-900 mb-3">Seleccione su método de pago</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -624,7 +588,6 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    {/* Payment Form */}
                     <div className="mt-6">
                       {paymentMethod === 'card' ? (
                         <CardPaymentForm
@@ -652,7 +615,6 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* Navegación - Solo mostrar botones en pasos que no sean payment */}
               {currentStep !== 'payment' && (
                 <div className="flex justify-between mt-8">
                   {currentStep !== 'passengers' ? (
@@ -672,7 +634,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Navegación para el paso de payment con botón Volver solamente */}
               {currentStep === 'payment' && (
                 <div className="flex justify-between mt-8">
                   <Button type="button" variant="outline" onClick={goToPreviousStep} disabled={isSubmitting}>
@@ -684,7 +645,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Sidebar - Oculto en mobile, visible en LG */}
           <div className="hidden lg:block">
             <div className="bg-white rounded-lg border shadow-sm md:sticky md:top-24">
               <div className="p-4 border-b bg-blue-50">
@@ -693,9 +653,9 @@ export default function CheckoutPage() {
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="text-lg font-medium flex items-center">
-                    {checkout.outboundTrip?.OriginName}
+                    {checkout.outboundTrip?.originName}
                     <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
-                    {checkout.outboundTrip?.DestinationName}
+                    {checkout.outboundTrip?.destinationName}
                   </div>
                 </div>
 
@@ -707,14 +667,14 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-blue-600" />
                     <div className="flex items-center">
-                      <span>{checkout.outboundTrip?.DepartureHour}</span>
+                      <span>{checkout.outboundTrip?.departureHour}</span>
                       <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
-                      <span>{checkout.outboundTrip?.ArrivalHour}</span>
+                      <span>{checkout.outboundTrip?.arrivalHour}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Bus className="h-4 w-4 text-blue-600" />
-                    <span>{checkout.outboundTrip?.VehicleName}</span>
+                    <span>{checkout.outboundTrip?.vehicleName}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-blue-600" />
@@ -722,9 +682,8 @@ export default function CheckoutPage() {
                       {checkout.passengers} Pasajero{checkout.passengers > 1 ? 's' : ''}
                     </span>
                   </div>
-                  {/* Show dropoff city if different from destination (only for one-way trips) */}
                   {!isRoundTrip && outboundLocation.dropoffCityName &&
-                   outboundLocation.dropoffCityName !== checkout.outboundTrip?.DestinationName && (
+                   outboundLocation.dropoffCityName !== checkout.outboundTrip?.destinationName && (
                     <div className="flex items-center gap-2 text-amber-600">
                       <MapPin className="h-4 w-4" />
                       <span>Bajada: {outboundLocation.dropoffCityName}</span>
@@ -737,9 +696,9 @@ export default function CheckoutPage() {
                     <Separator className="my-4" />
                     <div className="flex items-center justify-between mb-4">
                       <div className="text-lg font-medium flex items-center">
-                        {checkout.returnTrip?.OriginName}
+                        {checkout.returnTrip?.originName}
                         <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
-                        {checkout.returnTrip?.DestinationName}
+                        {checkout.returnTrip?.destinationName}
                       </div>
                     </div>
                     <div className="space-y-3 text-sm mb-4">
@@ -750,16 +709,14 @@ export default function CheckoutPage() {
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-blue-600" />
                         <div className="flex items-center">
-                          <span>{checkout.returnTrip?.DepartureHour}</span>
+                          <span>{checkout.returnTrip?.departureHour}</span>
                           <ArrowRight className="h-3 w-3 mx-1 text-gray-400" />
-                          <span>{checkout.returnTrip?.ArrivalHour}</span>
-
+                          <span>{checkout.returnTrip?.arrivalHour}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Bus className="h-4 w-4 text-blue-600" />
-                        <span>{checkout.returnTrip?.VehicleName}</span>
-
+                        <span>{checkout.returnTrip?.vehicleName}</span>
                       </div>
                     </div>
                   </>
@@ -778,10 +735,6 @@ export default function CheckoutPage() {
                       <span>${(returnPrice * checkout.passengers).toFixed(2)}</span>
                     </div>
                   )}
-                  {/* <div className="flex justify-between">
-                    <span className="text-gray-600">Tasa de servicio</span>
-                    <span>${serviceFee.toFixed(2)}</span>
-                  </div> */}
                 </div>
 
                 <Separator className="my-4" />

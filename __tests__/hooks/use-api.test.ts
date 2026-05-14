@@ -14,14 +14,14 @@ describe('useApi', () => {
   }
 
   const mockResponse: PagedResponse<TestData> = {
-    Items: [
+    items: [
       { id: 1, name: 'Item 1' },
       { id: 2, name: 'Item 2' },
     ],
-    PageNumber: 1,
-    PageSize: 10,
-    TotalRecords: 2,
-    TotalPages: 1,
+    pageNumber: 1,
+    pageSize: 10,
+    totalRecords: 2,
+    totalPages: 1,
   }
 
   const createMockApiCall = (

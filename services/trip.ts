@@ -26,14 +26,14 @@ export async function getTripsForSelect(params?: Partial<PaginationParams>): Pro
 
 // Public Trip DTO for landing page
 export interface PublicTripDto {
-  TripId: number;
-  Description: string;
-  OriginCityId: number;
-  OriginCityName: string;
-  DestinationCityId: number;
-  DestinationCityName: string;
-  PriceFrom: number | null;
-  EstimatedDuration: string | null;
+  tripId: number;
+  description: string;
+  originCityId: number;
+  originCityName: string;
+  destinationCityId: number;
+  destinationCityName: string;
+  priceFrom: number | null;
+  estimatedDuration: string | null;
 }
 
 // Get public trips for landing page (no auth required)

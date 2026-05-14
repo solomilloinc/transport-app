@@ -6,7 +6,7 @@ import type { ReserveSummaryItem } from '@/interfaces/reserve'
 // Helper to render hook with provider
 const renderCheckoutHook = () => {
   return renderHook(() => useCheckout(), {
-    wrapper: ({ children }) => <CheckoutProvider>{children}</CheckoutProvider>,
+    wrapper: ({ children }: { children: React.ReactNode }) => <CheckoutProvider>{children}</CheckoutProvider>,
   })
 }
 
@@ -36,7 +36,7 @@ describe('CheckoutContext', () => {
       const { result } = renderCheckoutHook()
 
       const newState: CheckoutState = {
-        outboundTrip: { Id: 1 } as ReserveSummaryItem,
+        outboundTrip: { reserveId: 1 } as unknown as ReserveSummaryItem,
         returnTrip: null,
         passengers: 3,
       }
@@ -45,7 +45,7 @@ describe('CheckoutContext', () => {
         result.current.setCheckout(newState)
       })
 
-      expect(result.current.checkout.outboundTrip).toEqual({ Id: 1 })
+      expect(result.current.checkout.outboundTrip).toEqual({ reserveId: 1 })
       expect(result.current.checkout.passengers).toBe(3)
     })
   })
@@ -97,8 +97,8 @@ describe('CheckoutContext', () => {
       // Set some state
       act(() => {
         result.current.setCheckout({
-          outboundTrip: { Id: 1 } as ReserveSummaryItem,
-          returnTrip: { Id: 2 } as ReserveSummaryItem,
+          outboundTrip: { reserveId: 1 } as unknown as ReserveSummaryItem,
+          returnTrip: { reserveId: 2 } as unknown as ReserveSummaryItem,
           passengers: 5,
         })
       })

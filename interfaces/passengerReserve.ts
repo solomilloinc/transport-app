@@ -1,5 +1,6 @@
-import { Auditable } from "./auditable"
-import { Payment } from "./payment"
+import { Auditable } from './auditable';
+import { Payment } from './payment';
+import { ReserveTypeId } from '@/constants/reserveType';
 
 export enum PaymentStatusEnum {
   PendingPayment = 1,
@@ -7,7 +8,7 @@ export enum PaymentStatusEnum {
   Cancelled = 3,
   Traveled = 4,
   NoShow = 5,
-  Refunded = 6
+  Refunded = 6,
 }
 
 export const PaymentStatusLabels: Record<number, string> = {
@@ -16,56 +17,99 @@ export const PaymentStatusLabels: Record<number, string> = {
   3: 'Cancelado',
   4: 'Viajó',
   5: 'No se presentó',
-  6: 'Reembolsado'
-}
+  6: 'Reembolsado',
+};
 
 export interface PassengerReserve extends Auditable {
-    PassengerId: number
-    ReserveId: number
-    CustomerId: number
-    IsPayment: boolean
-    StatusPaymentId: number
-    ReserveTypeId: number
-    PaymentMethod: number
-    PaymentMethods: string
-    PickupLocationId: number
-    DropoffLocationId: number
-    HasTraveled: boolean
-    Status: number
-    IsRoundTrip: boolean
-    Payments: Payment[]
-    PaidAmount: number
-}
-
-export interface PassengerReserveCreate extends Omit<PassengerReserve, 'CustomerReserveId' | 'IsRoundTrip' | 'Payments' | 'Status' | 'HasTraveled' | 'PaidAmount' | 'PaymentMethods' | 'CreatedBy' | 'CreatedDate' | 'UpdatedBy' | 'UpdatedDate'> {
-    PickupLocationReturnId?: number
-    DropoffLocationReturnId?: number
-    Price: number
-}
-
-export const emptyPassengerCreate: Omit<PassengerReserveCreate, 'PaidAmount' | 'PaymentMethods' | 'HasTraveled'> = {
-    PassengerId: 0,
-    ReserveId: 0,
-    CustomerId: 0,
-    PickupLocationId: 0,
-    DropoffLocationId: 0,
-    IsPayment: true,
-    StatusPaymentId: 1, // Assuming 1 means paid
-    PaymentMethod: 1, // Assuming 1 is cash
-    ReserveTypeId: 1,
-    Price: 0,
+  passengerId: number;
+  reserveId: number;
+  customerId: number;
+  isPayment: boolean;
+  statusPaymentId: number;
+  reserveTypeId: number;
+  paymentMethod: number;
+  paymentMethods: string;
+  pickupLocationId: number;
+  dropoffLocationId: number;
+  hasTraveled: boolean;
+  status: number;
+  isRoundTrip: boolean;
+  payments: Payment[];
+  paidAmount: number;
 }
 
 export interface PassengerReserveReport extends PassengerReserve {
-    FullName: string
-    DocumentNumber: string
-    PickupLocationName: string
-    DropoffLocaationName: string
-    CurrentBalance: number
+  fullName: string;
+  documentNumber: string;
+  pickupLocationName: string;
+  dropoffLocationName: string;
+  currentBalance: number;
 }
 
 export interface PassengerReserveUpdate {
-    pickupLocationId: number
-    dropoffLocationId: number
-    hasTraveled: boolean
+  pickupLocationId: number;
+  dropoffLocationId: number;
+  hasTraveled: boolean;
+}
+
+// === New shape for booking creation (matches backend after API migration) ===
+
+export interface LegInfo {
+  pickupLocationId: number | null;
+  dropoffLocationId: number | null;
+  price: number;
+}
+
+export interface PassengerBooking {
+  customerId: number;
+  isPayment: boolean;
+  hasTraveled: boolean;
+  outbound: LegInfo;
+  return: LegInfo | null;
+}
+
+export interface PassengerBookingExternal {
+  customerId: number | null;
+  isPayment: boolean;
+  hasTraveled: boolean;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone1: string;
+  documentNumber: string;
+  outbound: LegInfo;
+  return: LegInfo | null;
+}
+
+export interface PaymentItem {
+  transactionAmount: number;
+  paymentMethod: number;
+}
+
+export interface PassengerReserveCreateRequestWrapper {
+  reserveTypeId: ReserveTypeId;
+  outboundReserveId: number;
+  returnReserveId: number | null;
+  payments: PaymentItem[];
+  passengers: PassengerBooking[];
+}
+
+export interface ExternalPayment {
+  transactionAmount: number;
+  token: string;
+  description: string;
+  installments: number;
+  paymentMethodId: string;
+  payerEmail: string;
+  identificationType?: string;
+  identificationNumber?: string;
+}
+
+export interface CreateReserveWithLockRequest {
+  lockToken: string;
+  reserveTypeId: ReserveTypeId;
+  outboundReserveId: number;
+  returnReserveId: number | null;
+  payment: ExternalPayment | null;
+  passengers: PassengerBookingExternal[];
 }

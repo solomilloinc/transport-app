@@ -38,11 +38,11 @@ import CashBox from '@/interfaces/cash-box';
 // Al no poner un tipo explícito, TypeScript infiere el tipo más específico,
 // lo que resuelve el error de asignación en el hook `useTableSort`.
 const passengerSortFns = {
-  name: (a: PassengerReserveReport, b: PassengerReserveReport) => a.FullName.localeCompare(b.FullName),
-  pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.PickupLocationName.localeCompare(b.PickupLocationName),
-  paid: (a: PassengerReserveReport, b: PassengerReserveReport) => a.StatusPaymentId - b.StatusPaymentId,
-  paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.PaymentMethods || '').localeCompare(b.PaymentMethods),
-  paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.PaidAmount) - Number(b.PaidAmount),
+  name: (a: PassengerReserveReport, b: PassengerReserveReport) => a.fullName.localeCompare(b.fullName),
+  pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.pickupLocationName.localeCompare(b.pickupLocationName),
+  paid: (a: PassengerReserveReport, b: PassengerReserveReport) => a.statusPaymentId - b.statusPaymentId,
+  paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.paymentMethods || '').localeCompare(b.paymentMethods),
+  paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.paidAmount) - Number(b.paidAmount),
 };
 
 export default function ReservationsPage() {
@@ -101,7 +101,7 @@ export default function ReservationsPage() {
     sortColumn,
     sortDirection,
     handleSort,
-  } = useTableSort<PassengerReserveReport, PassengerSortColumn>(dataPassengerReserves?.Items, 'name', passengerSortFns);
+  } = useTableSort<PassengerReserveReport, PassengerSortColumn>(dataPassengerReserves?.items, 'name', passengerSortFns);
 
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
@@ -120,15 +120,15 @@ export default function ReservationsPage() {
           if (!prev) return prev;
 
           // Use either TripId or ServiceId for matching
-          const currentId = prev.TripId || (prev as any).ServiceId;
+          const currentId = prev.tripId || (prev as any).serviceId;
           if (currentId && Number(currentId) !== tripId) return prev;
 
           // Map properties defensively (handle PascalCase and camelCase)
           return {
             ...prev,
             TripId: tripId,
-            Prices: tripData.Prices || (tripData as any).prices || [],
-            RelevantCities: tripData.RelevantCities || (tripData as any).relevantCities || [],
+            Prices: tripData.prices || (tripData as any).prices || [],
+            RelevantCities: tripData.relevantCities || (tripData as any).relevantCities || [],
           };
         });
       }
@@ -144,15 +144,15 @@ export default function ReservationsPage() {
     console.log('Selected Trip:', selectedTrip);
 
     // Try to get tripId from available fields (case insensitive check for common variants)
-    const rawTripId = selectedTrip.TripId || (selectedTrip as any).ServiceId || (selectedTrip as any).tripId;
+    const rawTripId = selectedTrip.tripId || (selectedTrip as any).serviceId || (selectedTrip as any).tripId;
     const tripId = rawTripId ? Number(rawTripId) : null;
 
     // Fetch detailed trip info if we have an ID and missing data (RelevantCities)
-    if (tripId && !selectedTrip.RelevantCities) {
+    if (tripId && !selectedTrip.relevantCities) {
       fetchFullTripDetails(tripId);
     }
 
-    fetchPassengerReserves(selectedTrip.ReserveId);
+    fetchPassengerReserves(selectedTrip.reserveId);
     loadAllOptions();
     loadPaymentMethod();
   }, [selectedTrip]);
@@ -189,11 +189,11 @@ export default function ReservationsPage() {
         filters: {},
       });
 
-      if (directionsResponse && directionsResponse.Items) {
-        const formatedDirections: SelectOption[] = directionsResponse.Items.map((direction) => ({
-          id: direction.DirectionId,
-          value: direction.DirectionId.toString(),
-          label: direction.Name,
+      if (directionsResponse && directionsResponse.items) {
+        const formatedDirections: SelectOption[] = directionsResponse.items.map((direction) => ({
+          id: direction.directionId,
+          value: direction.directionId.toString(),
+          label: direction.name,
         }));
         setDirections(formatedDirections);
       }
@@ -206,20 +206,20 @@ export default function ReservationsPage() {
   // Handle passenger checkbox change
   const handlePassengerReserveCheck = async (passenger: PassengerReserveReport, checked: boolean) => {
     // Evitar múltiples clics con cooldown de 10 segundos
-    setDisabledPassengers((prev) => [...prev, passenger.PassengerId]);
+    setDisabledPassengers((prev) => [...prev, passenger.passengerId]);
 
     try {
       const updatePayload: PassengerReserveUpdate = {
-        pickupLocationId: passenger.PickupLocationId,
-        dropoffLocationId: passenger.DropoffLocationId,
+        pickupLocationId: passenger.pickupLocationId,
+        dropoffLocationId: passenger.dropoffLocationId,
         hasTraveled: checked,
       };
-      const response = await put(`/passenger-reserve-update/${passenger.PassengerId}`, updatePayload);
+      const response = await put(`/passenger-reserve-update/${passenger.passengerId}`, updatePayload);
 
       if (response) {
         toast({ title: 'Estado actualizado', description: 'El estado del pasajero ha sido actualizado.', variant: 'success' });
         if (selectedTrip) {
-          fetchPassengerReserves(selectedTrip.ReserveId);
+          fetchPassengerReserves(selectedTrip.reserveId);
         }
       } else {
         toast({ title: 'Error', description: 'No se pudo actualizar el estado.', variant: 'destructive' });
@@ -229,7 +229,7 @@ export default function ReservationsPage() {
     } finally {
       // Remover del estado de deshabilitado después de 10 segundos
       setTimeout(() => {
-        setDisabledPassengers((prev) => prev.filter((id) => id !== passenger.PassengerId));
+        setDisabledPassengers((prev) => prev.filter((id) => id !== passenger.passengerId));
       }, 10000);
     }
   };
@@ -248,12 +248,12 @@ export default function ReservationsPage() {
       setIsDeleting(true);
       try {
         // You can use the 'action' variable here to call different backend endpoints if needed
-        await deleteLogic(`/customer-reserve-delete/${selectedPassengerReserve.PassengerId}`);
+        await deleteLogic(`/customer-reserve-delete/${selectedPassengerReserve.passengerId}`);
         toast({ title: 'Pasajero eliminado', description: 'El pasajero ha sido eliminado de la reserva.', variant: 'success' });
         setIsDeleteModalOpen(false);
         setSelectedPassengerReserve(null);
         if (selectedTrip) {
-          fetchPassengerReserves(selectedTrip.ReserveId);
+          fetchPassengerReserves(selectedTrip.reserveId);
         }
       } finally {
         setIsDeleting(false);
@@ -294,14 +294,14 @@ export default function ReservationsPage() {
         departureHour: null,
         status: ReserveStatusEnum.Cancelled,
       };
-      const response = await put(`/reserve-update/${tripToCancel.ReserveId}`, updatePayload);
+      const response = await put(`/reserve-update/${tripToCancel.reserveId}`, updatePayload);
 
       if (response) {
         toast({ title: 'Viaje cancelado', description: 'El viaje ha sido cancelado exitosamente.', variant: 'success' });
         setIsCancelTripDialogOpen(false);
         setTripToCancel(null);
         if (selectedDate) fetchReserves(format(selectedDate, 'yyyyMMdd'));
-        if (selectedTrip?.ReserveId === tripToCancel.ReserveId) {
+        if (selectedTrip?.reserveId === tripToCancel.reserveId) {
           setSelectedTrip(null);
         }
       } else {
@@ -366,7 +366,7 @@ export default function ReservationsPage() {
           selectedTrip={selectedTrip}
           onTripSelect={setSelectedTrip}
           onCancelTrip={handleCancelTripClick}
-          trips={dataReserves?.Items}
+          trips={dataReserves?.items}
           isLoading={loadingReserves}
         />
 
@@ -380,7 +380,7 @@ export default function ReservationsPage() {
                   ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
                   format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
                   : ''}{' '}
-                - {selectedTrip?.OriginName} → {selectedTrip?.DestinationName}, {selectedTrip?.DepartureHour}
+                - {selectedTrip?.originName} → {selectedTrip?.destinationName}, {selectedTrip?.departureHour}
               </div>
 
               <PassengerListTable
@@ -406,7 +406,7 @@ export default function ReservationsPage() {
         onOpenChange={setIsAddReservationFlowOpen}
         onSuccess={() => {
           if (selectedTrip) {
-            fetchPassengerReserves(selectedTrip.ReserveId);
+            fetchPassengerReserves(selectedTrip.reserveId);
           }
         }}
         initialTrip={selectedTrip}
@@ -428,9 +428,9 @@ export default function ReservationsPage() {
         open={isEditPassengerReserveModalOpen}
         onOpenChange={setIsEditPassengerReserveModalOpen}
         passengerReserve={selectedPassengerReserve}
-        onSuccess={() => fetchPassengerReserves(selectedTrip!.ReserveId)}
+        onSuccess={() => fetchPassengerReserves(selectedTrip!.reserveId)}
         directions={directions}
-        relevantCities={selectedTrip?.RelevantCities || []}
+        relevantCities={selectedTrip?.relevantCities || []}
         isLoadingDirections={isOptionsLoading}
       />
       <AddPaymentDialog
@@ -438,7 +438,7 @@ export default function ReservationsPage() {
         onOpenChange={setIsAddPaymentReserveModalOpen}
         passengerReserve={selectedPassengerReserve}
         paymentMethodOptions={paymentMethod}
-        onSuccess={() => fetchPassengerReserves(selectedTrip!.ReserveId)}
+        onSuccess={() => fetchPassengerReserves(selectedTrip!.reserveId)}
       />
       <DeleteConfirmationDialog
         open={isDeleteModalOpen}

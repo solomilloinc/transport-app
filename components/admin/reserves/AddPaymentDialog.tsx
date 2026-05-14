@@ -44,15 +44,15 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   }, [open, passengerReserve]);
 
   const getTotalReserveAmount = () => {
-    return passengerReserve?.PaidAmount || 0;
+    return passengerReserve?.paidAmount || 0;
   };
 
   const getAlreadyPaidAmount = () => {
-    return passengerReserve?.Payments?.reduce((total, p) => total + p.TransactionAmount, 0) || 0;
+    return passengerReserve?.payments?.reduce((total, p) => total + p.transactionAmount, 0) || 0;
   };
 
   const getCurrentAddedAmount = () => {
-    return payments.reduce((total, payment) => total + payment.TransactionAmount, 0);
+    return payments.reduce((total, payment) => total + payment.transactionAmount, 0);
   };
 
   const getRemainingBalance = () => {
@@ -63,9 +63,9 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
 
   const handleAddPaymentToList = () => {
     // Basic validation before adding to the list
-    if (Number(form.data.TransactionAmount) > 0 && form.data.PaymentMethod) {
-      const methodId = Number(form.data.PaymentMethod);
-      if (payments.some((p) => p.PaymentMethod === methodId)) {
+    if (Number(form.data.transactionAmount) > 0 && form.data.paymentMethod) {
+      const methodId = Number(form.data.paymentMethod);
+      if (payments.some((p) => p.paymentMethod === methodId)) {
         toast({
           title: 'Método duplicado',
           description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
@@ -77,13 +77,13 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       setPayments([
         ...payments,
         {
-          PaymentMethod: methodId,
-          TransactionAmount: Number(form.data.TransactionAmount),
+          paymentMethod: methodId,
+          transactionAmount: Number(form.data.transactionAmount),
         },
       ]);
       // Reset form fields for the next payment entry
-      form.setField('TransactionAmount', '');
-      form.setField('PaymentMethod', 0);
+      form.setField('transactionAmount', '');
+      form.setField('paymentMethod', 0);
     }
   };
 
@@ -92,7 +92,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   };
 
   const getTotalPaymentAmount = () => {
-    return payments.reduce((total, payment) => total + payment.TransactionAmount, 0);
+    return payments.reduce((total, payment) => total + payment.transactionAmount, 0);
   };
 
   const handleSubmit = async () => {
@@ -115,11 +115,11 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     form.setIsSubmitting(true);
     try {
       const payload: PassengerPaymentCreate[] = payments.map((p) => ({
-        transactionAmount: p.TransactionAmount,
-        paymentMethod: p.PaymentMethod,
+        transactionAmount: p.transactionAmount,
+        paymentMethod: p.paymentMethod,
       }));
 
-      const response = await post(`/reserve-payments-create/${passengerReserve?.ReserveId}/${passengerReserve?.CustomerId}`, payload);
+      const response = await post(`/reserve-payments-create/${passengerReserve?.reserveId}/${passengerReserve?.customerId}`, payload);
       if (response) {
         toast({ title: 'Pago cargado', description: 'El pago ha sido cargado exitosamente', variant: 'success' });
         onSuccess();
@@ -144,7 +144,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       open={open}
       onOpenChange={onOpenChange}
       title="Agregar pago"
-      description={`Agrega pago de la reserva de ${passengerReserve?.FullName}`}
+      description={`Agrega pago de la reserva de ${passengerReserve?.fullName}`}
       onSubmit={handleSubmit}
       submitText={payments.length > 0 && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}
       isLoading={form.isSubmitting}
@@ -156,10 +156,10 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
             <h3 className="font-semibold text-lg mb-3">Información del Pasajero</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">Nombre:</span> <p>{passengerReserve?.FullName}</p>
+                <span className="font-medium">Nombre:</span> <p>{passengerReserve?.fullName}</p>
               </div>
               <div>
-                <span className="font-medium">DNI:</span> <p>{passengerReserve?.DocumentNumber}</p>
+                <span className="font-medium">DNI:</span> <p>{passengerReserve?.documentNumber}</p>
               </div>
             </div>
           </div>
@@ -167,22 +167,22 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
           <div className="rounded-lg border p-4">
             <h3 className="font-semibold text-lg mb-3">Gestión de Pagos</h3>
             <div className="flex gap-2 mb-4 items-end">
-              <FormField label="Medio de pago" required error={form.errors.PaymentMethod} className="flex-1">
-                <ApiSelect value={String(form.data.PaymentMethod)} onValueChange={(value) => form.setField('PaymentMethod', Number(value))} placeholder="Seleccionar medio" options={paymentMethodOptions} loading={false} error={null} />
+              <FormField label="Medio de pago" required error={form.errors.paymentMethod} className="flex-1">
+                <ApiSelect value={String(form.data.paymentMethod)} onValueChange={(value) => form.setField('PaymentMethod', Number(value))} placeholder="Seleccionar medio" options={paymentMethodOptions} loading={false} error={null} />
               </FormField>
               <FormField label="Monto" className="flex-1">
                 <Input
                   id="monto"
                   type="number"
                   placeholder={`Saldo: $${getRemainingBalance().toLocaleString()}`}
-                  value={form.data.TransactionAmount}
+                  value={form.data.transactionAmount}
                   onChange={(e) => form.setField('TransactionAmount', e.target.value)}
                 />
               </FormField>
               <Button
                 size="icon"
                 onClick={handleAddPaymentToList}
-                disabled={!form.data.TransactionAmount || Number(form.data.TransactionAmount) <= 0}
+                disabled={!form.data.transactionAmount || Number(form.data.transactionAmount) <= 0}
               >
                 <PlusCircleIcon className="h-4 w-4" />
               </Button>
@@ -194,7 +194,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
                 <div className="max-h-40 overflow-y-auto border rounded p-2 bg-gray-50 space-y-2">
                   {payments.map((payment, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                      <span className="text-sm">{paymentMethodOptions.find((p) => p.id === payment.PaymentMethod)?.label}: <span className="font-medium">${payment.TransactionAmount.toLocaleString()}</span></span>
+                      <span className="text-sm">{paymentMethodOptions.find((p) => p.id === payment.paymentMethod)?.label}: <span className="font-medium">${payment.transactionAmount.toLocaleString()}</span></span>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => handleRemovePaymentFromList(index)}><TrashIcon className="h-3 w-3" /></Button>
                     </div>
                   ))}

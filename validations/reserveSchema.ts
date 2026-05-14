@@ -1,8 +1,8 @@
 export const validationConfigEditReserve = {
-  VehicleId: {
+  vehicleId: {
     required: { message: 'El vehículo es requerido' },
   },
-  DepartureHour: {
+  departureHour: {
     required: { message: 'La hora de salida es requerida' },
   },
 };

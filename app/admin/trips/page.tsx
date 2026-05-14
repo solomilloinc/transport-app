@@ -102,10 +102,10 @@ export default function TripManagement() {
         sortDescending: false,
       });
       if (response) {
-        const formattedCities = response.Items.map((city: City) => ({
-          id: city.Id.toString(),
-          value: city.Id.toString(),
-          label: city.Name,
+        const formattedCities = response.items.map((city: City) => ({
+          id: city.id.toString(),
+          value: city.id.toString(),
+          label: city.name,
         }));
         setCities(formattedCities);
       }
@@ -192,10 +192,10 @@ export default function TripManagement() {
   };
 
   const handleEditTrip = (trip: Trip) => {
-    setCurrentTripId(trip.TripId);
-    editForm.setField('description', trip.Description);
-    editForm.setField('originCityId', trip.OriginCityId);
-    editForm.setField('destinationCityId', trip.DestinationCityId);
+    setCurrentTripId(trip.tripId);
+    editForm.setField('description', trip.description);
+    editForm.setField('originCityId', trip.originCityId);
+    editForm.setField('destinationCityId', trip.destinationCityId);
     setIsEditModalOpen(true);
     loadCities();
   };
@@ -234,14 +234,14 @@ export default function TripManagement() {
       header: 'Precios',
       accessor: 'Prices',
       width: '10%',
-      cell: (trip: Trip) => trip.Prices?.length || 0,
+      cell: (trip: Trip) => trip.prices?.length || 0,
     },
     {
       header: 'Estado',
       accessor: 'Status',
       className: 'text-center',
       width: '10%',
-      cell: (trip: Trip) => <StatusBadge status={trip.Status} />,
+      cell: (trip: Trip) => <StatusBadge status={trip.status} />,
     },
     {
       header: 'Acciones',
@@ -254,7 +254,7 @@ export default function TripManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-green-600 border-green-200 hover:bg-green-50"
-            onClick={() => handleManagePrices(trip.TripId)}
+            onClick={() => handleManagePrices(trip.tripId)}
             title="Gestionar Precios"
           >
             <DollarSign className="h-4 w-4" />
@@ -263,7 +263,7 @@ export default function TripManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-orange-600 border-orange-200 hover:bg-orange-50"
-            onClick={() => handleManageStops(trip.TripId)}
+            onClick={() => handleManageStops(trip.tripId)}
             title="Gestionar Paradas"
           >
             <MapPin className="h-4 w-4" />
@@ -280,7 +280,7 @@ export default function TripManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeleteTrip(trip.TripId)}
+            onClick={() => handleDeleteTrip(trip.tripId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -352,19 +352,19 @@ export default function TripManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data?.Items ?? []}
+                data={data?.items ?? []}
                 emptyMessage="No se encontraron rutas."
                 isLoading={loading}
-                skeletonRows={data?.PageSize}
+                skeletonRows={data?.pageSize}
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {data?.items?.length > 0 && (
               <TablePagination
                 currentPage={pageNumber}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.totalPages}
+                totalItems={data?.totalRecords}
+                itemsPerPage={data?.pageSize}
                 onPageChange={setPageNumber}
                 itemName="rutas"
               />
@@ -394,18 +394,18 @@ export default function TripManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((trip) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((trip) => (
             <MobileCard
-              key={trip.TripId}
-              title={trip.Description}
-              subtitle={`${trip.OriginCityName} → ${trip.DestinationCityName}`}
-              badge={<StatusBadge status={trip.Status} />}
+              key={trip.tripId}
+              title={trip.description}
+              subtitle={`${trip.originCityName} → ${trip.destinationCityName}`}
+              badge={<StatusBadge status={trip.status} />}
               fields={[
-                { label: 'Precios', value: `${trip.Prices?.length || 0} configurados` },
+                { label: 'Precios', value: `${trip.prices?.length || 0} configurados` },
               ]}
               onEdit={() => handleEditTrip(trip)}
-              onDelete={() => handleDeleteTrip(trip.TripId)}
+              onDelete={() => handleDeleteTrip(trip.tripId)}
             />
           ))
         ) : (

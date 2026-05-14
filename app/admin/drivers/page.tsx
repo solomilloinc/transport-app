@@ -134,10 +134,10 @@ export default function DriversManagement() {
   };
 
   const handleEditDriver = (driver: Driver) => {
-    setCurrentDriverId(driver.DriverId);
-    editForm.setField('firstName', driver.FirstName);
-    editForm.setField('lastName', driver.LastName);
-    editForm.setField('documentNumber', driver.DocumentNumber);
+    setCurrentDriverId(driver.driverId);
+    editForm.setField('firstName', driver.firstName);
+    editForm.setField('lastName', driver.lastName);
+    editForm.setField('documentNumber', driver.documentNumber);
     setIsEditModalOpen(true);
   };
 
@@ -162,7 +162,7 @@ export default function DriversManagement() {
       accessor: 'status',
       className: 'text-center',
       width: '20%',
-      cell: (driver: Driver) => <StatusBadge status={driver.Status} />,
+      cell: (driver: Driver) => <StatusBadge status={driver.status} />,
     },
     {
       header: 'Acciones',
@@ -178,7 +178,7 @@ export default function DriversManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeleteDriver(driver.DriverId)}
+            onClick={() => handleDeleteDriver(driver.driverId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -234,19 +234,19 @@ export default function DriversManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data?.Items ?? []}
+                data={data?.items ?? []}
                 emptyMessage="No se encontraron choferes."
                 isLoading={loading}
-                skeletonRows={data?.PageSize}
+                skeletonRows={data?.pageSize}
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {data?.items?.length > 0 && (
               <TablePagination
                 currentPage={pageNumber}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.totalPages}
+                totalItems={data?.totalRecords}
+                itemsPerPage={data?.pageSize}
                 onPageChange={setPageNumber}
                 itemName="choferes"
               />
@@ -257,7 +257,7 @@ export default function DriversManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {loading && data?.Items?.length === 0 ? (
+        {loading && data?.items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -277,20 +277,20 @@ export default function DriversManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((driver) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((driver) => (
             <MobileCard
-              key={driver.DriverId}
-              title={driver.FirstName}
-              subtitle={driver.LastName}
-              badge={<StatusBadge status={driver.Status ? 'Activo' : 'Inactivo'} />}
+              key={driver.driverId}
+              title={driver.firstName}
+              subtitle={driver.lastName}
+              badge={<StatusBadge status={driver.status ? 'Activo' : 'Inactivo'} />}
               fields={[
-                { label: 'Nombre', value: driver.FirstName },
-                { label: 'Apellido', value: driver.LastName },
-                { label: 'Numero de documento', value: driver.DocumentNumber },
+                { label: 'Nombre', value: driver.firstName },
+                { label: 'Apellido', value: driver.lastName },
+                { label: 'Numero de documento', value: driver.documentNumber },
               ]}
               onEdit={() => handleEditDriver(driver)}
-              onDelete={() => handleDeleteDriver(driver.DriverId)}
+              onDelete={() => handleDeleteDriver(driver.driverId)}
             />
           ))
         ) : (

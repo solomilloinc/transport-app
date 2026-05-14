@@ -38,11 +38,11 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
         sortDescending: false,
         filters: {},
       });
-      if (response && response.Items) {
-        const formattedVehicles: SelectOption[] = response.Items.map((vehicle) => ({
-          id: vehicle.VehicleId,
-          value: vehicle.VehicleId.toString(),
-          label: `${vehicle.VehicleTypeName} (${vehicle.InternalNumber})`,
+      if (response && response.items) {
+        const formattedVehicles: SelectOption[] = response.items.map((vehicle) => ({
+          id: vehicle.vehicleId,
+          value: vehicle.vehicleId.toString(),
+          label: `${vehicle.vehicleTypeName} (${vehicle.internalNumber})`,
         }));
         setVehicles(formattedVehicles);
       }
@@ -62,8 +62,8 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
 
   useEffect(() => {
     if (trip) {
-      form.setField('VehicleId', trip.VehicleId);
-      form.setField('DepartureHour', trip.DepartureHour);
+      form.setField('VehicleId', trip.vehicleId);
+      form.setField('DepartureHour', trip.departureHour);
     }
   }, [trip]);
 
@@ -72,13 +72,13 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
       if (!trip) return;
       try {
         const updatePayload: ReserveUpdate = {
-          vehicleId: data.VehicleId,
-          driverId: trip.DriverId,
-          reserveDate: trip.ReserveDate,
-          departureHour: data.DepartureHour,
-          status: trip.Status,
+          vehicleId: data.vehicleId,
+          driverId: trip.driverId,
+          reserveDate: trip.reserveDate,
+          departureHour: data.departureHour,
+          status: trip.status,
         };
-        const response = await put(`/reserve-update/${trip.ReserveId}`, updatePayload);
+        const response = await put(`/reserve-update/${trip.reserveId}`, updatePayload);
 
         if (response) {
           toast({ title: 'Viaje actualizado', description: 'El viaje ha sido actualizado exitosamente.', variant: 'success' });
@@ -95,11 +95,11 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
 
   return (
     <FormDialog open={open} onOpenChange={onOpenChange} title="Editar Viaje" description="Realiza cambios en los detalles del viaje a continuación." onSubmit={handleSubmit} submitText="Guardar Cambios" isLoading={form.isSubmitting}>
-      <FormField label="Vehículo" required error={form.errors.VehicleId}>
-        <ApiSelect value={String(form.data.VehicleId)} onValueChange={(value) => form.setField('VehicleId', Number(value))} placeholder="Seleccionar vehículo" options={vehicles} loading={isLoadingVehicles} error={vehiclesError} loadingMessage="Cargando vehículos..." errorMessage="Error al cargar los vehículos" emptyMessage="No hay vehículos disponibles" />
+      <FormField label="Vehículo" required error={form.errors.vehicleId}>
+        <ApiSelect value={String(form.data.vehicleId)} onValueChange={(value) => form.setField('VehicleId', Number(value))} placeholder="Seleccionar vehículo" options={vehicles} loading={isLoadingVehicles} error={vehiclesError} loadingMessage="Cargando vehículos..." errorMessage="Error al cargar los vehículos" emptyMessage="No hay vehículos disponibles" />
       </FormField>
-      <FormField label="Hora de partida" required error={form.errors.DepartureHour}>
-        <Input id="departure-hour" type="text" placeholder="Hora de partida" value={form.data.DepartureHour} onChange={(e) => form.setField('DepartureHour', e.target.value)} />
+      <FormField label="Hora de partida" required error={form.errors.departureHour}>
+        <Input id="departure-hour" type="text" placeholder="Hora de partida" value={form.data.departureHour} onChange={(e) => form.setField('DepartureHour', e.target.value)} />
       </FormField>
     </FormDialog>
   );

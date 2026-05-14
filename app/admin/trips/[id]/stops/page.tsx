@@ -92,14 +92,14 @@ export default function TripStopsManagement() {
           filters: {},
         });
         console.log('[TripStopsPage] direction-report response:', response);
-        if (response?.Items) {
-          const originDirections = response.Items.filter(
-            (d: Direction) => d.CityId === trip.OriginCityId
+        if (response?.items) {
+          const originDirections = response.items.filter(
+            (d: Direction) => d.cityId === trip.originCityId
           );
           const formattedDirections = originDirections.map((direction: Direction) => ({
-            id: direction.DirectionId.toString(),
-            value: direction.DirectionId.toString(),
-            label: direction.Name,
+            id: direction.directionId.toString(),
+            value: direction.directionId.toString(),
+            label: direction.name,
           }));
           console.log('[TripStopsPage] Formatted directions:', formattedDirections);
           setDirections(formattedDirections);
@@ -205,10 +205,10 @@ export default function TripStopsManagement() {
   };
 
   const handleEditStop = (stop: TripPickupStopReportDto) => {
-    setCurrentStopId(stop.TripPickupStopId);
-    editForm.setField('directionId', stop.DirectionId);
-    editForm.setField('order', stop.Order);
-    editForm.setField('pickupTimeOffset', stripSeconds(stop.PickupTimeOffset));
+    setCurrentStopId(stop.tripPickupStopId);
+    editForm.setField('directionId', stop.directionId);
+    editForm.setField('order', stop.order);
+    editForm.setField('pickupTimeOffset', stripSeconds(stop.pickupTimeOffset));
     setIsEditModalOpen(true);
   };
 
@@ -224,7 +224,7 @@ export default function TripStopsManagement() {
     fetchTrip(tripId);
   };
 
-  const stops = trip?.StopSchedules || [];
+  const stops = trip?.stopSchedules || [];
 
   const columns = [
     { header: 'Dirección', accessor: 'DirectionName', width: '25%' },
@@ -234,7 +234,7 @@ export default function TripStopsManagement() {
       header: 'Tiempo Offset',
       accessor: 'PickupTimeOffset',
       width: '20%',
-      cell: (stop: TripPickupStopReportDto) => `+${stripSeconds(stop.PickupTimeOffset)}`,
+      cell: (stop: TripPickupStopReportDto) => `+${stripSeconds(stop.pickupTimeOffset)}`,
     },
     {
       header: 'Acciones',
@@ -255,7 +255,7 @@ export default function TripStopsManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeleteStop(stop.TripPickupStopId)}
+            onClick={() => handleDeleteStop(stop.tripPickupStopId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -287,8 +287,8 @@ export default function TripStopsManagement() {
       </div>
 
       <PageHeader
-        title={`Paradas: ${trip?.Description || ''}`}
-        description={`${trip?.OriginCityName} → ${trip?.DestinationCityName}`}
+        title={`Paradas: ${trip?.description || ''}`}
+        description={`${trip?.originCityName} → ${trip?.destinationCityName}`}
         action={
           <Button onClick={handleAddStop}>
             <Plus className="mr-2 h-4 w-4" />
@@ -318,15 +318,15 @@ export default function TripStopsManagement() {
         {stops.length > 0 ? (
           stops.map((stop) => (
             <MobileCard
-              key={stop.TripPickupStopId}
-              title={stop.DirectionName}
-              subtitle={stop.CityName}
+              key={stop.tripPickupStopId}
+              title={stop.directionName}
+              subtitle={stop.cityName}
               fields={[
-                { label: 'Orden', value: String(stop.Order) },
-                { label: 'Tiempo Offset', value: `+${stripSeconds(stop.PickupTimeOffset)}` },
+                { label: 'Orden', value: String(stop.order) },
+                { label: 'Tiempo Offset', value: `+${stripSeconds(stop.pickupTimeOffset)}` },
               ]}
               onEdit={() => handleEditStop(stop)}
-              onDelete={() => handleDeleteStop(stop.TripPickupStopId)}
+              onDelete={() => handleDeleteStop(stop.tripPickupStopId)}
             />
           ))
         ) : (

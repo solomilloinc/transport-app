@@ -1,15 +1,15 @@
-import { PaymentMethodSummary } from "./reserve";
+import { PaymentMethodSummary } from './reserve';
 
 export default interface CashBox {
-    CashBoxId: number,
-    Description: string,
-    OpenedAt: string,
-    ClosedAt: string,
-    Status: string,
-    OpenedByUserEmail: string,
-    ClosedByUserEmail: string,
-    ReserveId: number,
-    TotalPayments: number,
-    TotalAmount: number,
-    PaymentsByMethod: PaymentMethodSummary[];
+  cashBoxId: number;
+  description: string;
+  openedAt: string;
+  closedAt: string;
+  status: string;
+  openedByUserEmail: string;
+  closedByUserEmail: string;
+  reserveId: number;
+  totalPayments: number;
+  totalAmount: number;
+  paymentsByMethod: PaymentMethodSummary[];
 }

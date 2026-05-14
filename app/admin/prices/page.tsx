@@ -82,11 +82,11 @@ export default function PriceManagement() {
 
   // State for the paged response
   const [pricesData, setPricesData] = useState<PagedResponse<ReservePrice>>({
-    Items: [],
-    PageNumber: 1,
-    PageSize: 8,
-    TotalRecords: 0,
-    TotalPages: 0,
+    items: [],
+    pageNumber: 1,
+    pageSize: 8,
+    totalRecords: 0,
+    totalPages: 0,
   });
   // Function to fetch vehicles data
   const fetchPrices = async (pageToFetch = currentPage, pageSizeToFetch = pageSize) => {
@@ -122,10 +122,10 @@ export default function PriceManagement() {
         sortDescending: false,
       });
       if (response) {
-        const formattedTypes = response.Items.map((city: City) => ({
-          id: city.Id.toString(),
-          value: city.Id.toString(),
-          label: city.Name,
+        const formattedTypes = response.items.map((city: City) => ({
+          id: city.id.toString(),
+          value: city.id.toString(),
+          label: city.name,
         }));
         setCities(formattedTypes);
       }
@@ -214,11 +214,11 @@ export default function PriceManagement() {
   };
 
   const handleEditPrice = (price: ReservePrice) => {
-    setCurrentPriceId(price.ReservePriceId);
-    editForm.setField('originId', price.OriginId);
-    editForm.setField('destinationId', price.DestinationId);
-    editForm.setField('price', price.Price);
-    editForm.setField('reserveTypeId', price.ReserveTypeId);
+    setCurrentPriceId(price.reservePriceId);
+    editForm.setField('originId', price.originId);
+    editForm.setField('destinationId', price.destinationId);
+    editForm.setField('price', price.price);
+    editForm.setField('reserveTypeId', price.reserveTypeId);
     setIsEditModalOpen(true);
     loadAllOptions();
   };
@@ -248,20 +248,20 @@ export default function PriceManagement() {
       header: 'Tipo de Reserva',
       accessor: 'ReserveTypeId',
       width: '15%',
-      cell: (price: ReservePrice) => (price.ReserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta'),
+      cell: (price: ReservePrice) => (price.reserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta'),
     },
     {
       header: 'Precio',
       accessor: 'Price',
       width: '15%',
-      cell: (price: ReservePrice) => formatCurrency(price.Price),
+      cell: (price: ReservePrice) => formatCurrency(price.price),
     },
     {
       header: 'Estado',
       accessor: 'status',
       className: 'text-center',
       width: '10%',
-      cell: (price: ReservePrice) => <StatusBadge status={price.Status} />,
+      cell: (price: ReservePrice) => <StatusBadge status={price.status} />,
     },
     {
       header: 'Acciones',
@@ -282,7 +282,7 @@ export default function PriceManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeletePrice(price.ReservePriceId)}
+            onClick={() => handleDeletePrice(price.reservePriceId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -314,19 +314,19 @@ export default function PriceManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={pricesData.Items}
+                data={pricesData.items}
                 emptyMessage="No se encontraron precios."
                 isLoading={isLoading}
-                skeletonRows={pricesData.PageSize}
+                skeletonRows={pricesData.pageSize}
               />
             </div>
 
-            {pricesData.Items.length > 0 && (
+            {pricesData.items.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={pricesData.TotalPages}
-                totalItems={pricesData.TotalRecords}
-                itemsPerPage={pricesData.PageSize}
+                totalPages={pricesData.totalPages}
+                totalItems={pricesData.totalRecords}
+                itemsPerPage={pricesData.pageSize}
                 onPageChange={setCurrentPage}
                 itemName="precios"
               />
@@ -357,16 +357,16 @@ export default function PriceManagement() {
               </CardContent>
             </Card>
           ))
-        ) : pricesData.Items.length > 0 ? (
-          pricesData.Items.map((price) => (
+        ) : pricesData.items.length > 0 ? (
+          pricesData.items.map((price) => (
             <MobileCard
-              key={price.ReservePriceId}
-              title={`${price.OriginName} → ${price.DestinationName}`}
-              subtitle={formatCurrency(price.Price)}
-              badge={<StatusBadge status={price.Status} />}
-              fields={[{ label: 'Tipo de Reserva', value: price.ReserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta' }]}
+              key={price.reservePriceId}
+              title={`${price.originName} → ${price.destinationName}`}
+              subtitle={formatCurrency(price.price)}
+              badge={<StatusBadge status={price.status} />}
+              fields={[{ label: 'Tipo de Reserva', value: price.reserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta' }]}
               onEdit={() => handleEditPrice(price)}
-              onDelete={() => handleDeletePrice(price.ReservePriceId)}
+              onDelete={() => handleDeletePrice(price.reservePriceId)}
             />
           ))
         ) : (

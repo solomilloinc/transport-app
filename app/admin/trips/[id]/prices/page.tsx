@@ -117,19 +117,19 @@ export default function TripPricesManagement() {
       ]);
 
       if (cityResponse) {
-        const formattedCities = cityResponse.Items.map((city: City) => ({
-          id: city.Id.toString(),
-          value: city.Id.toString(),
-          label: city.Name,
+        const formattedCities = cityResponse.items.map((city: City) => ({
+          id: city.id.toString(),
+          value: city.id.toString(),
+          label: city.name,
         }));
         setCities(formattedCities);
       }
 
       if (directionResponse) {
-        const formattedDirections = directionResponse.Items.map((direction: Direction) => ({
-          id: direction.DirectionId.toString(),
-          value: direction.DirectionId.toString(),
-          label: direction.Name,
+        const formattedDirections = directionResponse.items.map((direction: Direction) => ({
+          id: direction.directionId.toString(),
+          value: direction.directionId.toString(),
+          label: direction.name,
         }));
         setDirections([{ id: 'none', value: 'none', label: 'Ninguna' }, ...formattedDirections]);
       }
@@ -222,12 +222,12 @@ export default function TripPricesManagement() {
   };
 
   const handleEditPrice = (price: TripPrice) => {
-    setCurrentPriceId(price.TripPriceId);
-    editForm.setField('cityId', price.CityId);
-    editForm.setField('directionId', price.DirectionId);
-    editForm.setField('reserveTypeId', price.ReserveTypeId);
-    editForm.setField('price', price.Price);
-    editForm.setField('order', price.Order);
+    setCurrentPriceId(price.tripPriceId);
+    editForm.setField('cityId', price.cityId);
+    editForm.setField('directionId', price.directionId);
+    editForm.setField('reserveTypeId', price.reserveTypeId);
+    editForm.setField('price', price.price);
+    editForm.setField('order', price.order);
     setIsEditModalOpen(true);
     loadOptions();
   };
@@ -244,9 +244,9 @@ export default function TripPricesManagement() {
     fetchTrip(tripId);
   };
 
-  const filteredPrices = trip?.Prices?.filter((price) => {
+  const filteredPrices = trip?.prices?.filter((price) => {
     if (!filterReserveType) return true;
-    return price.ReserveTypeId === Number(filterReserveType);
+    return price.reserveTypeId === Number(filterReserveType);
   }) || [];
 
   const columns = [
@@ -255,19 +255,19 @@ export default function TripPricesManagement() {
       header: 'Dirección',
       accessor: 'DirectionName',
       width: '20%',
-      cell: (price: TripPrice) => price.DirectionName || '-',
+      cell: (price: TripPrice) => price.directionName || '-',
     },
     {
       header: 'Tipo',
       accessor: 'ReserveTypeId',
       width: '15%',
-      cell: (price: TripPrice) => (price.ReserveTypeId === 1 ? 'Ida' : 'Ida y Vuelta'),
+      cell: (price: TripPrice) => (price.reserveTypeId === 1 ? 'Ida' : 'Ida y Vuelta'),
     },
     {
       header: 'Precio',
       accessor: 'Price',
       width: '15%',
-      cell: (price: TripPrice) => formatCurrency(price.Price),
+      cell: (price: TripPrice) => formatCurrency(price.price),
     },
     { header: 'Orden', accessor: 'Order', width: '10%' },
     {
@@ -275,7 +275,7 @@ export default function TripPricesManagement() {
       accessor: 'Status',
       className: 'text-center',
       width: '10%',
-      cell: (price: TripPrice) => <StatusBadge status={price.Status} />,
+      cell: (price: TripPrice) => <StatusBadge status={price.status} />,
     },
     {
       header: 'Acciones',
@@ -296,7 +296,7 @@ export default function TripPricesManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeletePrice(price.TripPriceId)}
+            onClick={() => handleDeletePrice(price.tripPriceId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -328,8 +328,8 @@ export default function TripPricesManagement() {
       </div>
 
       <PageHeader
-        title={`Precios: ${trip?.Description || ''}`}
-        description={`${trip?.OriginCityName} → ${trip?.DestinationCityName}`}
+        title={`Precios: ${trip?.description || ''}`}
+        description={`${trip?.originCityName} → ${trip?.destinationCityName}`}
         action={
           <Button onClick={handleAddPrice}>
             <Plus className="mr-2 h-4 w-4" />
@@ -371,17 +371,17 @@ export default function TripPricesManagement() {
         {filteredPrices.length > 0 ? (
           filteredPrices.map((price) => (
             <MobileCard
-              key={price.TripPriceId}
-              title={price.CityName}
-              subtitle={formatCurrency(price.Price)}
-              badge={<StatusBadge status={price.Status} />}
+              key={price.tripPriceId}
+              title={price.cityName}
+              subtitle={formatCurrency(price.price)}
+              badge={<StatusBadge status={price.status} />}
               fields={[
-                { label: 'Tipo', value: price.ReserveTypeId === 1 ? 'Ida' : 'Ida y Vuelta' },
-                { label: 'Orden', value: String(price.Order) },
-                { label: 'Dirección', value: price.DirectionName || '-' },
+                { label: 'Tipo', value: price.reserveTypeId === 1 ? 'Ida' : 'Ida y Vuelta' },
+                { label: 'Orden', value: String(price.order) },
+                { label: 'Dirección', value: price.directionName || '-' },
               ]}
               onEdit={() => handleEditPrice(price)}
-              onDelete={() => handleDeletePrice(price.TripPriceId)}
+              onDelete={() => handleDeletePrice(price.tripPriceId)}
             />
           ))
         ) : (

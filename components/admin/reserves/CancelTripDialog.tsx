@@ -21,7 +21,7 @@ export function CancelTripDialog({ open, onOpenChange, trip, onConfirm, isConfir
         <DialogHeader>
           <DialogTitle>Cancelar Viaje</DialogTitle>
           <DialogDescription>
-            ¿Estás seguro de que deseas cancelar el viaje de las <strong>{trip.DepartureHour}</strong> de <strong>{trip.OriginName}</strong> a <strong>{trip.DestinationName}</strong>?
+            ¿Estás seguro de que deseas cancelar el viaje de las <strong>{trip.departureHour}</strong> de <strong>{trip.originName}</strong> a <strong>{trip.destinationName}</strong>?
             Esta acción no se puede deshacer y afectará a todas las reservas asociadas.
           </DialogDescription>
         </DialogHeader>

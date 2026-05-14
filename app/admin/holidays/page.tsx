@@ -135,11 +135,11 @@ export default function HolidaysManagement() {
   };
 
   const handleEditHoliday = (holiday: Holiday) => {
-    setCurrentHolidaysId(holiday.HolidayId);
+    setCurrentHolidaysId(holiday.holidayId);
     editForm.resetForm();
     const fields = {
-      holidayName: holiday.HolidayName,
-      holidayDate: holiday.HolidayDate,
+      holidayName: holiday.holidayName,
+      holidayDate: holiday.holidayDate,
     };
 
     Object.entries(fields).forEach(([key, value]) => {
@@ -188,7 +188,7 @@ export default function HolidaysManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeleteHoliday(holiday.HolidayId)}
+            onClick={() => handleDeleteHoliday(holiday.holidayId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -220,19 +220,19 @@ export default function HolidaysManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data?.Items ?? []}
+                data={data?.items ?? []}
                 emptyMessage="No se encontraron feriados."
                 isLoading={isLoading}
-                skeletonRows={data?.PageSize}
+                skeletonRows={data?.pageSize}
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {data?.items?.length > 0 && (
               <TablePagination
                 currentPage={currentPage}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.totalPages}
+                totalItems={data?.totalRecords}
+                itemsPerPage={data?.pageSize}
                 onPageChange={setCurrentPage}
                 itemName="pasajeros"
               />
@@ -243,7 +243,7 @@ export default function HolidaysManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {isLoading && data?.Items?.length === 0 ? (
+        {isLoading && data?.items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -263,16 +263,16 @@ export default function HolidaysManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((holiday: Holiday) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((holiday: Holiday) => (
             <MobileCard
-              key={holiday.HolidayId}
-              title={`${holiday.HolidayName}`}
+              key={holiday.holidayId}
+              title={`${holiday.holidayName}`}
               fields={[
-                { label: 'Fecha', value: holiday.HolidayDate },
+                { label: 'Fecha', value: holiday.holidayDate },
               ]}
               onEdit={() => handleEditHoliday(holiday)}
-              onDelete={() => handleDeleteHoliday(holiday.HolidayId)}
+              onDelete={() => handleDeleteHoliday(holiday.holidayId)}
             />
           ))
         ) : (

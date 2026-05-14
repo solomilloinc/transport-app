@@ -1,36 +1,36 @@
 export interface TripPrice {
-  TripPriceId: number;
-  TripId: number;
-  CityId: number;
-  CityName: string;
-  DirectionId: number | null;
-  DirectionName: string | null;
-  ReserveTypeId: number;
-  ReserveTypeName: string;
-  Price: number;
-  Order: number;
-  Status: string;
+  tripPriceId: number;
+  tripId: number;
+  cityId: number;
+  cityName: string;
+  directionId: number | null;
+  directionName: string | null;
+  reserveTypeId: number;
+  reserveTypeName: string;
+  price: number;
+  order: number;
+  status: string;
 }
 
 export interface CityDirectionItem {
-  DirectionId: number;
-  Name: string;
+  directionId: number;
+  name: string;
 }
 
 export interface CityDirectionsDto {
-  CityId: number;
-  Name: string;
-  Directions: CityDirectionItem[];
+  cityId: number;
+  name: string;
+  directions: CityDirectionItem[];
 }
 
 export interface TripPickupStopReportDto {
-  TripPickupStopId: number;
-  DirectionId: number;
-  DirectionName: string;
-  CityId: number;
-  CityName: string;
-  Order: number;
-  PickupTimeOffset: string;
+  tripPickupStopId: number;
+  directionId: number;
+  directionName: string;
+  cityId: number;
+  cityName: string;
+  order: number;
+  pickupTimeOffset: string;
 }
 
 export interface TripPickupStopCreateDto {
@@ -53,41 +53,40 @@ export const emptyTripPickupStopForm = {
   pickupTimeOffset: '',
 };
 
-// New simplified interfaces for combo options (PascalCase to match backend)
+// Combo-ready response shapes
 export interface PickupOption {
-  DirectionId: number;
-  DisplayName: string;
-  PickupTimeOffset: string | null;
+  directionId: number;
+  displayName: string;
+  pickupTimeOffset: string | null;
 }
 
 export interface DropoffDirectionOption {
-  DirectionId: number;
-  DisplayName: string;
+  directionId: number;
+  displayName: string;
 }
 
 export interface DropoffCityOption {
-  CityId: number;
-  CityName: string;
-  Price: number;
-  IsMainDestination?: boolean;
-  Directions?: DropoffDirectionOption[];
+  cityId: number;
+  cityName: string;
+  price: number;
+  isMainDestination?: boolean;
+  directions?: DropoffDirectionOption[];
 }
 
 export interface Trip {
-  TripId: number;
-  Description: string;
-  OriginCityId: number;
-  OriginCityName: string;
-  DestinationCityId: number;
-  DestinationCityName: string;
-  Status: string;
-  Prices: TripPrice[];
-  RelevantCities: CityDirectionsDto[];
-  StopSchedules?: TripPickupStopReportDto[] | null;
-  // New combo-ready fields
-  PickupOptions?: PickupOption[];
-  DropoffOptionsIda?: DropoffCityOption[];
-  DropoffOptionsIdaVuelta?: DropoffCityOption[];
+  tripId: number;
+  description: string;
+  originCityId: number;
+  originCityName: string;
+  destinationCityId: number;
+  destinationCityName: string;
+  status: string;
+  prices: TripPrice[];
+  relevantCities: CityDirectionsDto[];
+  stopSchedules?: TripPickupStopReportDto[] | null;
+  pickupOptions?: PickupOption[];
+  dropoffOptionsIda?: DropoffCityOption[];
+  dropoffOptionsIdaVuelta?: DropoffCityOption[];
 }
 
 export interface TripCreateDto {

@@ -173,16 +173,16 @@ export default function PassengersManagement() {
   };
 
   const handleEditPassenger = (passenger: Passenger) => {
-    setCurrentPassengersId(passenger.CustomerId);
+    setCurrentPassengersId(passenger.customerId);
     editForm.resetForm();
     const fields = {
-      FirstName: passenger.FirstName,
-      LastName: passenger.LastName,
-      Email: passenger.Email,
-      DocumentNumber: passenger.DocumentNumber,
-      Phone1: passenger.Phone1,
-      Phone2: passenger.Phone2,
-      ServiceIds: passenger.Services?.map(s => s.ServiceId) || [],
+      FirstName: passenger.firstName,
+      LastName: passenger.lastName,
+      Email: passenger.email,
+      DocumentNumber: passenger.documentNumber,
+      Phone1: passenger.phone1,
+      Phone2: passenger.phone2,
+      ServiceIds: passenger.services?.map(s => s.serviceId) || [],
     };
 
     Object.entries(fields).forEach(([key, value]) => {
@@ -215,13 +215,13 @@ export default function PassengersManagement() {
       width: '20%',
       cell: (passenger: Passenger) => (
         <div className="flex flex-wrap gap-1">
-          {passenger.Services && passenger.Services.length > 0 ? (
-            passenger.Services.map((s) => (
+          {passenger.services && passenger.services.length > 0 ? (
+            passenger.services.map((s) => (
               <span
-                key={s.ServiceId}
+                key={s.serviceId}
                 className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
               >
-                {s.ServiceName}
+                {s.serviceName}
               </span>
             ))
           ) : (
@@ -235,7 +235,7 @@ export default function PassengersManagement() {
       accessor: 'status',
       className: 'text-center',
       width: '10%',
-      cell: (passenger: Passenger) => <StatusBadge status={passenger.Status} />,
+      cell: (passenger: Passenger) => <StatusBadge status={passenger.status} />,
     },
     {
       header: 'Acciones',
@@ -256,7 +256,7 @@ export default function PassengersManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeletePassenger(passenger.CustomerId)}
+            onClick={() => handleDeletePassenger(passenger.customerId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -318,19 +318,19 @@ export default function PassengersManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data?.Items ?? []}
+                data={data?.items ?? []}
                 emptyMessage="No se encontraron pasajeros."
                 isLoading={loading}
-                skeletonRows={data?.PageSize}
+                skeletonRows={data?.pageSize}
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {data?.items?.length > 0 && (
               <TablePagination
                 currentPage={pageNumber}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.totalPages}
+                totalItems={data?.totalRecords}
+                itemsPerPage={data?.pageSize}
                 onPageChange={setPageNumber}
                 itemName="pasajeros"
               />
@@ -341,7 +341,7 @@ export default function PassengersManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {loading && data?.Items?.length === 0 ? (
+        {loading && data?.items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -361,20 +361,20 @@ export default function PassengersManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((passenger: Passenger) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((passenger: Passenger) => (
             <MobileCard
-              key={passenger.CustomerId}
-              title={`${passenger.FirstName} ${passenger.LastName}`}
-              badge={<StatusBadge status={passenger.Status ? 'Activo' : 'Inactivo'} />}
+              key={passenger.customerId}
+              title={`${passenger.firstName} ${passenger.lastName}`}
+              badge={<StatusBadge status={passenger.status ? 'Activo' : 'Inactivo'} />}
               fields={[
-                { label: 'Documento', value: passenger.DocumentNumber },
-                { label: 'Email', value: passenger.Email },
-                { label: 'Telefono', value: passenger.Phone1 },
-                { label: 'Telefono 2', value: passenger.Phone2 },
+                { label: 'Documento', value: passenger.documentNumber },
+                { label: 'Email', value: passenger.email },
+                { label: 'Telefono', value: passenger.phone1 },
+                { label: 'Telefono 2', value: passenger.phone2 },
               ]}
               onEdit={() => handleEditPassenger(passenger)}
-              onDelete={() => handleDeletePassenger(passenger.CustomerId)}
+              onDelete={() => handleDeletePassenger(passenger.customerId)}
             />
           ))
         ) : (
@@ -392,46 +392,46 @@ export default function PassengersManagement() {
         submitText="Crear pasajero"
         isLoading={addForm.isSubmitting}
       >
-        <FormField label="Nombre" required error={addForm.errors.FirstName}>
+        <FormField label="Nombre" required error={addForm.errors.firstName}>
           <Input
             id="first-name"
-            value={addForm.data.FirstName}
+            value={addForm.data.firstName}
             type="text"
             placeholder="Nombre"
             onChange={(e) => addForm.setField('FirstName', e.target.value)}
           />
         </FormField>
-        <FormField label="Apellido" required error={addForm.errors.LastName}>
+        <FormField label="Apellido" required error={addForm.errors.lastName}>
           <Input
             id="last-name"
-            value={addForm.data.LastName}
+            value={addForm.data.lastName}
             placeholder="Apellido"
             type="text"
             onChange={(e) => addForm.setField('LastName', e.target.value)}
           />
         </FormField>
-        <FormField label="Email" required error={addForm.errors.Email}>
-          <Input id="email" value={addForm.data.Email} onChange={(e) => addForm.setField('Email', e.target.value)} />
+        <FormField label="Email" required error={addForm.errors.email}>
+          <Input id="email" value={addForm.data.email} onChange={(e) => addForm.setField('Email', e.target.value)} />
         </FormField>
         <FormField label="Número de documento" required error={addForm.errors.documentNumber}>
           <Input
             id="documentNumber"
-            value={addForm.data.DocumentNumber}
+            value={addForm.data.documentNumber}
             placeholder="Número de documento"
             type="number"
             onChange={(e) => addForm.setField('DocumentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono 1" required error={addForm.errors.Phone1}>
-          <Input id="phone1" value={addForm.data.Phone1} onChange={(e) => addForm.setField('Phone1', e.target.value)} />
+        <FormField label="Teléfono 1" required error={addForm.errors.phone1}>
+          <Input id="phone1" value={addForm.data.phone1} onChange={(e) => addForm.setField('Phone1', e.target.value)} />
         </FormField>
         <FormField label="Teléfono 2">
-          <Input id="phone2" value={addForm.data.Phone2} onChange={(e) => addForm.setField('Phone2', e.target.value)} />
+          <Input id="phone2" value={addForm.data.phone2} onChange={(e) => addForm.setField('Phone2', e.target.value)} />
         </FormField>
         <FormField label="Servicios asociados">
           <CheckboxGroup
-            options={services.map(s => ({ value: s.ServiceId, label: s.Name }))}
-            selected={addForm.data.ServiceIds || []}
+            options={services.map(s => ({ value: s.serviceId, label: s.name }))}
+            selected={addForm.data.serviceIds || []}
             onChange={(selected) => addForm.setField('ServiceIds', selected)}
             disabled={servicesLoading}
           />
@@ -448,56 +448,56 @@ export default function PassengersManagement() {
         submitText="Guardar Cambios"
         isLoading={editForm.isSubmitting}
       >
-        <FormField label="Nombre" required error={editForm.errors.FirstName}>
+        <FormField label="Nombre" required error={editForm.errors.firstName}>
           <Input
             id="first-name"
             type="text"
             placeholder="Nombre"
-            value={editForm.data.FirstName}
+            value={editForm.data.firstName}
             onChange={(e) => editForm.setField('FirstName', e.target.value)}
           />
         </FormField>
-        <FormField label="Apellido" required error={editForm.errors.LastName}>
+        <FormField label="Apellido" required error={editForm.errors.lastName}>
           <Input
             id="last-name"
-            value={editForm.data.LastName}
+            value={editForm.data.lastName}
             type="text"
             placeholder="Apellido"
             onChange={(e) => editForm.setField('LastName', e.target.value)}
           />
         </FormField>
-        <FormField label="Email" required error={editForm.errors.Email}>
-          <Input id="email" value={editForm.data.Email} onChange={(e) => editForm.setField('Email', e.target.value)} />
+        <FormField label="Email" required error={editForm.errors.email}>
+          <Input id="email" value={editForm.data.email} onChange={(e) => editForm.setField('Email', e.target.value)} />
         </FormField>
-        <FormField label="Número de documento" required error={editForm.errors.DocumentNumber}>
+        <FormField label="Número de documento" required error={editForm.errors.documentNumber}>
           <Input
             id="document-number"
             type="number"
             placeholder="Número de documento"
-            value={editForm.data.DocumentNumber}
+            value={editForm.data.documentNumber}
             onChange={(e) => editForm.setField('DocumentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono 1" required error={editForm.errors.Phone1}>
+        <FormField label="Teléfono 1" required error={editForm.errors.phone1}>
           <Input
             id="phone1"
             type="text"
             placeholder="Teléfono 1"
-            value={editForm.data.Phone1}
+            value={editForm.data.phone1}
             onChange={(e) => editForm.setField('Phone1', e.target.value)}
           />
         </FormField>
         <FormField label="Teléfono 2">
           <Input
             id="phone2"
-            value={editForm.data.Phone2}
+            value={editForm.data.phone2}
             onChange={(e) => editForm.setField('Phone2', e.target.value)}
           />
         </FormField>
         <FormField label="Servicios asociados">
           <CheckboxGroup
-            options={services.map(s => ({ value: s.ServiceId, label: s.Name }))}
-            selected={editForm.data.ServiceIds || []}
+            options={services.map(s => ({ value: s.serviceId, label: s.name }))}
+            selected={editForm.data.serviceIds || []}
             onChange={(selected) => editForm.setField('ServiceIds', selected)}
             disabled={servicesLoading}
           />

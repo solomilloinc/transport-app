@@ -82,11 +82,11 @@ export default function VehicleManagement() {
       setOptionsError(null);
       const response = await get<any, PagedResponse<VehicleType>>('/vehicle-type-report', withDefaultPagination());
       if (response) {
-        const formattedTypes: SelectOption[] = response.Items.map((type: VehicleType) => ({
-          id: type.VehicleTypeId.toString(),
-          value: type.VehicleTypeId.toString(),
-          label: type.Name,
-          defaultQuantity: type.Quantity.toString(),
+        const formattedTypes: SelectOption[] = response.items.map((type: VehicleType) => ({
+          id: type.vehicleTypeId.toString(),
+          value: type.vehicleTypeId.toString(),
+          label: type.name,
+          defaultQuantity: type.quantity.toString(),
         }));
         setVehicleTypes(formattedTypes);
       }
@@ -168,10 +168,10 @@ export default function VehicleManagement() {
   };
 
   const handleEditVehicle = (vehicle: Vehicle) => {
-    setCurrentVehicleId(vehicle.VehicleId);
-    editForm.setField('vehicleTypeId', vehicle.VehicleTypeId);
-    editForm.setField('availableQuantity', vehicle.AvailableQuantity);
-    editForm.setField('internalNumber', vehicle.InternalNumber);
+    setCurrentVehicleId(vehicle.vehicleId);
+    editForm.setField('vehicleTypeId', vehicle.vehicleTypeId);
+    editForm.setField('availableQuantity', vehicle.availableQuantity);
+    editForm.setField('internalNumber', vehicle.internalNumber);
     setIsEditModalOpen(true);
     loadAllOptions();
   };
@@ -195,7 +195,7 @@ export default function VehicleManagement() {
     {
       header: 'Capacidad',
       accessor: 'capacity',
-      cell: (vehicle: Vehicle) => <>{vehicle.AvailableQuantity} asientos</>,
+      cell: (vehicle: Vehicle) => <>{vehicle.availableQuantity} asientos</>,
       hidden: true,
       width: '15%',
     },
@@ -204,7 +204,7 @@ export default function VehicleManagement() {
       accessor: 'status',
       className: 'text-center',
       width: '20%',
-      cell: (vehicle: Vehicle) => <StatusBadge status={vehicle.Status} />,
+      cell: (vehicle: Vehicle) => <StatusBadge status={vehicle.status} />,
     },
     {
       header: 'Acciones',
@@ -225,7 +225,7 @@ export default function VehicleManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeleteVehicle(vehicle.VehicleId)}
+            onClick={() => handleDeleteVehicle(vehicle.vehicleId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -247,7 +247,7 @@ export default function VehicleManagement() {
         }
       />
 
-      {loading && data?.Items?.length === 0 ? (
+      {loading && data?.items?.length === 0 ? (
         <div className="flex justify-center items-center h-64">
           <Skeleton className="h-8 w-48" />
         </div>
@@ -286,19 +286,19 @@ export default function VehicleManagement() {
               <div className="hidden md:block w-full">
                 <DashboardTable
                   columns={columns}
-                  data={data?.Items ?? []}
+                  data={data?.items ?? []}
                   emptyMessage="No se encontraron vehiculos."
                   isLoading={loading}
-                  skeletonRows={data?.PageSize}
+                  skeletonRows={data?.pageSize}
                 />
               </div>
 
-              {data?.Items?.length > 0 && (
+              {data?.items?.length > 0 && (
                 <TablePagination
                   currentPage={pageNumber}
-                  totalPages={data?.TotalPages}
-                  totalItems={data?.TotalRecords}
-                  itemsPerPage={data?.PageSize}
+                  totalPages={data?.totalPages}
+                  totalItems={data?.totalRecords}
+                  itemsPerPage={data?.pageSize}
                   onPageChange={setPageNumber}
                   itemName="vehiculos"
                 />
@@ -310,7 +310,7 @@ export default function VehicleManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {loading && data?.Items?.length === 0 ? (
+        {loading && data?.items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -330,19 +330,19 @@ export default function VehicleManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((vehicle) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((vehicle) => (
             <MobileCard
-              key={vehicle.VehicleId}
-              title={vehicle.VehicleTypeName}
-              subtitle={vehicle.VehicleId.toString()}
-              badge={<StatusBadge status={vehicle.Status ? 'Activo' : 'Inactivo'} />}
+              key={vehicle.vehicleId}
+              title={vehicle.vehicleTypeName}
+              subtitle={vehicle.vehicleId.toString()}
+              badge={<StatusBadge status={vehicle.status ? 'Activo' : 'Inactivo'} />}
               fields={[
-                { label: 'Numero de interno', value: vehicle.InternalNumber },
-                { label: 'Capacidad', value: vehicle.AvailableQuantity },
+                { label: 'Numero de interno', value: vehicle.internalNumber },
+                { label: 'Capacidad', value: vehicle.availableQuantity },
               ]}
               onEdit={() => handleEditVehicle(vehicle)}
-              onDelete={() => handleDeleteVehicle(vehicle.VehicleId)}
+              onDelete={() => handleDeleteVehicle(vehicle.vehicleId)}
             />
           ))
         ) : (
