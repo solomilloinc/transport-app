@@ -125,7 +125,7 @@ export default function VehicleManagement() {
   const handleEditTypeVehicle = (vehicle: VehicleType) => {
     setCurrentVehicleTypeId(vehicle.vehicleTypeId);
     editForm.setField('Name', vehicle.name);
-    editForm.setField('Quantity', vehicle.quantity);
+    editForm.setField('quantity', vehicle.quantity);
     setIsEditModalOpen(true);
   };
 
@@ -144,7 +144,7 @@ export default function VehicleManagement() {
 
   const columns = [
     { header: 'Nombre', accessor: 'Name', width: '40%' },
-    { header: 'Cantidad', accessor: 'Quantity', width: '15%' },
+    { header: 'Cantidad', accessor: 'quantity', width: '15%' },
     {
       header: 'Estado',
       accessor: 'status',
@@ -294,7 +294,7 @@ export default function VehicleManagement() {
             id="quantity"
             placeholder="Capacidad"
             value={addForm.data.quantity}
-            onChange={(e) => addForm.setField('Quantity', Number(e.target.value))}
+            onChange={(e) => addForm.setField('quantity', Number(e.target.value))}
           />
         </FormField>
       </FormDialog>
@@ -319,7 +319,7 @@ export default function VehicleManagement() {
           <Input
             id="edit-capacidad"
             value={editForm.data.quantity}
-            onChange={(e) => editForm.setField('Quantity', Number(e.target.value))}
+            onChange={(e) => editForm.setField('quantity', Number(e.target.value))}
           />
         </FormField>
       </FormDialog>

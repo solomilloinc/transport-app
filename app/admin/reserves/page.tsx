@@ -111,27 +111,20 @@ export default function ReservationsPage() {
 
   const fetchFullTripDetails = async (tripId: number) => {
     try {
-      console.log('Fetching trip details for ID:', tripId);
       const tripData = await getTripById(tripId);
-      console.log('Trip data received:', tripData);
+      if (!tripData) return;
 
-      if (tripData) {
-        setSelectedTrip((prev) => {
-          if (!prev) return prev;
+      setSelectedTrip((prev) => {
+        if (!prev) return prev;
+        if (prev.tripId && Number(prev.tripId) !== tripId) return prev;
 
-          // Use either TripId or ServiceId for matching
-          const currentId = prev.tripId || (prev as any).serviceId;
-          if (currentId && Number(currentId) !== tripId) return prev;
-
-          // Map properties defensively (handle PascalCase and camelCase)
-          return {
-            ...prev,
-            TripId: tripId,
-            Prices: tripData.prices || (tripData as any).prices || [],
-            RelevantCities: tripData.relevantCities || (tripData as any).relevantCities || [],
-          };
-        });
-      }
+        return {
+          ...prev,
+          tripId,
+          prices: tripData.prices ?? [],
+          relevantCities: tripData.relevantCities ?? [],
+        };
+      });
     } catch (error) {
       console.error('Error fetching full trip details:', error);
     }
@@ -140,16 +133,11 @@ export default function ReservationsPage() {
   useEffect(() => {
     if (!selectedTrip) return;
 
-    // Log the selected trip to verify available IDs
-    console.log('Selected Trip:', selectedTrip);
-
-    // Try to get tripId from available fields (case insensitive check for common variants)
-    const rawTripId = selectedTrip.tripId || (selectedTrip as any).serviceId || (selectedTrip as any).tripId;
-    const tripId = rawTripId ? Number(rawTripId) : null;
-
-    // Fetch detailed trip info if we have an ID and missing data (RelevantCities)
-    if (tripId && !selectedTrip.relevantCities) {
-      fetchFullTripDetails(tripId);
+    // Fetch full trip detail (RelevantCities, Prices) only the first time —
+    // after the merge, selectedTrip.relevantCities is populated, so this branch
+    // doesn't run again and we don't loop.
+    if (selectedTrip.tripId && !selectedTrip.relevantCities) {
+      fetchFullTripDetails(Number(selectedTrip.tripId));
     }
 
     fetchPassengerReserves(selectedTrip.reserveId);

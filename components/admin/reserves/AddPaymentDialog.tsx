@@ -38,7 +38,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       // Preload remaining amount
       const remaining = getRemainingBalance();
       if (remaining > 0) {
-        form.setField('TransactionAmount', remaining.toString());
+        form.setField('transactionAmount', remaining.toString());
       }
     }
   }, [open, passengerReserve]);
@@ -176,7 +176,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
                   type="number"
                   placeholder={`Saldo: $${getRemainingBalance().toLocaleString()}`}
                   value={form.data.transactionAmount}
-                  onChange={(e) => form.setField('TransactionAmount', e.target.value)}
+                  onChange={(e) => form.setField('transactionAmount', e.target.value)}
                 />
               </FormField>
               <Button

@@ -5,7 +5,7 @@ export const validationConfig = {
     required: true,
     rules: [minLengthRule(3), maxLengthRule(50)],
   },
-  Quantity: {
+  quantity: {
     required: true,
     rules: [minValueRule(1), maxValueRule(100)],
   },

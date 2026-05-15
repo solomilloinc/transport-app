@@ -167,8 +167,8 @@ export default function HolidaysManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'HolidayName', width: '50%' },
-    { header: 'Fecha', accessor: 'HolidayDate', width: '30%' },
+    { header: 'Nombre', accessor: 'holidayName', width: '50%' },
+    { header: 'Fecha', accessor: 'holidayDate', width: '30%' },
     {
       header: 'Acciones',
       accessor: 'actions',

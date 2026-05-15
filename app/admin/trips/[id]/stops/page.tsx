@@ -132,10 +132,10 @@ export default function TripStopsManagement() {
     addForm.handleSubmit(async (data) => {
       try {
         const transformedData = {
-          TripId: tripId,
-          DirectionId: data.directionId,
+          tripId: tripId,
+          directionId: data.directionId,
           Order: data.order,
-          PickupTimeOffset: appendSeconds(data.pickupTimeOffset),
+          pickupTimeOffset: appendSeconds(data.pickupTimeOffset),
         };
         const response = await post('/trip-pickup-stop-create', transformedData);
         if (response) {
@@ -167,9 +167,9 @@ export default function TripStopsManagement() {
     editForm.handleSubmit(async (data) => {
       try {
         const transformedData = {
-          DirectionId: data.directionId,
+          directionId: data.directionId,
           Order: data.order,
-          PickupTimeOffset: appendSeconds(data.pickupTimeOffset),
+          pickupTimeOffset: appendSeconds(data.pickupTimeOffset),
         };
         const response = await put(`/trip-pickup-stop-update/${currentStopId}`, transformedData);
         if (response) {
@@ -227,12 +227,12 @@ export default function TripStopsManagement() {
   const stops = trip?.stopSchedules || [];
 
   const columns = [
-    { header: 'Dirección', accessor: 'DirectionName', width: '25%' },
-    { header: 'Ciudad', accessor: 'CityName', width: '20%' },
+    { header: 'Dirección', accessor: 'directionName', width: '25%' },
+    { header: 'Ciudad', accessor: 'cityName', width: '20%' },
     { header: 'Orden', accessor: 'Order', width: '15%' },
     {
       header: 'Tiempo Offset',
-      accessor: 'PickupTimeOffset',
+      accessor: 'pickupTimeOffset',
       width: '20%',
       cell: (stop: TripPickupStopReportDto) => `+${stripSeconds(stop.pickupTimeOffset)}`,
     },

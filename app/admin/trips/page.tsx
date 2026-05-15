@@ -121,8 +121,8 @@ export default function TripManagement() {
       try {
         const transformedData = {
           Description: data.description,
-          OriginCityId: data.originCityId,
-          DestinationCityId: data.destinationCityId,
+          originCityId: data.originCityId,
+          destinationCityId: data.destinationCityId,
         };
         const response = await post('/trip-create', transformedData);
         if (response) {
@@ -155,8 +155,8 @@ export default function TripManagement() {
       try {
         const transformedData = {
           Description: data.description,
-          OriginCityId: data.originCityId,
-          DestinationCityId: data.destinationCityId,
+          originCityId: data.originCityId,
+          destinationCityId: data.destinationCityId,
         };
         const response = await put(`/trip-update/${currentTripId}`, transformedData);
         if (response) {
@@ -228,11 +228,11 @@ export default function TripManagement() {
 
   const columns = [
     { header: 'Descripción', accessor: 'Description', width: '25%' },
-    { header: 'Origen', accessor: 'OriginCityName', width: '20%' },
-    { header: 'Destino', accessor: 'DestinationCityName', width: '20%' },
+    { header: 'Origen', accessor: 'originCityName', width: '20%' },
+    { header: 'Destino', accessor: 'destinationCityName', width: '20%' },
     {
       header: 'Precios',
-      accessor: 'Prices',
+      accessor: 'prices',
       width: '10%',
       cell: (trip: Trip) => trip.prices?.length || 0,
     },

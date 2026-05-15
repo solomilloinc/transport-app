@@ -164,7 +164,7 @@ export default function DebtsPage() {
     { header: 'Descripción', accessor: 'Description', width: '45%' },
     {
       header: 'Tipo',
-      accessor: 'TransactionType',
+      accessor: 'transactionType',
       width: '15%',
       cell: (t: Transaction) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTransactionTypeStyle(t.transactionType)}`}>

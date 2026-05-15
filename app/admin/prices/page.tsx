@@ -143,7 +143,7 @@ export default function PriceManagement() {
           OriginId: data.originId,
           DestinationId: data.destinationId,
           Price: data.price,
-          ReserveTypeId: data.reserveTypeId,
+          reserveTypeId: data.reserveTypeId,
         };
         const response = await post('/price-add', transformedData);
         if (response) {
@@ -178,7 +178,7 @@ export default function PriceManagement() {
           OriginId: data.originId,
           DestinationId: data.destinationId,
           Price: data.price,
-          ReserveTypeId: data.reserveTypeId,
+          reserveTypeId: data.reserveTypeId,
         };
         const response = await put(`/price-update/${currentPriceId}`, transformedData);
         if (response) {
@@ -242,11 +242,11 @@ export default function PriceManagement() {
   };
 
   const columns = [
-    { header: 'Origen', accessor: 'OriginName', width: '25%' },
-    { header: 'Destino', accessor: 'DestinationName', width: '25%' },
+    { header: 'Origen', accessor: 'originName', width: '25%' },
+    { header: 'Destino', accessor: 'destinationName', width: '25%' },
     {
       header: 'Tipo de Reserva',
-      accessor: 'ReserveTypeId',
+      accessor: 'reserveTypeId',
       width: '15%',
       cell: (price: ReservePrice) => (price.reserveTypeId === 1 ? 'Solo Ida' : 'Ida y Vuelta'),
     },

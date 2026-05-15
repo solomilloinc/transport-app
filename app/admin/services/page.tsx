@@ -300,7 +300,7 @@ export default function ServiceManagement() {
 
   const addSchedule = () => {
     const newSchedule = emptyServiceSchedule;
-    addForm.setField('Schedules', [...addForm.data.schedules, newSchedule]);
+    addForm.setField('schedules', [...addForm.data.schedules, newSchedule]);
   };
 
   const removeSchedule = (index: number) => {
@@ -315,14 +315,14 @@ export default function ServiceManagement() {
         // Transform the data to match the API expectations
         const transformedData = {
           ...data,
-          EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
-          StartDay: data.startDay, // Keep in main service
-          EndDay: data.endDay,     // Keep in main service
-          Schedules: data.schedules.map(schedule => ({
+          estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
+          startDay: data.startDay, // Keep in main service
+          endDay: data.endDay,     // Keep in main service
+          schedules: data.schedules.map(schedule => ({
             ...schedule,
-            DepartureHour: schedule.departureHour + ':00' // Convert HH:MM to HH:MM:SS format
+            departureHour: schedule.departureHour + ':00' // Convert HH:MM to HH:MM:SS format
           })),
-          AllowedDirectionIds: selectedDirectionIds.length > 0 ? selectedDirectionIds : null,
+          allowedDirectionIds: selectedDirectionIds.length > 0 ? selectedDirectionIds : null,
         };
         const response = await post('/service-create', transformedData);
         if (response) {
@@ -362,18 +362,18 @@ export default function ServiceManagement() {
         // Transform the data to match the API expectations
         const transformedData = {
           Name: data.name,
-          TripId: data.tripId,
-          EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
-          StartDay: data.startDay,
-          EndDay: data.endDay,
-          VehicleId: data.vehicleId,
-          Schedules: editSchedules.map(schedule => ({
+          tripId: data.tripId,
+          estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
+          startDay: data.startDay,
+          endDay: data.endDay,
+          vehicleId: data.vehicleId,
+          schedules: editSchedules.map(schedule => ({
             ...schedule,
-            DepartureHour: schedule.departureHour.includes(':')
+            departureHour: schedule.departureHour.includes(':')
               ? schedule.departureHour + ':00'
               : schedule.departureHour // Convert HH:MM to HH:MM:SS format
           })),
-          AllowedDirectionIds: editSelectedDirectionIds.length > 0 ? editSelectedDirectionIds : null,
+          allowedDirectionIds: editSelectedDirectionIds.length > 0 ? editSelectedDirectionIds : null,
         };
         console.log('Transformed data for update:', transformedData);
         const response = await put(`/service-update/${currentServiceId}`, transformedData);
@@ -406,13 +406,13 @@ export default function ServiceManagement() {
     tripForm.handleSubmit(async (data) => {
       try {
         const transformedData = {
-          TripId: data.tripId,
-          ReserveDate: data.reserveDate,
-          VehicleId: data.vehicleId,
-          DepartureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
-          EstimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
-          IsHoliday: false,
-          AllowedDirectionIds: tripFormDirectionIds.length > 0 ? tripFormDirectionIds : null,
+          tripId: data.tripId,
+          reserveDate: data.reserveDate,
+          vehicleId: data.vehicleId,
+          departureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
+          estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
+          isHoliday: false,
+          allowedDirectionIds: tripFormDirectionIds.length > 0 ? tripFormDirectionIds : null,
         };
         const response = await post('/reserve-create', transformedData);
         if (response) {
@@ -495,8 +495,8 @@ export default function ServiceManagement() {
     editForm.setField('endDay', service.endDay || 5);   // Default to Friday if not provided
     editForm.setField('vehicleId', service.vehicle.vehicleId);
 
-    console.log('Setting StartDay:', service.startDay);
-    console.log('Setting EndDay:', service.endDay);
+    console.log('Setting startDay:', service.startDay);
+    console.log('Setting endDay:', service.endDay);
     console.log('EditForm data after setting:', editForm.data);
 
     // Convert schedules DepartureHour from TimeSpan (HH:MM:SS) to HH:MM for time inputs
@@ -541,14 +541,14 @@ export default function ServiceManagement() {
     { header: 'Nombre', accessor: 'Name', width: '25%' },
     {
       header: 'Ruta Comercial',
-      accessor: 'TripName',
+      accessor: 'tripName',
       width: '25%',
       cell: (service: Service) => service.tripName || '-',
     },
-    { header: 'Duración Estimada', accessor: 'EstimatedDuration', width: '20%' },
+    { header: 'Duración Estimada', accessor: 'estimatedDuration', width: '20%' },
     {
       header: 'Hora de partida',
-      accessor: 'DepartureHour',
+      accessor: 'departureHour',
       width: '20%',
       cell: (service: Service) => {
         const firstSchedule = service.schedulers?.[0];
@@ -730,7 +730,7 @@ export default function ServiceManagement() {
                   value={String(addForm.data.tripId)}
                   onValueChange={(value) => {
                     const tripId = Number(value);
-                    addForm.setField('TripId', tripId);
+                    addForm.setField('tripId', tripId);
                     // Load available directions for this trip
                     setSelectedDirectionIds([]);
                     loadTripDirections(tripId);
@@ -747,7 +747,7 @@ export default function ServiceManagement() {
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Dia Inicio" required error={addForm.errors.startDay}>
-                <Select onValueChange={(value) => addForm.setField('StartDay', Number(value))}>
+                <Select onValueChange={(value) => addForm.setField('startDay', Number(value))}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -763,7 +763,7 @@ export default function ServiceManagement() {
                 </Select>
               </FormField>
               <FormField label="Dia Fin" required error={addForm.errors.endDay}>
-                <Select onValueChange={(value) => addForm.setField('EndDay', Number(value))}>
+                <Select onValueChange={(value) => addForm.setField('endDay', Number(value))}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -786,13 +786,13 @@ export default function ServiceManagement() {
                   type="time"
                   placeholder="HH:MM"
                   value={addForm.data.estimatedDuration}
-                  onChange={(e) => addForm.setField('EstimatedDuration', e.target.value)}
+                  onChange={(e) => addForm.setField('estimatedDuration', e.target.value)}
                 />
               </FormField>
               <FormField label="Vehículo" required error={addForm.errors.vehicleId}>
                 <ApiSelect
                   value={String(addForm.data.vehicleId)}
-                  onValueChange={(value) => addForm.setField('VehicleId', Number(value))}
+                  onValueChange={(value) => addForm.setField('vehicleId', Number(value))}
                   placeholder="Seleccionar vehículo"
                   options={vehicles}
                   loading={isOptionsLoading}
@@ -816,7 +816,7 @@ export default function ServiceManagement() {
                         <Input
                           type="time"
                           value={schedule.departureHour}
-                          onChange={(e) => handleScheduleChange(index, 'DepartureHour', e.target.value)}
+                          onChange={(e) => handleScheduleChange(index, 'departureHour', e.target.value)}
                           className="mt-1"
                         />
                       </div>
@@ -824,7 +824,7 @@ export default function ServiceManagement() {
                         <Label className="text-sm text-muted-foreground">Es Feriado</Label>
                         <Select
                           value={schedule.isHoliday.toString()}
-                          onValueChange={(value) => handleScheduleChange(index, 'IsHoliday', value === 'true')}
+                          onValueChange={(value) => handleScheduleChange(index, 'isHoliday', value === 'true')}
                         >
                           <SelectTrigger className="mt-1">
                             <SelectValue />
@@ -1020,7 +1020,7 @@ export default function ServiceManagement() {
                         <Input
                           type="time"
                           value={schedule.departureHour}
-                          onChange={(e) => handleEditScheduleChange(index, 'DepartureHour', e.target.value)}
+                          onChange={(e) => handleEditScheduleChange(index, 'departureHour', e.target.value)}
                           className="mt-1"
                         />
                       </div>
@@ -1028,7 +1028,7 @@ export default function ServiceManagement() {
                         <Label className="text-sm text-muted-foreground">Es Feriado</Label>
                         <Select
                           value={schedule.isHoliday.toString()}
-                          onValueChange={(value) => handleEditScheduleChange(index, 'IsHoliday', value === 'true')}
+                          onValueChange={(value) => handleEditScheduleChange(index, 'isHoliday', value === 'true')}
                         >
                           <SelectTrigger className="mt-1">
                             <SelectValue />

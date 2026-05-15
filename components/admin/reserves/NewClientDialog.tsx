@@ -68,7 +68,7 @@ export function NewClientDialog({ open, onOpenChange, onSuccess }: NewClientDial
           value={addFormPassenger.data.firstName}
           type="text"
           placeholder="Nombre"
-          onChange={(e) => addFormPassenger.setField('FirstName', e.target.value)}
+          onChange={(e) => addFormPassenger.setField('firstName', e.target.value)}
         />
       </FormField>
       <FormField label="Apellido" required error={addFormPassenger.errors.lastName}>
@@ -77,7 +77,7 @@ export function NewClientDialog({ open, onOpenChange, onSuccess }: NewClientDial
           value={addFormPassenger.data.lastName}
           placeholder="Apellido"
           type="text"
-          onChange={(e) => addFormPassenger.setField('LastName', e.target.value)}
+          onChange={(e) => addFormPassenger.setField('lastName', e.target.value)}
         />
       </FormField>
       <FormField label="Email" required error={addFormPassenger.errors.email}>
@@ -89,14 +89,14 @@ export function NewClientDialog({ open, onOpenChange, onSuccess }: NewClientDial
           value={addFormPassenger.data.documentNumber}
           placeholder="Número de documento"
           type="number"
-          onChange={(e) => addFormPassenger.setField('DocumentNumber', e.target.value)}
+          onChange={(e) => addFormPassenger.setField('documentNumber', e.target.value)}
         />
       </FormField>
       <FormField label="Teléfono 1" required error={addFormPassenger.errors.phone1}>
-        <Input id="phone1" value={addFormPassenger.data.phone1} onChange={(e) => addFormPassenger.setField('Phone1', e.target.value)} />
+        <Input id="phone1" value={addFormPassenger.data.phone1} onChange={(e) => addFormPassenger.setField('phone1', e.target.value)} />
       </FormField>
       <FormField label="Teléfono 2">
-        <Input id="phone2" value={addFormPassenger.data.phone2} onChange={(e) => addFormPassenger.setField('Phone2', e.target.value)} />
+        <Input id="phone2" value={addFormPassenger.data.phone2} onChange={(e) => addFormPassenger.setField('phone2', e.target.value)} />
       </FormField>
     </FormDialog>
   );

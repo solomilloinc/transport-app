@@ -154,9 +154,9 @@ export default function DriversManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'FirstName', width: '20%' },
-    { header: 'Apellido', accessor: 'LastName', width: '20%' },
-    { header: 'Numero de documento', accessor: 'DocumentNumber', width: '20%' },
+    { header: 'Nombre', accessor: 'firstName', width: '20%' },
+    { header: 'Apellido', accessor: 'lastName', width: '20%' },
+    { header: 'Numero de documento', accessor: 'documentNumber', width: '20%' },
     {
       header: 'Estado',
       accessor: 'status',

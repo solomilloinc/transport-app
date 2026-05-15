@@ -144,10 +144,10 @@ export default function TripPricesManagement() {
     addForm.handleSubmit(async (data) => {
       try {
         const transformedData = {
-          TripId: tripId,
-          CityId: data.cityId,
-          DirectionId: data.directionId || null,
-          ReserveTypeId: data.reserveTypeId,
+          tripId: tripId,
+          cityId: data.cityId,
+          directionId: data.directionId || null,
+          reserveTypeId: data.reserveTypeId,
           Price: data.price,
           Order: data.order,
         };
@@ -181,9 +181,9 @@ export default function TripPricesManagement() {
     editForm.handleSubmit(async (data) => {
       try {
         const transformedData = {
-          CityId: data.cityId,
-          DirectionId: data.directionId || null,
-          ReserveTypeId: data.reserveTypeId,
+          cityId: data.cityId,
+          directionId: data.directionId || null,
+          reserveTypeId: data.reserveTypeId,
           Price: data.price,
           Order: data.order,
         };
@@ -250,16 +250,16 @@ export default function TripPricesManagement() {
   }) || [];
 
   const columns = [
-    { header: 'Ciudad', accessor: 'CityName', width: '20%' },
+    { header: 'Ciudad', accessor: 'cityName', width: '20%' },
     {
       header: 'Dirección',
-      accessor: 'DirectionName',
+      accessor: 'directionName',
       width: '20%',
       cell: (price: TripPrice) => price.directionName || '-',
     },
     {
       header: 'Tipo',
-      accessor: 'ReserveTypeId',
+      accessor: 'reserveTypeId',
       width: '15%',
       cell: (price: TripPrice) => (price.reserveTypeId === 1 ? 'Ida' : 'Ida y Vuelta'),
     },

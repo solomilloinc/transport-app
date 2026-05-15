@@ -190,8 +190,8 @@ export default function VehicleManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'VehicleTypeName', width: '30%' },
-    { header: 'Numero Interno', accessor: 'InternalNumber', width: '15%' },
+    { header: 'Nombre', accessor: 'vehicleTypeName', width: '30%' },
+    { header: 'Numero Interno', accessor: 'internalNumber', width: '15%' },
     {
       header: 'Capacidad',
       accessor: 'capacity',

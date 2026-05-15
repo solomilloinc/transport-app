@@ -62,8 +62,8 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
 
   useEffect(() => {
     if (trip) {
-      form.setField('VehicleId', trip.vehicleId);
-      form.setField('DepartureHour', trip.departureHour);
+      form.setField('vehicleId', trip.vehicleId);
+      form.setField('departureHour', trip.departureHour);
     }
   }, [trip]);
 
@@ -96,10 +96,10 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
   return (
     <FormDialog open={open} onOpenChange={onOpenChange} title="Editar Viaje" description="Realiza cambios en los detalles del viaje a continuación." onSubmit={handleSubmit} submitText="Guardar Cambios" isLoading={form.isSubmitting}>
       <FormField label="Vehículo" required error={form.errors.vehicleId}>
-        <ApiSelect value={String(form.data.vehicleId)} onValueChange={(value) => form.setField('VehicleId', Number(value))} placeholder="Seleccionar vehículo" options={vehicles} loading={isLoadingVehicles} error={vehiclesError} loadingMessage="Cargando vehículos..." errorMessage="Error al cargar los vehículos" emptyMessage="No hay vehículos disponibles" />
+        <ApiSelect value={String(form.data.vehicleId)} onValueChange={(value) => form.setField('vehicleId', Number(value))} placeholder="Seleccionar vehículo" options={vehicles} loading={isLoadingVehicles} error={vehiclesError} loadingMessage="Cargando vehículos..." errorMessage="Error al cargar los vehículos" emptyMessage="No hay vehículos disponibles" />
       </FormField>
       <FormField label="Hora de partida" required error={form.errors.departureHour}>
-        <Input id="departure-hour" type="text" placeholder="Hora de partida" value={form.data.departureHour} onChange={(e) => form.setField('DepartureHour', e.target.value)} />
+        <Input id="departure-hour" type="text" placeholder="Hora de partida" value={form.data.departureHour} onChange={(e) => form.setField('departureHour', e.target.value)} />
       </FormField>
     </FormDialog>
   );

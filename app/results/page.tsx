@@ -66,7 +66,7 @@ async function getReserves(searchParams: ResultsSearchParams): Promise<PagedRese
 
 // 4. La página ahora es un Server Component asíncrono.
 export default async function ResultsPage({ searchParams }: {
-  searchParams: { [key: string]: string | undefined }
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const resolvedSearchParams = await searchParams;
   const initialReserves = await getReserves(resolvedSearchParams);

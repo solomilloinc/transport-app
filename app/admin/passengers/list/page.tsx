@@ -176,17 +176,17 @@ export default function PassengersManagement() {
     setCurrentPassengersId(passenger.customerId);
     editForm.resetForm();
     const fields = {
-      FirstName: passenger.firstName,
-      LastName: passenger.lastName,
+      firstName: passenger.firstName,
+      lastName: passenger.lastName,
       Email: passenger.email,
-      DocumentNumber: passenger.documentNumber,
-      Phone1: passenger.phone1,
-      Phone2: passenger.phone2,
-      ServiceIds: passenger.services?.map(s => s.serviceId) || [],
+      documentNumber: passenger.documentNumber,
+      phone1: passenger.phone1,
+      phone2: passenger.phone2,
+      serviceIds: passenger.services?.map(s => s.serviceId) || [],
     };
 
     Object.entries(fields).forEach(([key, value]) => {
-      editForm.setField(key, value || (key === 'ServiceIds' ? [] : ''));
+      editForm.setField(key, value || (key === 'serviceIds' ? [] : ''));
     });
 
     setIsEditModalOpen(true);
@@ -205,10 +205,10 @@ export default function PassengersManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'FirstName', width: '15%' },
-    { header: 'Apellido', accessor: 'LastName', width: '15%' },
-    { header: 'Documento', accessor: 'DocumentNumber', width: '12%' },
-    { header: 'Teléfono', accessor: 'Phone1', width: '12%' },
+    { header: 'Nombre', accessor: 'firstName', width: '15%' },
+    { header: 'Apellido', accessor: 'lastName', width: '15%' },
+    { header: 'Documento', accessor: 'documentNumber', width: '12%' },
+    { header: 'Teléfono', accessor: 'phone1', width: '12%' },
     {
       header: 'Servicios',
       accessor: 'services',
@@ -398,7 +398,7 @@ export default function PassengersManagement() {
             value={addForm.data.firstName}
             type="text"
             placeholder="Nombre"
-            onChange={(e) => addForm.setField('FirstName', e.target.value)}
+            onChange={(e) => addForm.setField('firstName', e.target.value)}
           />
         </FormField>
         <FormField label="Apellido" required error={addForm.errors.lastName}>
@@ -407,7 +407,7 @@ export default function PassengersManagement() {
             value={addForm.data.lastName}
             placeholder="Apellido"
             type="text"
-            onChange={(e) => addForm.setField('LastName', e.target.value)}
+            onChange={(e) => addForm.setField('lastName', e.target.value)}
           />
         </FormField>
         <FormField label="Email" required error={addForm.errors.email}>
@@ -419,20 +419,20 @@ export default function PassengersManagement() {
             value={addForm.data.documentNumber}
             placeholder="Número de documento"
             type="number"
-            onChange={(e) => addForm.setField('DocumentNumber', e.target.value)}
+            onChange={(e) => addForm.setField('documentNumber', e.target.value)}
           />
         </FormField>
         <FormField label="Teléfono 1" required error={addForm.errors.phone1}>
-          <Input id="phone1" value={addForm.data.phone1} onChange={(e) => addForm.setField('Phone1', e.target.value)} />
+          <Input id="phone1" value={addForm.data.phone1} onChange={(e) => addForm.setField('phone1', e.target.value)} />
         </FormField>
         <FormField label="Teléfono 2">
-          <Input id="phone2" value={addForm.data.phone2} onChange={(e) => addForm.setField('Phone2', e.target.value)} />
+          <Input id="phone2" value={addForm.data.phone2} onChange={(e) => addForm.setField('phone2', e.target.value)} />
         </FormField>
         <FormField label="Servicios asociados">
           <CheckboxGroup
             options={services.map(s => ({ value: s.serviceId, label: s.name }))}
             selected={addForm.data.serviceIds || []}
-            onChange={(selected) => addForm.setField('ServiceIds', selected)}
+            onChange={(selected) => addForm.setField('serviceIds', selected)}
             disabled={servicesLoading}
           />
         </FormField>
@@ -454,7 +454,7 @@ export default function PassengersManagement() {
             type="text"
             placeholder="Nombre"
             value={editForm.data.firstName}
-            onChange={(e) => editForm.setField('FirstName', e.target.value)}
+            onChange={(e) => editForm.setField('firstName', e.target.value)}
           />
         </FormField>
         <FormField label="Apellido" required error={editForm.errors.lastName}>
@@ -463,7 +463,7 @@ export default function PassengersManagement() {
             value={editForm.data.lastName}
             type="text"
             placeholder="Apellido"
-            onChange={(e) => editForm.setField('LastName', e.target.value)}
+            onChange={(e) => editForm.setField('lastName', e.target.value)}
           />
         </FormField>
         <FormField label="Email" required error={editForm.errors.email}>
@@ -475,7 +475,7 @@ export default function PassengersManagement() {
             type="number"
             placeholder="Número de documento"
             value={editForm.data.documentNumber}
-            onChange={(e) => editForm.setField('DocumentNumber', e.target.value)}
+            onChange={(e) => editForm.setField('documentNumber', e.target.value)}
           />
         </FormField>
         <FormField label="Teléfono 1" required error={editForm.errors.phone1}>
@@ -484,21 +484,21 @@ export default function PassengersManagement() {
             type="text"
             placeholder="Teléfono 1"
             value={editForm.data.phone1}
-            onChange={(e) => editForm.setField('Phone1', e.target.value)}
+            onChange={(e) => editForm.setField('phone1', e.target.value)}
           />
         </FormField>
         <FormField label="Teléfono 2">
           <Input
             id="phone2"
             value={editForm.data.phone2}
-            onChange={(e) => editForm.setField('Phone2', e.target.value)}
+            onChange={(e) => editForm.setField('phone2', e.target.value)}
           />
         </FormField>
         <FormField label="Servicios asociados">
           <CheckboxGroup
             options={services.map(s => ({ value: s.serviceId, label: s.name }))}
             selected={editForm.data.serviceIds || []}
-            onChange={(selected) => editForm.setField('ServiceIds', selected)}
+            onChange={(selected) => editForm.setField('serviceIds', selected)}
             disabled={servicesLoading}
           />
         </FormField>

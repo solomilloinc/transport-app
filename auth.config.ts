@@ -8,7 +8,7 @@ import { getRequestHost } from '@/lib/get-host'
 
 // Tipado de respuesta de tu API
 interface LoginResponse {
-  AccessToken: string;
+  accessToken: string;
   user: {
     id: string;
     email: string;
@@ -96,14 +96,14 @@ export const nextAuthOptions: NextAuthOptions = {
         if (!res.ok) return null;
 
         const data: LoginResponse = await res.json();
-        if (!data || !data.AccessToken) return null;
+        if (!data || !data.accessToken) return null;
 
         try {
-          const decoded: ExtendedUser = jwtDecode(data.AccessToken);
+          const decoded: ExtendedUser = jwtDecode(data.accessToken);
           // Retornamos el usuario + el token como propiedad aparte
           return {
             ...decoded,
-            token: data.AccessToken,
+            token: data.accessToken,
           };
         } catch (err) {
           console.error("Error decodificando token:", err);

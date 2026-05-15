@@ -165,7 +165,7 @@ export default function DirectionManagement() {
 
   const handleEditDirection = (direction: Direction) => {
     setCurrentDirectionId(direction.directionId);
-    editForm.setField('CityId', direction.cityId);
+    editForm.setField('cityId', direction.cityId);
     editForm.setField('Name', direction.name);
     setIsEditModalOpen(true);
     loadAllOptions();
@@ -185,7 +185,7 @@ export default function DirectionManagement() {
   };
 
   const columns = [
-    { header: 'Ciudad', accessor: 'CityName', width: '30%' },
+    { header: 'Ciudad', accessor: 'cityName', width: '30%' },
     { header: 'Direccion', accessor: 'Name', width: '50%' },
     {
       header: 'Acciones',
