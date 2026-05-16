@@ -192,12 +192,16 @@ export function AddReservationFlow({
     return selected?.price || 0;
   };
 
-  // For downgrade (days differ): look up the return trip's per-leg Ida price
-  // for the same dropoff city the user picked on the outbound side.
+  // For downgrade (days differ): look up the return trip's per-leg Ida price.
+  // Geographically the return's dropoff = the outbound's ORIGIN city (round-trip
+  // mirrors endpoints: Lobos → Capital outbound, Capital → Lobos return). The
+  // user only picks one city in the admin flow (the outbound dropoff), so we
+  // can't reuse `selectedDropoffCityId` here — that's the outbound's destination,
+  // not the return's.
   const getReturnIdaPrice = (): number => {
-    if (!selectedDropoffCityId || !returnTripData) return 0;
+    if (!returnTripData || !initialTrip?.originCityId) return 0;
     const opt = returnTripData.dropoffOptionsIda?.find(
-      (o) => String(o.cityId) === String(selectedDropoffCityId),
+      (o) => String(o.cityId) === String(initialTrip.originCityId),
     );
     return opt?.price || 0;
   };
