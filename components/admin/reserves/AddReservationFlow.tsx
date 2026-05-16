@@ -100,6 +100,9 @@ export function AddReservationFlow({
   const [reservationPayments, setReservationPayments] = useState<Payment[]>([]);
 
   const [tripData, setTripData] = useState<Trip | null>(null);
+  // Loaded lazily when a return trip is picked. Used to look up the return
+  // trip's per-leg Ida price when the booking downgrades (days differ).
+  const [returnTripData, setReturnTripData] = useState<Trip | null>(null);
   const [isTripLoading, setIsTripLoading] = useState(false);
   const [selectedDropoffCityId, setSelectedDropoffCityId] = useState<number | null>(null);
 
@@ -176,6 +179,10 @@ export function AddReservationFlow({
     }
   }, [dropoffDirectionOptions]);
 
+  // Returns the price currently selected from `dropoffCityOptions`. The shape
+  // of that list depends on `useIdaVueltaTariff`:
+  // - true  → package price (TOTAL of round-trip, from dropoffOptionsIdaVuelta)
+  // - false → outbound's per-leg Ida price (from dropoffOptionsIda)
   const getSelectedDropoffPrice = (): number => {
     if (!selectedDropoffCityId) {
       const mainDest = dropoffCityOptions.find((opt) => opt.isMainDestination);
@@ -183,6 +190,24 @@ export function AddReservationFlow({
     }
     const selected = dropoffCityOptions.find((opt) => opt.id === String(selectedDropoffCityId));
     return selected?.price || 0;
+  };
+
+  // For downgrade (days differ): look up the return trip's per-leg Ida price
+  // for the same dropoff city the user picked on the outbound side.
+  const getReturnIdaPrice = (): number => {
+    if (!selectedDropoffCityId || !returnTripData) return 0;
+    const opt = returnTripData.dropoffOptionsIda?.find(
+      (o) => String(o.cityId) === String(selectedDropoffCityId),
+    );
+    return opt?.price || 0;
+  };
+
+  // Total to show next to the round-trip summary. Mirrors what the server will
+  // charge: package price when IdaVuelta applies, sum of both Ida prices when
+  // the booking downgrades because the dates differ.
+  const getRoundTripDisplayTotal = (): number => {
+    if (useIdaVueltaTariff) return getSelectedDropoffPrice();
+    return getSelectedDropoffPrice() + getReturnIdaPrice();
   };
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
@@ -234,6 +259,28 @@ export function AddReservationFlow({
     }
   }, [open, initialTrip?.tripId]);
 
+  // Load the return trip's full data (pickup options, dropoffOptionsIda) when
+  // it changes. We need it for the downgrade case so we can look up the return
+  // leg's Ida price.
+  useEffect(() => {
+    if (!returnTrip?.tripId) {
+      setReturnTripData(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getTripById(returnTrip.tripId, returnTrip.reserveId);
+        if (!cancelled) setReturnTripData(data);
+      } catch (err) {
+        console.error('[AddReservationFlow] Error fetching return trip:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [returnTrip?.tripId, returnTrip?.reserveId]);
+
   useEffect(() => {
     if (open && initialTrip) {
       setStep(FlowStep.SELECT_PASSENGER);
@@ -273,6 +320,7 @@ export function AddReservationFlow({
     setBookingPassengers([]);
     setReservationPayments([]);
     setTripData(null);
+    setReturnTripData(null);
     setSelectedDropoffCityId(null);
     onOpenChange(false);
   };
@@ -306,40 +354,65 @@ export function AddReservationFlow({
       }
 
       const dropoffLocationId = data.dropoffLocationId || selectedDropoffCityId;
-      const legPrice = getSelectedDropoffPrice();
+      const isRT = data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP;
 
-      const outboundLeg = {
-        pickupLocationId: data.pickupLocationId,
-        dropoffLocationId,
-        price: legPrice,
-      };
+      if (isRT && initialTrip!.reserveId === returnTrip!.reserveId) {
+        toast({
+          title: 'Error',
+          description: 'El viaje de ida y vuelta no pueden ser el mismo.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      const passenger: PassengerBooking = {
-        customerId: selectedPassenger!.customerId,
-        isPayment: data.isPayment,
-        hasTraveled: false,
-        outbound: outboundLeg,
-        return:
-          data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP
-            ? {
-                // Return leg swaps the outbound endpoints: pickup ← dropoff, dropoff ← pickup.
-                pickupLocationId: dropoffLocationId,
-                dropoffLocationId: data.pickupLocationId,
-                price: legPrice,
-              }
-            : null,
-      };
+      // Decide what each leg's price is. The server validates:
+      //  - IdaVuelta effective: outbound.price + return.price === packagePrice
+      //  - Downgrade (days differ): each leg is validated against ITS trip's Ida
+      let outboundLegPrice: number;
+      let returnLegPrice: number;
 
-      if (data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP) {
-        if (initialTrip!.reserveId === returnTrip!.reserveId) {
+      if (!isRT) {
+        outboundLegPrice = getSelectedDropoffPrice();
+        returnLegPrice = 0; // unused when there is no return leg
+      } else if (useIdaVueltaTariff) {
+        // Package price split 50/50 (recommended split per backend doc).
+        const pkg = getSelectedDropoffPrice();
+        outboundLegPrice = pkg / 2;
+        returnLegPrice = pkg / 2;
+      } else {
+        // Downgrade: outbound trip's Ida price + return trip's Ida price for the
+        // same dropoff city. Need returnTripData loaded.
+        outboundLegPrice = getSelectedDropoffPrice();
+        returnLegPrice = getReturnIdaPrice();
+        if (returnLegPrice === 0) {
           toast({
             title: 'Error',
-            description: 'El viaje de ida y vuelta no pueden ser el mismo.',
+            description:
+              'No se encontró precio Ida para la ciudad seleccionada en el viaje de vuelta. Probá con otra ciudad o esperá a que cargue.',
             variant: 'destructive',
           });
           return;
         }
       }
+
+      const passenger: PassengerBooking = {
+        customerId: selectedPassenger!.customerId,
+        isPayment: data.isPayment,
+        hasTraveled: false,
+        outbound: {
+          pickupLocationId: data.pickupLocationId,
+          dropoffLocationId,
+          price: outboundLegPrice,
+        },
+        return: isRT
+          ? {
+              // Return leg swaps the outbound endpoints: pickup ← dropoff, dropoff ← pickup.
+              pickupLocationId: dropoffLocationId,
+              dropoffLocationId: data.pickupLocationId,
+              price: returnLegPrice,
+            }
+          : null,
+      };
 
       setBookingPassengers([passenger]);
       setStep(FlowStep.CONFIRM_PAYMENT);
@@ -648,8 +721,9 @@ export function AddReservationFlow({
               </div>
             </div>
             <div className="text-right text-lg font-bold text-blue-600 pt-2 border-t">
-              {useIdaVueltaTariff ? 'Total Ida y Vuelta (descuento aplicado)' : 'Total Ida y Vuelta (días distintos: 2× precio Ida)'}
-              : ${(getSelectedDropoffPrice() * 2).toLocaleString()}
+              {useIdaVueltaTariff
+                ? `Total Ida y Vuelta (paquete con descuento): $${getRoundTripDisplayTotal().toLocaleString()}`
+                : `Total Ida y Vuelta (días distintos, sin descuento): $${getRoundTripDisplayTotal().toLocaleString()}`}
             </div>
           </div>
         )}

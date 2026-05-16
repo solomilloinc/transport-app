@@ -86,13 +86,25 @@ export default function CheckoutPage() {
     }
   }, [checkout.outboundTrip, checkout.returnTrip]);
 
+  // `outboundLocation.dropoffPrice` and `returnLocation.dropoffPrice` come
+  // straight from the LocationSelector, which already picks the right table
+  // (`dropoffOptionsIdaVuelta` for the discounted package, `dropoffOptionsIda`
+  // for per-leg pricing). When the package applies, BOTH selectors return the
+  // same package total — summing would double-count.
   const outboundPrice = outboundLocation.dropoffPrice > 0
     ? outboundLocation.dropoffPrice
     : (checkout.outboundTrip?.price || 0);
   const returnPrice = returnLocation.dropoffPrice > 0
     ? returnLocation.dropoffPrice
     : (checkout.returnTrip?.price || 0);
-  const totalPrice = (outboundPrice + returnPrice) * checkout.passengers;
+
+  // Per-passenger total:
+  // - IdaVuelta package applies → outboundPrice IS the package total
+  // - Otherwise (one-way or downgrade) → sum the two legs (return = 0 if one-way)
+  const perPassengerTotal = useIdaVueltaTariff
+    ? outboundPrice
+    : outboundPrice + (checkout.returnTrip ? returnPrice : 0);
+  const totalPrice = perPassengerTotal * checkout.passengers;
   const serviceFee = 0;
   const finalTotal = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
 
@@ -103,9 +115,23 @@ export default function CheckoutPage() {
   };
 
   // Builds the external Passengers[] for the public reservation endpoint.
-  // `outbound` and `return` carry shared pickup/dropoff/price for every pax
-  // (the public flow doesn't support per-pax variations).
+  // Each pax gets the same shared pickup/dropoff/price (public flow doesn't
+  // support per-pax variations).
+  //
+  // Price assignment per leg:
+  //  - IdaVuelta package applies → split 50/50: each leg gets packagePrice / 2.
+  //  - Days differ (downgrade) → each leg gets its own trip's Ida price
+  //    (already returned by its LocationSelector).
+  //  - One-way → return is null.
   const buildExternalPassengers = useCallback((): PassengerBookingExternal[] => {
+    const hasReturn = !!checkout.returnTrip;
+    const outboundLegPrice = useIdaVueltaTariff && hasReturn
+      ? outboundPrice / 2
+      : outboundPrice;
+    const returnLegPrice = useIdaVueltaTariff && hasReturn
+      ? outboundPrice / 2 // same package, split 50/50
+      : returnPrice;
+
     return passengerData.map((p) => ({
       customerId: null,
       isPayment: true,
@@ -118,13 +144,13 @@ export default function CheckoutPage() {
       outbound: {
         pickupLocationId: outboundLocation.pickupDirectionId,
         dropoffLocationId: outboundLocation.dropoffDirectionId,
-        price: Number(outboundPrice.toFixed(2)),
+        price: Number(outboundLegPrice.toFixed(2)),
       },
-      return: checkout.returnTrip
+      return: hasReturn
         ? {
             pickupLocationId: returnLocation.pickupDirectionId,
             dropoffLocationId: returnLocation.dropoffDirectionId,
-            price: Number(returnPrice.toFixed(2)),
+            price: Number(returnLegPrice.toFixed(2)),
           }
         : null,
     }));
@@ -134,6 +160,7 @@ export default function CheckoutPage() {
     returnLocation,
     outboundPrice,
     returnPrice,
+    useIdaVueltaTariff,
     checkout.returnTrip,
   ]);
 
@@ -526,15 +553,24 @@ export default function CheckoutPage() {
                       <div className="lg:hidden bg-white p-4 rounded-lg border border-gray-200 mt-4 shadow-sm">
                         <h3 className="font-medium text-blue-800 mb-3">Resumen de Precio</h3>
                         <div className="space-y-2 mb-4 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Precio (ida)</span>
-                            <span>${(outboundPrice * checkout.passengers).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                          </div>
-                          {checkout.returnTrip && (
+                          {useIdaVueltaTariff && checkout.returnTrip ? (
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Precio (vuelta)</span>
-                              <span>${(returnPrice * checkout.passengers).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                              <span className="text-gray-600">Paquete Ida y Vuelta</span>
+                              <span>${(outboundPrice * checkout.passengers).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
                             </div>
+                          ) : (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Precio (ida)</span>
+                                <span>${(outboundPrice * checkout.passengers).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                              {checkout.returnTrip && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Precio (vuelta)</span>
+                                  <span>${(returnPrice * checkout.passengers).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                         <div className="flex justify-between font-bold text-lg pt-3 border-t border-gray-100">
@@ -725,15 +761,24 @@ export default function CheckoutPage() {
                 <Separator className="my-4" />
 
                 <div className="space-y-2 mb-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Precio (ida)</span>
-                    <span>${(outboundPrice * checkout.passengers).toFixed(2)}</span>
-                  </div>
-                  {checkout.returnTrip && (
+                  {useIdaVueltaTariff && checkout.returnTrip ? (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Precio (vuelta)</span>
-                      <span>${(returnPrice * checkout.passengers).toFixed(2)}</span>
+                      <span className="text-gray-600">Paquete Ida y Vuelta</span>
+                      <span>${(outboundPrice * checkout.passengers).toFixed(2)}</span>
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Precio (ida)</span>
+                        <span>${(outboundPrice * checkout.passengers).toFixed(2)}</span>
+                      </div>
+                      {checkout.returnTrip && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Precio (vuelta)</span>
+                          <span>${(returnPrice * checkout.passengers).toFixed(2)}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
