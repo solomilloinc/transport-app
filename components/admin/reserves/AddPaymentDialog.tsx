@@ -168,7 +168,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
             <h3 className="font-semibold text-lg mb-3">Gestión de Pagos</h3>
             <div className="flex gap-2 mb-4 items-end">
               <FormField label="Medio de pago" required error={form.errors.paymentMethod} className="flex-1">
-                <ApiSelect value={String(form.data.paymentMethod)} onValueChange={(value) => form.setField('PaymentMethod', Number(value))} placeholder="Seleccionar medio" options={paymentMethodOptions} loading={false} error={null} />
+                <ApiSelect value={String(form.data.paymentMethod)} onValueChange={(value) => form.setField('paymentMethod', Number(value))} placeholder="Seleccionar medio" options={paymentMethodOptions} loading={false} error={null} />
               </FormField>
               <FormField label="Monto" className="flex-1">
                 <Input

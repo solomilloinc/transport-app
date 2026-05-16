@@ -124,7 +124,7 @@ export default function VehicleManagement() {
 
   const handleEditTypeVehicle = (vehicle: VehicleType) => {
     setCurrentVehicleTypeId(vehicle.vehicleTypeId);
-    editForm.setField('Name', vehicle.name);
+    editForm.setField('name', vehicle.name);
     editForm.setField('quantity', vehicle.quantity);
     setIsEditModalOpen(true);
   };
@@ -286,7 +286,7 @@ export default function VehicleManagement() {
             id="name"
             placeholder="Nombre"
             value={addForm.data.name}
-            onChange={(e) => addForm.setField('Name', e.target.value)}
+            onChange={(e) => addForm.setField('name', e.target.value)}
           />
         </FormField>
         <FormField label="Capacidad" required error={addForm.errors.quantity}>
@@ -312,7 +312,7 @@ export default function VehicleManagement() {
           <Input
             id="edit-name"
             value={editForm.data.name}
-            onChange={(e) => editForm.setField('Name', e.target.value)}
+            onChange={(e) => editForm.setField('name', e.target.value)}
           />
         </FormField>
         <FormField label="Capacidad" required error={editForm.errors.quantity}>

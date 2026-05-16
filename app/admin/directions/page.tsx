@@ -166,7 +166,7 @@ export default function DirectionManagement() {
   const handleEditDirection = (direction: Direction) => {
     setCurrentDirectionId(direction.directionId);
     editForm.setField('cityId', direction.cityId);
-    editForm.setField('Name', direction.name);
+    editForm.setField('name', direction.name);
     setIsEditModalOpen(true);
     loadAllOptions();
   };

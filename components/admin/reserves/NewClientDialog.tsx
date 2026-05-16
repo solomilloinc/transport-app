@@ -81,7 +81,7 @@ export function NewClientDialog({ open, onOpenChange, onSuccess }: NewClientDial
         />
       </FormField>
       <FormField label="Email" required error={addFormPassenger.errors.email}>
-        <Input id="email" value={addFormPassenger.data.email} onChange={(e) => addFormPassenger.setField('Email', e.target.value)} />
+        <Input id="email" value={addFormPassenger.data.email} onChange={(e) => addFormPassenger.setField('email', e.target.value)} />
       </FormField>
       <FormField label="Número de documento" required error={addFormPassenger.errors.documentNumber}>
         <Input

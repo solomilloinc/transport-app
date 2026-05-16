@@ -411,7 +411,7 @@ export default function PassengersManagement() {
           />
         </FormField>
         <FormField label="Email" required error={addForm.errors.email}>
-          <Input id="email" value={addForm.data.email} onChange={(e) => addForm.setField('Email', e.target.value)} />
+          <Input id="email" value={addForm.data.email} onChange={(e) => addForm.setField('email', e.target.value)} />
         </FormField>
         <FormField label="Número de documento" required error={addForm.errors.documentNumber}>
           <Input
@@ -467,7 +467,7 @@ export default function PassengersManagement() {
           />
         </FormField>
         <FormField label="Email" required error={editForm.errors.email}>
-          <Input id="email" value={editForm.data.email} onChange={(e) => editForm.setField('Email', e.target.value)} />
+          <Input id="email" value={editForm.data.email} onChange={(e) => editForm.setField('email', e.target.value)} />
         </FormField>
         <FormField label="Número de documento" required error={editForm.errors.documentNumber}>
           <Input

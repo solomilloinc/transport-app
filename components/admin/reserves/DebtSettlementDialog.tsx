@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlusCircleIcon, TrashIcon, ChevronDown, ChevronUp } from 'lucide-react';
@@ -227,8 +227,8 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                 </thead>
                 <tbody>
                   {pendingReserves.map((reserve) => (
-                    <>
-                      <tr key={reserve.reserveId} className="border-b hover:bg-gray-50">
+                    <Fragment key={reserve.reserveId}>
+                      <tr className="border-b hover:bg-gray-50">
                         <td className="p-3">
                           <Checkbox
                             checked={selectedReserveIds.includes(reserve.reserveId)}
@@ -272,7 +272,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                           <td className="p-2" colSpan={2}></td>
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

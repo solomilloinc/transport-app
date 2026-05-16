@@ -721,7 +721,7 @@ export default function ServiceManagement() {
             {/* Información Personal */}
             <div className="w-full">
               <FormField label="Nombre" required error={addForm.errors.name}>
-                <Input id="name" placeholder="Nombre" value={addForm.data.name} onChange={(e) => addForm.setField('Name', e.target.value)} />
+                <Input id="name" placeholder="Nombre" value={addForm.data.name} onChange={(e) => addForm.setField('name', e.target.value)} />
               </FormField>
             </div>
             <div className="w-full">

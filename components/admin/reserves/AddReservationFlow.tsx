@@ -196,14 +196,33 @@ export function AddReservationFlow({
   // Geographically the return's dropoff = the outbound's ORIGIN city (round-trip
   // mirrors endpoints: Lobos → Capital outbound, Capital → Lobos return). The
   // user only picks one city in the admin flow (the outbound dropoff), so we
-  // can't reuse `selectedDropoffCityId` here — that's the outbound's destination,
-  // not the return's.
+  // can't reuse `selectedDropoffCityId` here — that's the outbound's destination.
+  //
+  // Lookup chain (most specific to most permissive):
+  //   1) outbound's origin city in return's dropoffOptionsIda
+  //   2) return trip's main destination (isMainDestination)
+  //   3) any single option if there is only one
+  //   4) fall back to the outbound Ida price (assume symmetric pricing)
   const getReturnIdaPrice = (): number => {
-    if (!returnTripData || !initialTrip?.originCityId) return 0;
-    const opt = returnTripData.dropoffOptionsIda?.find(
-      (o) => String(o.cityId) === String(initialTrip.originCityId),
-    );
-    return opt?.price || 0;
+    if (!returnTripData) return 0;
+    const options = returnTripData.dropoffOptionsIda || [];
+
+    if (initialTrip?.originCityId) {
+      const byOrigin = options.find(
+        (o) => String(o.cityId) === String(initialTrip.originCityId),
+      );
+      if (byOrigin?.price) return byOrigin.price;
+    }
+
+    const main = options.find((o) => o.isMainDestination);
+    if (main?.price) return main.price;
+
+    if (options.length === 1 && options[0].price) return options[0].price;
+
+    // Last-resort fallback: assume the return leg costs the same as the
+    // outbound Ida. The server will validate; if it diverges, the user gets
+    // the PriceNotAvailable retry flow.
+    return getSelectedDropoffPrice();
   };
 
   // Total to show next to the round-trip summary. Mirrors what the server will
