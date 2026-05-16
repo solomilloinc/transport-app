@@ -1,6 +1,6 @@
 export interface Auditable {
-     CreatedBy: string;
-    CreatedDate: string;
-    UpdatedBy: string;
-    UpdatedDate: string;
+  createdBy: string;
+  createdDate: string;
+  updatedBy: string;
+  updatedDate: string;
 }

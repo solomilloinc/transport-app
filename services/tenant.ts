@@ -1,19 +1,27 @@
 'use server';
 
-import { TenantConfig } from '@/interfaces/tenant';
+import { TenantBusinessRules, TenantConfig } from '@/interfaces/tenant';
 import { resolveTenant } from '@/services/tenant-headers';
 
-/**
- * Gets the full tenant configuration for the current host.
- * Uses the cached resolve response (single API call per host).
- */
+const DEFAULT_BUSINESS_RULES: TenantBusinessRules = {
+  // Defaults to true to match the backend default — keeps the UI safe if a stale
+  // tenant config payload omits the new section.
+  roundTripRequiresSameDay: true,
+};
+
 export async function getTenantConfig(host?: string): Promise<TenantConfig | null> {
   const resolved = await resolveTenant(host);
   if (!resolved) return null;
 
-  return {
+  const merged: TenantConfig = {
     code: resolved.code,
     publicKey: resolved.publicKey,
     ...resolved.config,
+    businessRules: {
+      ...DEFAULT_BUSINESS_RULES,
+      ...(resolved.config as Partial<TenantConfig>).businessRules,
+    },
   };
+
+  return merged;
 }

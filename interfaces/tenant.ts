@@ -132,6 +132,12 @@ export interface TenantSeo {
   keywords: string[];
 }
 
+export interface TenantBusinessRules {
+  // If true, IdaVuelta discount only applies when outbound + return are on the
+  // same calendar day (Argentina TZ). Default true; matches backend default.
+  roundTripRequiresSameDay: boolean;
+}
+
 export interface TenantConfig {
   code: string;
   publicKey: string | null;
@@ -143,4 +149,5 @@ export interface TenantConfig {
   contact: TenantContact;
   legal: TenantLegal;
   seo: TenantSeo;
+  businessRules: TenantBusinessRules;
 }

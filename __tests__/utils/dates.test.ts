@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { parseToLocalDate, formatWithTimezone } from '@/utils/dates'
+import { parseToLocalDate, formatWithTimezone, isSameDayInArgentinaTZ } from '@/utils/dates'
 
 describe('dates utilities', () => {
   describe('parseToLocalDate', () => {
@@ -50,9 +50,43 @@ describe('dates utilities', () => {
     it('should format date in medium style (es-AR locale)', () => {
       const isoString = '2024-12-25T12:00:00.000Z'
       const result = formatWithTimezone(isoString)
-      
+
       // In es-AR medium format, should contain year
       expect(result).toMatch(/2024/)
+    })
+  })
+
+  describe('isSameDayInArgentinaTZ', () => {
+    it('returns true when both timestamps fall on the same calendar day in ART', () => {
+      expect(
+        isSameDayInArgentinaTZ('2026-05-13T10:00:00Z', '2026-05-13T23:00:00Z'),
+      ).toBe(true)
+    })
+
+    it('returns true when a UTC string crosses midnight back to previous day in ART', () => {
+      // 22:00 ART (=01:00 UTC next day) vs 10:00 ART same calendar day.
+      // Raw `slice(0,10)` would report different days; ART-aware comparison must say same.
+      const outbound = '2026-05-14T01:00:00Z' // 13 May 22:00 ART
+      const ret = '2026-05-13T13:00:00Z' // 13 May 10:00 ART
+      expect(isSameDayInArgentinaTZ(outbound, ret)).toBe(true)
+    })
+
+    it('returns false for distinct calendar days in ART', () => {
+      expect(
+        isSameDayInArgentinaTZ('2026-05-13T10:00:00Z', '2026-05-14T10:00:00Z'),
+      ).toBe(false)
+    })
+
+    it('returns true for identical timestamps', () => {
+      expect(
+        isSameDayInArgentinaTZ('2026-05-13T12:00:00Z', '2026-05-13T12:00:00Z'),
+      ).toBe(true)
+    })
+
+    it('handles timestamps with explicit -03:00 offset', () => {
+      expect(
+        isSameDayInArgentinaTZ('2026-05-13T22:00:00-03:00', '2026-05-13T08:00:00-03:00'),
+      ).toBe(true)
     })
   })
 })

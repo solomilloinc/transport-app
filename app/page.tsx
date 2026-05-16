@@ -23,13 +23,13 @@ async function loadTrips(): Promise<TripSelectOption[]> {
   try {
     const response = await getPublicTrips(1, 100);
 
-    if (response && response.Items) {
+    if (response && response.items) {
       // Load full trip data in parallel to get StopSchedules
       const fullTrips = await Promise.all(
-        response.Items.map(async (trip) => {
+        response.items.map(async (trip) => {
           try {
-            const fullTrip = await getTripById(trip.TripId);
-            return { ...trip, stopSchedules: fullTrip.StopSchedules || [] };
+            const fullTrip = await getTripById(trip.tripId);
+            return { ...trip, stopSchedules: fullTrip.stopSchedules || [] };
           } catch {
             return { ...trip, stopSchedules: [] as TripPickupStopReportDto[] };
           }
@@ -37,14 +37,14 @@ async function loadTrips(): Promise<TripSelectOption[]> {
       );
 
       return fullTrips.map((trip) => ({
-        id: trip.TripId,
-        value: trip.TripId.toString(),
-        label: `${trip.OriginCityName} → ${trip.DestinationCityName}`,
-        originCityId: trip.OriginCityId,
-        originCityName: trip.OriginCityName,
-        destinationCityId: trip.DestinationCityId,
-        destinationCityName: trip.DestinationCityName,
-        priceFrom: trip.PriceFrom,
+        id: trip.tripId,
+        value: trip.tripId.toString(),
+        label: `${trip.originCityName} → ${trip.destinationCityName}`,
+        originCityId: trip.originCityId,
+        originCityName: trip.originCityName,
+        destinationCityId: trip.destinationCityId,
+        destinationCityName: trip.destinationCityName,
+        priceFrom: trip.priceFrom,
         stopSchedules: trip.stopSchedules,
       }));
     }

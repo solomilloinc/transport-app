@@ -1,16 +1,15 @@
-// Define the Vehicle interface
 export interface Vehicle {
-    VehicleId: number;
-    VehicleTypeId: number;
-    VehicleTypeName: string;
-    InternalNumber: string;
-    VehicleTypeQuantity: number;
-    AvailableQuantity: number;
-    Status: string;
-  }
+  vehicleId: number;
+  vehicleTypeId: number;
+  vehicleTypeName: string;
+  internalNumber: string;
+  vehicleTypeQuantity: number;
+  availableQuantity: number;
+  status: string;
+}
 
 export const emptyVehicle = {
   vehicleTypeId: 0,
   internalNumber: '',
-  availableQuantity: 0
-}
+  availableQuantity: 0,
+};

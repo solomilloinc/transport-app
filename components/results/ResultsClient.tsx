@@ -178,7 +178,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                   <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
                   <p className="mt-4 text-gray-600">Buscando viajes...</p>
                 </div>
-              ) : reserves.Outbound.Items.length === 0 ? (
+              ) : reserves.outbound.items.length === 0 ? (
                 <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
                   <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No hay viajes disponibles</h3>
@@ -187,22 +187,22 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
               ) : (
                 <ScrollArea className="h-[600px]">
                   <div className="divide-y">
-                    {reserves.Outbound.Items.map((trip) => (
-                      <div key={trip.ReserveId} className={cn('p-4 hover:bg-gray-50 transition-colors', selectedOutboundTrip?.ReserveId === trip.ReserveId && 'bg-blue-50')}>
+                    {reserves.outbound.items.map((trip) => (
+                      <div key={trip.reserveId} className={cn('p-4 hover:bg-gray-50 transition-colors', selectedOutboundTrip?.reserveId === trip.reserveId && 'bg-blue-50')}>
                         <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
-                          <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
+                          <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.departureHour}</div>
                           <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                          <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                          <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
+                          <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.availableQuantity} disponibles</span></div>
+                          <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
                           <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectOutbound(trip)}>Reservar</Button>
                         </div>
-                        {trip.StopSchedules && trip.StopSchedules.length > 0 && (
+                        {trip.stopSchedules && trip.stopSchedules.length > 0 && (
                           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                             <MapPin className="h-3 w-3" />
-                            {trip.StopSchedules.map((stop, idx) => (
-                              <span key={stop.DirectionId}>
-                                {stop.DirectionName}: {stop.PickupTime}
-                                {idx < trip.StopSchedules!.length - 1 && ' |'}
+                            {trip.stopSchedules.map((stop, idx) => (
+                              <span key={stop.directionId}>
+                                {stop.directionName}: {stop.pickupTime}
+                                {idx < trip.stopSchedules!.length - 1 && ' |'}
                               </span>
                             ))}
                           </div>
@@ -232,7 +232,7 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                     </h2>
                     <p className="text-sm text-blue-700">{formattedReturnDate}</p>
                   </div>
-                  {reserves.Return.Items.length === 0 ? (
+                  {reserves.return.items.length === 0 ? (
                     <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
                       <Info className="h-12 w-12 text-blue-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No hay viajes de vuelta disponibles</h3>
@@ -241,22 +241,22 @@ export default function ResultsClient({ initialReserves, searchParams }: Results
                   ) : (
                     <ScrollArea className="h-[600px]">
                       <div className="divide-y">
-                        {reserves.Return.Items.map((trip) => (
-                          <div key={trip.ReserveId} className="p-4 hover:bg-gray-50 transition-colors">
+                        {reserves.return.items.map((trip) => (
+                          <div key={trip.reserveId} className="p-4 hover:bg-gray-50 transition-colors">
                             <div className="flex flex-col sm:grid sm:grid-cols-5 gap-3 sm:gap-4 items-start sm:items-center">
-                              <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.DepartureHour}</div>
+                              <div className="text-xl sm:text-2xl font-bold text-blue-900">{trip.departureHour}</div>
                               <div className="flex items-center gap-2 text-sm sm:text-base"><Bus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" /><span>Servicio Estándar</span></div>
-                              <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.AvailableQuantity} disponibles</span></div>
-                              <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.Price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
+                              <div className="flex items-center gap-2 text-gray-600 text-sm sm:text-base"><Users className="h-4 w-4 sm:h-5 sm:w-5" /><span>{trip.availableQuantity} disponibles</span></div>
+                              <div className="flex sm:flex-col items-center sm:items-center gap-2 sm:gap-0"><span className="text-xl sm:text-2xl font-bold text-blue-800">${trip.price.toFixed(2)}</span><span className="text-xs sm:text-sm text-gray-500">por persona</span></div>
                               <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleSelectReturn(trip)}>Seleccionar Vuelta</Button>
                             </div>
-                            {trip.StopSchedules && trip.StopSchedules.length > 0 && (
+                            {trip.stopSchedules && trip.stopSchedules.length > 0 && (
                               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                                 <MapPin className="h-3 w-3" />
-                                {trip.StopSchedules.map((stop, idx) => (
-                                  <span key={stop.DirectionId}>
-                                    {stop.DirectionName}: {stop.PickupTime}
-                                    {idx < trip.StopSchedules!.length - 1 && ' |'}
+                                {trip.stopSchedules.map((stop, idx) => (
+                                  <span key={stop.directionId}>
+                                    {stop.directionName}: {stop.pickupTime}
+                                    {idx < trip.stopSchedules!.length - 1 && ' |'}
                                   </span>
                                 ))}
                               </div>

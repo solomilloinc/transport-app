@@ -1,13 +1,13 @@
-export interface Driver{
-    DriverId: number;
-    FirstName: string;
-    LastName: string;
-    DocumentNumber: string;
-    Status: string;
+export interface Driver {
+  driverId: number;
+  firstName: string;
+  lastName: string;
+  documentNumber: string;
+  status: string;
 }
 
 export const emptyDriver = {
   firstName: '',
   lastName: '',
-  documentNumber: ''
+  documentNumber: '',
 };

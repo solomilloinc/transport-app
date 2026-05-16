@@ -98,27 +98,27 @@ export function PassengerListTable({
         </thead>
         <tbody>
           {passengers.map((passenger) => (
-            <tr key={passenger.PassengerId} className="border-b">
+            <tr key={passenger.passengerId} className="border-b">
               <td className="py-3 pr-4">
                 <div className="flex items-center">
                   <Checkbox
-                    id={`passenger-${passenger.CustomerId}`}
-                    checked={passenger.HasTraveled}
+                    id={`passenger-${passenger.customerId}`}
+                    checked={passenger.hasTraveled}
                     onCheckedChange={(checked) => onCheckPassenger(passenger, checked as boolean)}
                     className="mr-2"
-                    disabled={disabledPassengers.includes(passenger.PassengerId)}
+                    disabled={disabledPassengers.includes(passenger.passengerId)}
                   />
                   <div>
-                    <label htmlFor={`passenger-${passenger.PassengerId}`} className="font-medium">
-                      {passenger.FullName}
+                    <label htmlFor={`passenger-${passenger.passengerId}`} className="font-medium">
+                      {passenger.fullName}
                     </label>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <span>DNI: {passenger.DocumentNumber}</span>
-                      {passenger.DocumentNumber && (passenger.CurrentBalance) !== null && passenger.CurrentBalance !== 0 && (
-                        <span className={(passenger.CurrentBalance) > 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
-                          {(passenger.CurrentBalance) > 0
-                            ? `Debe $${passenger.CurrentBalance.toLocaleString()}`
-                            : `A favor $${Math.abs(passenger.CurrentBalance).toLocaleString()}`}
+                      <span>DNI: {passenger.documentNumber}</span>
+                      {passenger.documentNumber && (passenger.currentBalance) !== null && passenger.currentBalance !== 0 && (
+                        <span className={(passenger.currentBalance) > 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
+                          {(passenger.currentBalance) > 0
+                            ? `Debe $${passenger.currentBalance.toLocaleString()}`
+                            : `A favor $${Math.abs(passenger.currentBalance).toLocaleString()}`}
                         </span>
                       )}
                     </div>
@@ -127,11 +127,11 @@ export function PassengerListTable({
               </td>
               <td className="py-3 pr-4 text-center">
                 {/* Dropdown for pickup location can be added here if needed */}
-                {passenger.PickupLocationName}
+                {passenger.pickupLocationName}
               </td>
               <td className="py-3 pr-4 text-center">
                 {(() => {
-                  const status = passenger.Status ?? passenger.StatusPaymentId;
+                  const status = passenger.status ?? passenger.statusPaymentId;
                   const label = PaymentStatusLabels[status] || 'Desconocido';
                   let badgeClass = 'bg-gray-100 text-gray-700';
                   if (status === PaymentStatusEnum.PendingPayment) badgeClass = 'bg-yellow-100 text-yellow-800';
@@ -160,20 +160,20 @@ export function PassengerListTable({
                   );
                 })()}
               </td>
-              <td className="py-3 pr-4 text-center">{passenger.PaymentMethods}</td>
+              <td className="py-3 pr-4 text-center">{passenger.paymentMethods}</td>
               <td className="py-3 pr-4 text-center font-medium">
-                ${(passenger.PaidAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${(passenger.paidAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               <td className="py-3 pl-4 text-right">
                 <div className="flex justify-end items-center">
                   <div
                     className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ml-4 mr-2 ${
-                      passenger.HasTraveled
+                      passenger.hasTraveled
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-500'
                     }`}
                   >
-                    {passenger.HasTraveled ? 'Subió' : 'No subió'}
+                    {passenger.hasTraveled ? 'Subió' : 'No subió'}
                   </div>
                   <Button
                     variant="ghost"

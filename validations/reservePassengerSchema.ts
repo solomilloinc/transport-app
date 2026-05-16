@@ -1,9 +1,7 @@
-import { FormValidationConfig } from "@/hooks/use-form-validation";
-import { minValueRule } from "@/utils/validation-rules";
+import { FormValidationConfig } from '@/hooks/use-form-validation';
 
 export const reserveValidationSchema: FormValidationConfig = {
-  // Campos obligatorios siempre
-   PickupLocationId: {  
+  pickupLocationId: {
     required: { message: 'La dirección de subida es obligatoria' },
     rules: [
       {
@@ -12,45 +10,22 @@ export const reserveValidationSchema: FormValidationConfig = {
       },
     ],
   },
-  // DropoffLocationId is now optional - city selection is tracked separately
-  // Direction within city is optional when available
-  
-  PickupLocationReturnId: {
+  pickupLocationReturnId: {
     rules: [
       {
-        validate: (value, formData) => formData?.ReserveTypeId === 2 ? value !== "0" : true,
+        validate: (value, formData) =>
+          formData?.reserveTypeId === 2 ? value !== '0' : true,
         message: 'Dirección de subida para la vuelta es obligatoria',
       },
     ],
   },
-  DropoffLocationReturnId: {
+  dropoffLocationReturnId: {
     rules: [
       {
-        validate: (value, formData) => formData?.ReserveTypeId === 2 ? value !== "0" : true,
+        validate: (value, formData) =>
+          formData?.reserveTypeId === 2 ? value !== '0' : true,
         message: 'Dirección de bajada para la vuelta es obligatoria',
       },
     ],
   },
-
-  // Campos de pago (si hay pago activado)
-
-  // PaymentMethod: {
-  //   required: false,
-  //   rules: [
-  //     {
-  //       validate: (value, formData) => formData?.IsPayment ? !!value : true,
-  //       message: 'Debe seleccionar un método de pago',
-  //     },
-  //   ],
-  // },
-  // TransactionAmount: {
-  //   required: false,
-  //   rules: [
-  //     {
-  //       validate: (value, formData) =>
-  //         formData?.IsPayment ? Number(value) > 0 : true,
-  //       message: 'El monto debe ser mayor a cero',
-  //     },
-  //   ],
-  // },
 };

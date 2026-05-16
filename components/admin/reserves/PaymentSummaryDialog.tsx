@@ -71,12 +71,12 @@ export function PaymentSummaryDialog({ open, onOpenChange, currentCashBox, onSuc
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-1">
             <div className="flex justify-between items-center text-xs text-blue-600 font-semibold uppercase tracking-wider">
               <span>Caja Actual</span>
-              <span className="bg-blue-100 px-2 py-0.5 rounded-full">{currentCashBox.Status}</span>
+              <span className="bg-blue-100 px-2 py-0.5 rounded-full">{currentCashBox.status}</span>
             </div>
-            <p className="text-sm font-medium text-blue-900">{currentCashBox.Description}</p>
+            <p className="text-sm font-medium text-blue-900">{currentCashBox.description}</p>
             <div className="flex justify-between text-sm pt-1">
-              <span className="text-blue-700">Abierta: {formatSafeDate(currentCashBox.OpenedAt, "HH:mm")}hs</span>
-              <span className="font-bold text-blue-800">${currentCashBox.TotalAmount?.toLocaleString() ?? '0'}</span>
+              <span className="text-blue-700">Abierta: {formatSafeDate(currentCashBox.openedAt, "HH:mm")}hs</span>
+              <span className="font-bold text-blue-800">${currentCashBox.totalAmount?.toLocaleString() ?? '0'}</span>
             </div>
           </div>
         )}
@@ -88,11 +88,11 @@ export function PaymentSummaryDialog({ open, onOpenChange, currentCashBox, onSuc
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Pagos por Método</h4>
               <div className="grid gap-3">
-                {currentCashBox.PaymentsByMethod && currentCashBox.PaymentsByMethod.length > 0 ? (
-                  currentCashBox.PaymentsByMethod.map((item) => (
-                    <div key={item.PaymentMethodId} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
-                      <span className="font-medium">{item.PaymentMethodName}</span>
-                      <span className="text-lg font-bold text-blue-600">${item.Amount?.toLocaleString() ?? '0'}</span>
+                {currentCashBox.paymentsByMethod && currentCashBox.paymentsByMethod.length > 0 ? (
+                  currentCashBox.paymentsByMethod.map((item) => (
+                    <div key={item.paymentMethodId} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                      <span className="font-medium">{item.paymentMethodName}</span>
+                      <span className="text-lg font-bold text-blue-600">${item.amount?.toLocaleString() ?? '0'}</span>
                     </div>
                   ))
                 ) : (
@@ -104,7 +104,7 @@ export function PaymentSummaryDialog({ open, onOpenChange, currentCashBox, onSuc
             <div className="mt-6 pt-4 border-t">
               <div className="flex justify-between items-center px-2">
                 <span className="text-lg font-semibold">Total General</span>
-                <span className="text-2xl font-bold text-green-600">${currentCashBox.TotalAmount?.toLocaleString() ?? '0'}</span>
+                <span className="text-2xl font-bold text-green-600">${currentCashBox.totalAmount?.toLocaleString() ?? '0'}</span>
               </div>
             </div>
           </div>
@@ -128,7 +128,7 @@ export function PaymentSummaryDialog({ open, onOpenChange, currentCashBox, onSuc
         <DialogFooter className="flex flex-col sm:flex-row gap-2">
           {!closingMode ? (
             <>
-              {currentCashBox?.CashBoxId && (
+              {currentCashBox?.cashBoxId && (
                 <Button variant="destructive" onClick={() => setClosingMode(true)} disabled={loadingCashBox}>
                   Cerrar Caja
                 </Button>

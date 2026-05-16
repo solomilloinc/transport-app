@@ -80,10 +80,10 @@ export default function DirectionManagement() {
         pageSize: 100,
       }));
       if (response) {
-        const formattedTypes = response.Items.map((type: City) => ({
-          id: type.Id.toString(),
-          value: type.Id.toString(),
-          label: type.Name,
+        const formattedTypes = response.items.map((type: City) => ({
+          id: type.id.toString(),
+          value: type.id.toString(),
+          label: type.name,
         }));
         setCities(formattedTypes);
       }
@@ -164,9 +164,9 @@ export default function DirectionManagement() {
   };
 
   const handleEditDirection = (direction: Direction) => {
-    setCurrentDirectionId(direction.DirectionId);
-    editForm.setField('CityId', direction.CityId);
-    editForm.setField('Name', direction.Name);
+    setCurrentDirectionId(direction.directionId);
+    editForm.setField('cityId', direction.cityId);
+    editForm.setField('name', direction.name);
     setIsEditModalOpen(true);
     loadAllOptions();
   };
@@ -185,7 +185,7 @@ export default function DirectionManagement() {
   };
 
   const columns = [
-    { header: 'Ciudad', accessor: 'CityName', width: '30%' },
+    { header: 'Ciudad', accessor: 'cityName', width: '30%' },
     { header: 'Direccion', accessor: 'Name', width: '50%' },
     {
       header: 'Acciones',
@@ -206,7 +206,7 @@ export default function DirectionManagement() {
             size="sm"
             variant="outline"
             className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={() => handleDeleteDirection(direction.DirectionId)}
+            onClick={() => handleDeleteDirection(direction.directionId)}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -255,19 +255,19 @@ export default function DirectionManagement() {
             <div className="hidden md:block w-full">
               <DashboardTable
                 columns={columns}
-                data={data?.Items ?? []}
+                data={data?.items ?? []}
                 emptyMessage="No se encontraron direcciones."
                 isLoading={loading}
-                skeletonRows={data?.PageSize}
+                skeletonRows={data?.pageSize}
               />
             </div>
 
-            {data?.Items?.length > 0 && (
+            {data?.items?.length > 0 && (
               <TablePagination
                 currentPage={pageNumber}
-                totalPages={data?.TotalPages}
-                totalItems={data?.TotalRecords}
-                itemsPerPage={data?.PageSize}
+                totalPages={data?.totalPages}
+                totalItems={data?.totalRecords}
+                itemsPerPage={data?.pageSize}
                 onPageChange={setPageNumber}
                 itemName="direcciones"
               />
@@ -278,7 +278,7 @@ export default function DirectionManagement() {
 
       {/* Mobile view - Card layout */}
       <div className="md:hidden space-y-4 mt-4">
-        {loading && data?.Items?.length === 0 ? (
+        {loading && data?.items?.length === 0 ? (
           // Mobile skeleton loading state
           Array.from({ length: 3 }).map((_, index) => (
             <Card key={`skeleton-card-${index}`} className="w-full">
@@ -298,15 +298,15 @@ export default function DirectionManagement() {
               </CardContent>
             </Card>
           ))
-        ) : data?.Items?.length > 0 ? (
-          data?.Items?.map((direction) => (
+        ) : data?.items?.length > 0 ? (
+          data?.items?.map((direction) => (
             <MobileCard
-              key={direction.DirectionId}
-              title={direction.Name}
-              subtitle={direction.DirectionId.toString()}
-              fields={[{ label: 'Nombre', value: direction.Name }]}
+              key={direction.directionId}
+              title={direction.name}
+              subtitle={direction.directionId.toString()}
+              fields={[{ label: 'Nombre', value: direction.name }]}
               onEdit={() => handleEditDirection(direction)}
-              onDelete={() => handleDeleteDirection(direction.DirectionId)}
+              onDelete={() => handleDeleteDirection(direction.directionId)}
             />
           ))
         ) : (

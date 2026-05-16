@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlusCircleIcon, TrashIcon, ChevronDown, ChevronUp } from 'lucide-react';
@@ -59,10 +59,10 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
     if (!customer) return;
     setIsLoading(true);
     try {
-      const data = await getCustomerPendingReserves(customer.CustomerId);
+      const data = await getCustomerPendingReserves(customer.customerId);
       if (Array.isArray(data) && data.length > 0) {
         setPendingReserves(data);
-        setSelectedReserveIds(data.map((r) => r.ReserveId));
+        setSelectedReserveIds(data.map((r) => r.reserveId));
       } else {
         setPendingReserves([]);
         setSelectedReserveIds([]);
@@ -88,12 +88,12 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
 
   const getSelectedDebt = () => {
     return pendingReserves
-      .filter((r) => selectedReserveIds.includes(r.ReserveId))
-      .reduce((sum, r) => sum + r.PendingDebt, 0);
+      .filter((r) => selectedReserveIds.includes(r.reserveId))
+      .reduce((sum, r) => sum + r.pendingDebt, 0);
   };
 
   const getTotalPaymentAmount = () => {
-    return payments.reduce((sum, p) => sum + p.TransactionAmount, 0);
+    return payments.reduce((sum, p) => sum + p.transactionAmount, 0);
   };
 
   const getRemainingBalance = () => {
@@ -116,7 +116,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
     }
 
     const methodId = Number(selectedPaymentMethod);
-    if (payments.some((p) => p.PaymentMethod === methodId)) {
+    if (payments.some((p) => p.paymentMethod === methodId)) {
       toast({
         title: 'Método duplicado',
         description: 'Ya existe un pago con este método. Elimínalo antes de agregar otro.',
@@ -125,7 +125,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
       return;
     }
 
-    setPayments((prev) => [...prev, { PaymentMethod: methodId, TransactionAmount: amount }]);
+    setPayments((prev) => [...prev, { paymentMethod: methodId, transactionAmount: amount }]);
     setSelectedPaymentMethod('1');
     setPaymentAmount('');
   };
@@ -161,9 +161,9 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
     setIsSubmitting(true);
     try {
       await settleCustomerDebt({
-        customerId: customer.CustomerId,
+        customerId: customer.customerId,
         reserveIds: selectedReserveIds,
-        payments: payments.map((p) => ({ transactionAmount: p.TransactionAmount, paymentMethod: p.PaymentMethod })),
+        payments: payments.map((p) => ({ transactionAmount: p.transactionAmount, paymentMethod: p.paymentMethod })),
       });
 
       toast({ title: 'Deuda saldada', description: 'Los pagos han sido registrados exitosamente.', variant: 'success' });
@@ -196,7 +196,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
         <DialogHeader>
           <DialogTitle className="text-blue-500">Saldar Deuda</DialogTitle>
           <DialogDescription>
-            Saldar deuda de {customer?.FirstName} {customer?.LastName}
+            Saldar deuda de {customer?.firstName} {customer?.lastName}
           </DialogDescription>
         </DialogHeader>
 
@@ -227,52 +227,52 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                 </thead>
                 <tbody>
                   {pendingReserves.map((reserve) => (
-                    <>
-                      <tr key={reserve.ReserveId} className="border-b hover:bg-gray-50">
+                    <Fragment key={reserve.reserveId}>
+                      <tr className="border-b hover:bg-gray-50">
                         <td className="p-3">
                           <Checkbox
-                            checked={selectedReserveIds.includes(reserve.ReserveId)}
-                            onCheckedChange={() => toggleReserveSelection(reserve.ReserveId)}
+                            checked={selectedReserveIds.includes(reserve.reserveId)}
+                            onCheckedChange={() => toggleReserveSelection(reserve.reserveId)}
                           />
                         </td>
                         <td className="p-3">
-                          {format(new Date(reserve.ReserveDate), 'dd/MM/yyyy', { locale: es })}
+                          {format(new Date(reserve.reserveDate), 'dd/MM/yyyy', { locale: es })}
                         </td>
                         <td className="p-3 font-medium">
-                          {reserve.OriginName} → {reserve.DestinationName}
+                          {reserve.originName} → {reserve.destinationName}
                         </td>
-                        <td className="p-3">{reserve.DepartureHour}</td>
-                        <td className="p-3 text-right">${reserve.TotalPrice.toLocaleString()}</td>
-                        <td className="p-3 text-right text-green-600">${reserve.TotalPaid.toLocaleString()}</td>
-                        <td className="p-3 text-right font-semibold text-red-600">${reserve.PendingDebt.toLocaleString()}</td>
+                        <td className="p-3">{reserve.departureHour}</td>
+                        <td className="p-3 text-right">${reserve.totalPrice.toLocaleString()}</td>
+                        <td className="p-3 text-right text-green-600">${reserve.totalPaid.toLocaleString()}</td>
+                        <td className="p-3 text-right font-semibold text-red-600">${reserve.pendingDebt.toLocaleString()}</td>
                         <td className="p-3">
-                          {reserve.Passengers?.length > 0 && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleExpanded(reserve.ReserveId)}>
-                              {expandedReserves.includes(reserve.ReserveId)
+                          {reserve.passengers?.length > 0 && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleExpanded(reserve.reserveId)}>
+                              {expandedReserves.includes(reserve.reserveId)
                                 ? <ChevronUp className="h-4 w-4" />
                                 : <ChevronDown className="h-4 w-4" />}
                             </Button>
                           )}
                         </td>
                       </tr>
-                      {expandedReserves.includes(reserve.ReserveId) && reserve.Passengers?.map((p) => (
-                        <tr key={`${reserve.ReserveId}-${p.PassengerId}`} className="border-b bg-gray-50/50">
+                      {expandedReserves.includes(reserve.reserveId) && reserve.passengers?.map((p) => (
+                        <tr key={`${reserve.reserveId}-${p.passengerId}`} className="border-b bg-gray-50/50">
                           <td className="p-2"></td>
                           <td className="p-2" colSpan={3}>
-                            <span className="text-xs text-gray-500 ml-4">{p.FullName}</span>
+                            <span className="text-xs text-gray-500 ml-4">{p.fullName}</span>
                           </td>
-                          <td className="p-2 text-right text-xs">${p.Price.toLocaleString()}</td>
+                          <td className="p-2 text-right text-xs">${p.price.toLocaleString()}</td>
                           <td className="p-2 text-right text-xs">
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${
-                              p.Status === 1 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
+                              p.status === 1 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
                             }`}>
-                              {PaymentStatusLabels[p.Status] || 'Desconocido'}
+                              {PaymentStatusLabels[p.status] || 'Desconocido'}
                             </span>
                           </td>
                           <td className="p-2" colSpan={2}></td>
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -318,8 +318,8 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                     {payments.map((payment, index) => (
                       <div key={index} className="flex items-center justify-between p-1 bg-white rounded">
                         <span className="text-sm">
-                          {paymentMethodOptions.find((pm) => String(pm.id) === String(payment.PaymentMethod))?.label || 'Pago'}:{' '}
-                          ${payment.TransactionAmount.toLocaleString()}
+                          {paymentMethodOptions.find((pm) => String(pm.id) === String(payment.paymentMethod))?.label || 'Pago'}:{' '}
+                          ${payment.transactionAmount.toLocaleString()}
                         </span>
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => handleRemovePayment(index)}>
                           <TrashIcon className="h-3 w-3" />

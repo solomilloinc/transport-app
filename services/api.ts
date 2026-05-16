@@ -6,7 +6,7 @@ import { PagedRequest, PagedResponse } from './types';
 function rethrowWithCode(error: unknown): never {
   if (error instanceof AxiosError && error.response?.data) {
     const data = error.response.data as any;
-    const code = data.code || data.Code || '';
+    const code = data.code || '';
     if (code) throw new Error(`API_ERROR:${code}`);
   }
   throw error;

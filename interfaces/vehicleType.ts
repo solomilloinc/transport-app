@@ -1,14 +1,15 @@
 export interface VehicleType {
-    VehicleTypeId: number;
-    Name: string;
-    ImageBase64: string;
-    Quantity: number;
-    status: string;
-  }
+  vehicleTypeId: number;
+  name: string;
+  imageBase64: string;
+  quantity: number;
+  status: string;
+}
+
 export const emptyVehicleType: VehicleType = {
-    VehicleTypeId: 0,
-    Name: '',
-    ImageBase64: '',
-    Quantity: 0,
-    status: 'active'
-  };
+  vehicleTypeId: 0,
+  name: '',
+  imageBase64: '',
+  quantity: 0,
+  status: 'active',
+};

@@ -37,15 +37,15 @@ export function DeleteConfirmationDialog({ open, onOpenChange, passengerReserve,
         <DialogHeader>
           <DialogTitle>Eliminar Pasajero</DialogTitle>
           <DialogDescription>
-            {passengerReserve?.IsPayment
-              ? `Este pasajero (${passengerReserve.FullName}) ya ha pagado. ¿Qué deseas hacer con el pago?`
-              : `Este pasajero (${passengerReserve?.FullName}) no ha pagado. ¿Qué deseas hacer?`}
+            {passengerReserve?.isPayment
+              ? `Este pasajero (${passengerReserve.fullName}) ya ha pagado. ¿Qué deseas hacer con el pago?`
+              : `Este pasajero (${passengerReserve?.fullName}) no ha pagado. ¿Qué deseas hacer?`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
           <RadioGroup value={deleteAction} onValueChange={(value) => setDeleteAction(value as DeleteAction)} className="space-y-3">
-            {passengerReserve?.IsPayment ? (
+            {passengerReserve?.isPayment ? (
               <>
                 <div className="flex items-center space-x-2"><RadioGroupItem value="delete" id="delete" /><Label htmlFor="delete">Eliminar sin guardar el pago</Label></div>
                 <div className="flex items-center space-x-2"><RadioGroupItem value="favor" id="favor" /><Label htmlFor="favor">Poner el dinero a favor del pasajero</Label></div>

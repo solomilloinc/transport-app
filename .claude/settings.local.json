@@ -42,7 +42,15 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "Bash(node_modules/.bin/tsc --noEmit 2>&1 | head -30)",
-      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit 2>&1 | head -30)"
-    ]
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit 2>&1 | head -30)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\"; $f = \".\\\\app\\\\admin\\\\cities\\\\page.tsx\"; $c = Get-Content -LiteralPath $f -Raw; \"len: $\\($c.Length\\)\"; if \\($c -match '\\\\.Items\\\\b'\\) { 'has .Items' } else { 'no .Items' })",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\x\\\\Desktop\\\\transport-app\"; $f = \".\\\\app\\\\admin\\\\cities\\\\page.tsx\"; $c = Get-Content -LiteralPath $f -Raw -Encoding UTF8; $new = [regex]::Replace\\($c, '\\\\.Items\\\\b', '.items'\\); if \\($new -ne $c\\) { 'changed' } else { 'no change' })",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }

@@ -10,18 +10,17 @@ export interface PagedRequest<TFilter = any> {
 }
 
 export interface PagedResponse<T = any> {
-  Items: T[];
-  PageNumber: number;
-  PageSize: number;
-  TotalRecords: number;
-  TotalPages: number;
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalRecords: number;
+  totalPages: number;
 }
 
 export interface PagedReserveResponse<T = any> {
-  Outbound: PagedResponse<T>;
-  Return: PagedResponse<T>;
+  outbound: PagedResponse<T>;
+  return: PagedResponse<T>;
 }
-
 
 export interface UseApiCall<T, R = PagedResponse<T>> {
   call: Promise<R>;
@@ -35,16 +34,10 @@ export interface PaginationParams {
   filters?: Record<string, any>;
 }
 
-// declare module 'axios' {
-//   export interface AxiosRequestConfig {
-//     skipAuth?: boolean;
-//   }
-// }
-
 declare module 'next-auth' {
   interface Session {
     accessToken?: string;
-    error?: string; // 'RefreshTokenError' cuando la renovación falla
+    error?: string;
     user: {
       id: string;
       email: string;

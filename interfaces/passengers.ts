@@ -1,29 +1,28 @@
-// For customer report services (from API response)
 export interface CustomerServiceDto {
-  ServiceId: number;
-  ServiceName: string;
+  serviceId: number;
+  serviceName: string;
 }
 
 export interface Passenger {
-  CustomerId: number;
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  Phone1: string;
-  Phone2: string;
-  DocumentNumber: string;
-  Status: string;
-  ServiceIds?: number[];
-  Services?: CustomerServiceDto[];
+  customerId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone1: string;
+  phone2: string;
+  documentNumber: string;
+  status: string;
+  serviceIds?: number[];
+  services?: CustomerServiceDto[];
 }
 
-export const emptyPassenger: Omit<Passenger, 'CustomerId'> = {
-  FirstName: '',
-  LastName: '',
-  Email: '',
-  DocumentNumber: '',
-  Phone1: '',
-  Phone2: '',
-  Status: 'Activo',
-  ServiceIds: []
-}
+export const emptyPassenger: Omit<Passenger, 'customerId'> = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  documentNumber: '',
+  phone1: '',
+  phone2: '',
+  status: 'Activo',
+  serviceIds: [],
+};

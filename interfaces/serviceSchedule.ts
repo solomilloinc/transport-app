@@ -1,15 +1,13 @@
-
 export interface ServiceSchedule {
-    ServiceScheduleId: number;
-    ServiceId: number;
-    DepartureHour: string; // TimeSpan from API
-    IsHoliday: boolean;
-    Status: string;
+  serviceScheduleId: number;
+  serviceId: number;
+  departureHour: string; // TimeSpan from API
+  isHoliday: boolean;
+  status: string;
 }
 
 export const emptyServiceSchedule = {
-    ServiceId: 0,
-    IsHoliday: false,
-    DepartureHour: "10:00"
-}
-
+  serviceId: 0,
+  isHoliday: false,
+  departureHour: '10:00',
+};

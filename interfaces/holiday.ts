@@ -1,5 +1,5 @@
-export interface Holiday{
-    HolidayId: number;
-    HolidayName: string;
-    HolidayDate: string;
+export interface Holiday {
+  holidayId: number;
+  holidayName: string;
+  holidayDate: string;
 }

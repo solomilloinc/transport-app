@@ -200,8 +200,8 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                           </SelectTrigger>
                           <SelectContent>
                             {selectedTrip.stopSchedules.map((stop) => (
-                              <SelectItem key={stop.DirectionId} value={stop.DirectionId.toString()}>
-                                {stop.DirectionName}
+                              <SelectItem key={stop.directionId} value={stop.directionId.toString()}>
+                                {stop.directionName}
                               </SelectItem>
                             ))}
                           </SelectContent>
