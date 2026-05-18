@@ -2,12 +2,12 @@
 
 import type React from 'react';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Building, Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { deleteLogic, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { StatusFilter } from '@/components/dashboard/status-filter';
@@ -19,7 +19,6 @@ import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { DeleteDialog } from '@/components/dashboard/delete-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckboxGroup } from '@/components/ui/checkbox-group';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
 import { PagedResponse, PaginationParams } from '@/services/types';
@@ -58,19 +57,14 @@ const customerFilterParsers = {
     EntityStatus.Suspended,
   ]),
 };
-import { getServicesList } from '@/services/serviceList';
-import { ServiceIdNameDto } from '@/interfaces/serviceList';
 import { validationConfigPassenger } from '@/validations/passengerSchema';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 
 export default function PassengersManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentPassengersId, setCurrentPassengersId] = useState<number | null>(null);
-
-  // Services state for multiselect
-  const [services, setServices] = useState<ServiceIdNameDto[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(false);
 
   const addForm = useFormValidation(emptyPassenger, validationConfigPassenger);
   const editForm = useFormValidation(emptyPassenger, validationConfigPassenger);
@@ -91,22 +85,6 @@ export default function PassengersManagement() {
     apiCall: getCustomerReport,
     initialPageSize: 8,
   });
-
-  // Fetch services on mount
-  useEffect(() => {
-    const fetchServices = async () => {
-      setServicesLoading(true);
-      try {
-        const servicesList = await getServicesList();
-        setServices(servicesList);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-      } finally {
-        setServicesLoading(false);
-      }
-    };
-    fetchServices();
-  }, []);
 
   const submitAddPassenger = async () => {
     addForm.handleSubmit(async (data) => {
@@ -130,7 +108,7 @@ export default function PassengersManagement() {
       } catch (error) {
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el pasajero',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -159,7 +137,7 @@ export default function PassengersManagement() {
       } catch (error) {
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar el pasajero',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -182,11 +160,10 @@ export default function PassengersManagement() {
       documentNumber: passenger.documentNumber,
       phone1: passenger.phone1,
       phone2: passenger.phone2,
-      serviceIds: passenger.services?.map(s => s.serviceId) || [],
     };
 
     Object.entries(fields).forEach(([key, value]) => {
-      editForm.setField(key, value || (key === 'serviceIds' ? [] : ''));
+      editForm.setField(key, value || '');
     });
 
     setIsEditModalOpen(true);
@@ -198,10 +175,20 @@ export default function PassengersManagement() {
   };
 
   const confirmDelete = async () => {
-    await deleteLogic(`/customer-delete/${currentPassengersId}`);
-    setIsDeleteModalOpen(false);
-    setCurrentPassengersId(null);
-    refetch();
+    try {
+      await deleteLogic(`/customer-delete/${currentPassengersId}`);
+      setIsDeleteModalOpen(false);
+      setCurrentPassengersId(null);
+      refetch();
+    } catch (error) {
+      // Surface backend errors (e.g. Customer.HasActiveSubscriptions) via toast.
+      // Mantengo el modal abierto para que el admin pueda confirmar leer y cerrar.
+      toast({
+        title: 'No se pudo eliminar',
+        description: getApiErrorMessage(error).message,
+        variant: 'destructive',
+      });
+    }
   };
 
   const columns = [
@@ -209,27 +196,6 @@ export default function PassengersManagement() {
     { header: 'Apellido', accessor: 'lastName', width: '15%' },
     { header: 'Documento', accessor: 'documentNumber', width: '12%' },
     { header: 'Teléfono', accessor: 'phone1', width: '12%' },
-    {
-      header: 'Servicios',
-      accessor: 'services',
-      width: '20%',
-      cell: (passenger: Passenger) => (
-        <div className="flex flex-wrap gap-1">
-          {passenger.services && passenger.services.length > 0 ? (
-            passenger.services.map((s) => (
-              <span
-                key={s.serviceId}
-                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-              >
-                {s.serviceName}
-              </span>
-            ))
-          ) : (
-            <span className="text-muted-foreground text-xs">Sin servicios</span>
-          )}
-        </div>
-      ),
-    },
     {
       header: 'Estado',
       accessor: 'status',
@@ -428,14 +394,6 @@ export default function PassengersManagement() {
         <FormField label="Teléfono 2">
           <Input id="phone2" value={addForm.data.phone2} onChange={(e) => addForm.setField('phone2', e.target.value)} />
         </FormField>
-        <FormField label="Servicios asociados">
-          <CheckboxGroup
-            options={services.map(s => ({ value: s.serviceId, label: s.name }))}
-            selected={addForm.data.serviceIds || []}
-            onChange={(selected) => addForm.setField('serviceIds', selected)}
-            disabled={servicesLoading}
-          />
-        </FormField>
       </FormDialog>
 
       {/* Edit Customer Modal */}
@@ -492,14 +450,6 @@ export default function PassengersManagement() {
             id="phone2"
             value={editForm.data.phone2}
             onChange={(e) => editForm.setField('phone2', e.target.value)}
-          />
-        </FormField>
-        <FormField label="Servicios asociados">
-          <CheckboxGroup
-            options={services.map(s => ({ value: s.serviceId, label: s.name }))}
-            selected={editForm.data.serviceIds || []}
-            onChange={(selected) => editForm.setField('serviceIds', selected)}
-            disabled={servicesLoading}
           />
         </FormField>
       </FormDialog>

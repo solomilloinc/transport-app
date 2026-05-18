@@ -398,10 +398,15 @@ export function AddReservationFlow({
         outboundLegPrice = getSelectedDropoffPrice();
         returnLegPrice = 0; // unused when there is no return leg
       } else if (useIdaVueltaTariff) {
-        // Package price split 50/50 (recommended split per backend doc).
+        // Convención Mayo 2026: el outbound se lleva el precio COMPLETO del
+        // package y el return queda en 0. La regla del backend sigue siendo
+        // `outbound + return == packagePrice`, pero centralizar el monto en
+        // el outbound deja claro a futuros consumers que el ticket de vuelta
+        // es parte del bundle, no un cobro separado (se identifica por
+        // reserveRelatedId != null && price == 0).
         const pkg = getSelectedDropoffPrice();
-        outboundLegPrice = pkg / 2;
-        returnLegPrice = pkg / 2;
+        outboundLegPrice = pkg;
+        returnLegPrice = 0;
       } else {
         // Downgrade: outbound trip's Ida price + return trip's Ida price for the
         // same dropoff city. Need returnTripData loaded.
@@ -795,7 +800,12 @@ export function AddReservationFlow({
                       <strong>Ruta:</strong> {returnTrip?.departureHour} - {returnTrip?.originName} → {returnTrip?.destinationName}
                     </p>
                     <p>
-                      <strong>Precio:</strong> ${bookingPassengers[0].return.price.toLocaleString()}
+                      <strong>Precio:</strong>{' '}
+                      {bookingPassengers[0].return.price === 0
+                        ? // Convención IdaVuelta package: el outbound se lleva el total,
+                          // la vuelta va a 0. Evitamos mostrar "$0" sin contexto.
+                          <span className="text-muted-foreground">Incluido en el paquete IdaVuelta</span>
+                        : `$${bookingPassengers[0].return.price.toLocaleString()}`}
                     </p>
                   </div>
                 )}

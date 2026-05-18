@@ -10,6 +10,7 @@ import {
   CreditCard,
   LogOut,
   MapPin,
+  Repeat,
   Route,
   Settings,
   User,
@@ -74,13 +75,19 @@ const MENU_CONFIG: {
     {
       name: 'Clientes',
       icon: Users,
-      path: '/admin/passengers',
-      key: 'passengers',
+      path: '/admin/customers',
+      key: 'customers',
       roles: ['admin', 'user'],
       submenu: [
-        { name: 'Lista', path: '/admin/passengers/list', roles: ['admin', 'user'] },
-        { name: 'Deudas', path: '/admin/passengers/debts', roles: ['admin', 'user'] },
+        { name: 'Lista', path: '/admin/customers/list', roles: ['admin', 'user'] },
+        { name: 'Deudas', path: '/admin/customers/debts', roles: ['admin', 'user'] },
       ],
+    },
+    {
+      name: 'Pasajeros Frecuentes',
+      icon: Repeat,
+      path: '/admin/frequent-subscriptions',
+      roles: ['admin', 'user'],
     },
     {
       name: 'Servicios',

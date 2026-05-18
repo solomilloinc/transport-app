@@ -109,9 +109,33 @@ export function PassengerListTable({
                     disabled={disabledPassengers.includes(passenger.passengerId)}
                   />
                   <div>
-                    <label htmlFor={`passenger-${passenger.passengerId}`} className="font-medium">
-                      {passenger.fullName}
-                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label htmlFor={`passenger-${passenger.passengerId}`} className="font-medium">
+                        {passenger.fullName}
+                      </label>
+                      {passenger.frequentSubscriptionId != null && (
+                        // Badge: este Passenger fue auto-creado por el batch
+                        // a partir de una FrequentSubscription activa.
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700"
+                          title={`Generado por la suscripción frecuente #${passenger.frequentSubscriptionId}`}
+                        >
+                          Frecuente
+                        </span>
+                      )}
+                      {passenger.reserveRelatedId != null &&
+                        (passenger.paidAmount ?? 0) === 0 && (
+                          // Badge: este Passenger es la pata del package IdaVuelta.
+                          // Convención Mayo 2026: el outbound carga el total, el return va a 0.
+                          // Sin este badge, el admin podría asumir que el ticket es gratis.
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800"
+                            title={`Parte del paquete IdaVuelta — cobro en Reserve #${passenger.reserveRelatedId}`}
+                          >
+                            Paquete IdaVuelta
+                          </span>
+                        )}
+                    </div>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>DNI: {passenger.documentNumber}</span>
                       {passenger.documentNumber && (passenger.currentBalance) !== null && passenger.currentBalance !== 0 && (
