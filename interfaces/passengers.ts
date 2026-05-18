@@ -1,8 +1,3 @@
-export interface CustomerServiceDto {
-  serviceId: number;
-  serviceName: string;
-}
-
 export interface Passenger {
   customerId: number;
   firstName: string;
@@ -12,8 +7,6 @@ export interface Passenger {
   phone2: string;
   documentNumber: string;
   status: string;
-  serviceIds?: number[];
-  services?: CustomerServiceDto[];
 }
 
 export const emptyPassenger: Omit<Passenger, 'customerId'> = {
@@ -24,5 +17,4 @@ export const emptyPassenger: Omit<Passenger, 'customerId'> = {
   phone1: '',
   phone2: '',
   status: 'Activo',
-  serviceIds: [],
 };

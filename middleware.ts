@@ -15,7 +15,7 @@ interface RouteConfig {
 const routeConfigs: Record<string, RouteConfig> = {
   // Rutas de administrador - permitir acceso a /admin para redirección
   "/admin/reserves": { roles: ["admin"], redirectTo: "/" },
-  "/admin/passengers": { roles: ["admin"], redirectTo: "/" },
+  "/admin/customers": { roles: ["admin"], redirectTo: "/" },
   "/admin/vehicles": { roles: ["admin"], redirectTo: "/" },
   "/admin/drivers": { roles: ["admin"], redirectTo: "/" },
   "/admin/directions": { roles: ["admin"], redirectTo: "/" },

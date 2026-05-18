@@ -118,18 +118,20 @@ export default function CheckoutPage() {
   // Each pax gets the same shared pickup/dropoff/price (public flow doesn't
   // support per-pax variations).
   //
-  // Price assignment per leg:
-  //  - IdaVuelta package applies → split 50/50: each leg gets packagePrice / 2.
-  //  - Days differ (downgrade) → each leg gets its own trip's Ida price
-  //    (already returned by its LocationSelector).
-  //  - One-way → return is null.
+  // Price assignment per leg (convención Mayo 2026, mismo criterio que admin):
+  //  - IdaVuelta package → outbound se lleva el monto COMPLETO, return = 0.
+  //    El backend sigue validando `outbound + return == packagePrice`, pero
+  //    centralizar el monto en el outbound evita que un Passenger del leg de
+  //    vuelta parezca "gratis" en pantallas downstream.
+  //  - Días distintos (downgrade) → cada leg con su propio Ida price.
+  //  - One-way → return = null.
   const buildExternalPassengers = useCallback((): PassengerBookingExternal[] => {
     const hasReturn = !!checkout.returnTrip;
     const outboundLegPrice = useIdaVueltaTariff && hasReturn
-      ? outboundPrice / 2
+      ? outboundPrice
       : outboundPrice;
     const returnLegPrice = useIdaVueltaTariff && hasReturn
-      ? outboundPrice / 2 // same package, split 50/50
+      ? 0 // package: outbound concentra el total, return queda en 0
       : returnPrice;
 
     return passengerData.map((p) => ({

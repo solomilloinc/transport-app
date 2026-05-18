@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
 import { PagedResponse, PaginationParams } from '@/services/types';
-import { emptyService, Service } from '@/interfaces/service';
+import { emptyService, Service, formatServiceSlot } from '@/interfaces/service';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { Vehicle } from '@/interfaces/vehicle';
 import { useFormValidation } from '@/hooks/use-form-validation';
@@ -55,6 +55,7 @@ const serviceFilterParsers = {
 import { getTripsForSelect, getTripById } from '@/services/trip';
 import { Trip } from '@/interfaces/trip';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 
 const initialService = {
   name: '',
@@ -341,9 +342,11 @@ export default function ServiceManagement() {
           });
         }
       } catch (error) {
+        // Surface backend error codes (e.g. validación de schedules, conflictos)
+        // vía catálogo en español. Service.HasActiveSubscriptions etc también caen acá.
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el servicio',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -393,9 +396,12 @@ export default function ServiceManagement() {
           });
         }
       } catch (error) {
+        // Especialmente importante acá: Service.VehicleCapacityBelowSubscriptions
+        // (cuando cambian a un Vehicle más chico con subs activas) y
+        // Service.HasActiveSubscriptions (cuando intentan desactivar).
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar el servicio',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -530,41 +536,54 @@ export default function ServiceManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/service-delete/${currentServiceId}`);
-    setIsDeleteModalOpen(false);
-    setCurrentServiceId(null);
-    refetch();
+    try {
+      await deleteLogic(`/service-delete/${currentServiceId}`);
+      setIsDeleteModalOpen(false);
+      setCurrentServiceId(null);
+      refetch();
+    } catch (error) {
+      // Si el Service tiene subs activas, el backend bloquea con
+      // Service.HasActiveSubscriptions (409). Mostrar mensaje canónico
+      // y dejar el modal abierto para que el admin pueda volver.
+      toast({
+        title: 'No se pudo eliminar',
+        description: getApiErrorMessage(error).message,
+        variant: 'destructive',
+      });
+    }
   };
 
 
   const columns = [
-    { header: 'Nombre', accessor: 'Name', width: '25%' },
+    { header: 'Nombre', accessor: 'name', width: '22%' },
     {
       header: 'Ruta Comercial',
-      accessor: 'tripName',
-      width: '25%',
-      cell: (service: Service) => service.tripName || '-',
+      accessor: 'tripDescription',
+      width: '22%',
+      // Backend Mayo 2026 envía tripDescription directamente.
+      // Fallback a tripName por si alguna respuesta vieja todavía lo trae.
+      cell: (service: Service) => service.tripDescription || service.tripName || '-',
     },
-    { header: 'Duración Estimada', accessor: 'estimatedDuration', width: '20%' },
     {
-      header: 'Hora de partida',
-      accessor: 'departureHour',
-      width: '20%',
-      cell: (service: Service) => {
-        const firstSchedule = service.schedulers?.[0];
-        if (firstSchedule?.departureHour) {
-          // Format HH:MM:SS to HH:MM
-          const parts = firstSchedule.departureHour.split(':');
-          return `${parts[0]}:${parts[1]}`;
-        }
-        return '-';
-      },
+      header: 'Día y hora',
+      accessor: 'dayOfWeek',
+      width: '18%',
+      // dayOfWeek + departureHour son flat ahora (schedulers[] fue removido
+      // post-refactor ADR 0003: un Service = un slot único).
+      cell: (service: Service) => formatServiceSlot(service) || '-',
+    },
+    {
+      header: 'Duración Estimada',
+      accessor: 'estimatedDuration',
+      width: '13%',
+      cell: (service: Service) =>
+        service.estimatedDuration ? service.estimatedDuration.slice(0, 5) : '-',
     },
     {
       header: 'Estado',
       accessor: 'status',
       className: 'text-center',
-      width: '20%',
+      width: '10%',
       cell: (service: Service) => <StatusBadge status={service.status} />,
     },
     {
@@ -694,9 +713,9 @@ export default function ServiceManagement() {
               subtitle={service.serviceId.toString()}
               badge={<StatusBadge status={service.status ? 'Activo' : 'Inactivo'} />}
               fields={[
-                { label: 'Ruta Comercial', value: service.tripName || '-' },
-                { label: 'Duración Estimada', value: service.estimatedDuration },
-                { label: 'Hora de partida', value: service.schedulers?.[0]?.departureHour?.split(':').slice(0, 2).join(':') || '-' },
+                { label: 'Ruta Comercial', value: service.tripDescription || service.tripName || '-' },
+                { label: 'Día y hora', value: formatServiceSlot(service) || '-' },
+                { label: 'Duración Estimada', value: service.estimatedDuration?.slice(0, 5) || '-' },
               ]}
               onEdit={() => handleEditService(service)}
               onDelete={() => handleDeleteService(service.serviceId)}

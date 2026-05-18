@@ -119,6 +119,13 @@ export function useFormValidation<T extends Record<string, any>>(
 )
 
 
+  // Setear un error server-side puntual (e.g. al traducir un Error.Code del backend
+  // a un campo específico vía bindApiErrorToForm de lib/apiErrors).
+  const setError = useCallback((name: string, message: string) => {
+    setErrors((prev) => ({ ...prev, [name]: message }))
+    setTouchedFields((prev) => ({ ...prev, [name]: true }))
+  }, [])
+
   // Resetear el formulario
   const resetForm = useCallback(() => {
     setData(initialData)
@@ -133,6 +140,7 @@ export function useFormValidation<T extends Record<string, any>>(
     touchedFields,
     isSubmitting,
     setField,
+    setError,
     validateField,
     validateForm,
     handleSubmit,

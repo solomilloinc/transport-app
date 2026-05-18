@@ -5,6 +5,7 @@ export * from './customer-filters';
 export * from './customer-transaction-filters';
 export * from './direction-filters';
 export * from './driver-filters';
+export * from './frequent-subscription-filters';
 export * from './passenger-reserve-filters';
 export * from './reserve-filters';
 export * from './reserve-payment-summary-filters';
