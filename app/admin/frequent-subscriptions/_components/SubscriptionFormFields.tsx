@@ -212,8 +212,9 @@ export function SubscriptionFormFields({
     <>
       {isEdit && (
         <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
-          Los cambios afectan solo a las reservas que se generen de ahora en
-          más. Las ya creadas mantienen su pickup/dropoff original.
+          Los cambios aplican sólo a las próximas reservas. Las ya generadas
+          mantienen sus valores actuales. Si necesitás editar una reserva
+          existente, hacelo desde el panel de la reserva.
         </div>
       )}
 
