@@ -161,7 +161,7 @@ export default function DebtsPage() {
       width: '15%',
       cell: (t: Transaction) => format(new Date(t.date), 'dd/MM/yyyy HH:mm', { locale: es })
     },
-    { header: 'Descripción', accessor: 'Description', width: '45%' },
+    { header: 'Descripción', accessor: 'description', width: '45%' },
     {
       header: 'Tipo',
       accessor: 'transactionType',

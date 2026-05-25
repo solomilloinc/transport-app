@@ -75,21 +75,25 @@ describe('buildAdminReservePayload', () => {
     expect(out.payments).toEqual([{ transactionAmount: 100, paymentMethod: 1 }]);
   });
 
-  it('builds an IdaVuelta same-day payload, total = 2 * discounted price', () => {
+  it('builds an IdaVuelta same-day payload (outbound carries full package, return=0)', () => {
+    // Convención Mayo 2026: outbound = packagePrice completo, return = 0.
+    // El total a cobrar (160) lo mantiene la suma de ambos legs.
     const out = buildAdminReservePayload({
       reserveTypeId: RESERVE_TYPE.ROUND_TRIP,
       outboundReserveId: 1,
       returnReserveId: 2,
       passengers: [
         adminPax({
-          outbound: { pickupLocationId: 1, dropoffLocationId: 2, price: 80 },
-          return: { pickupLocationId: 2, dropoffLocationId: 1, price: 80 },
+          outbound: { pickupLocationId: 1, dropoffLocationId: 2, price: 160 },
+          return: { pickupLocationId: 2, dropoffLocationId: 1, price: 0 },
         }),
       ],
       paymentMethod: 1,
     });
 
     expect(out.returnReserveId).toBe(2);
+    expect(out.passengers[0].outbound.price).toBe(160);
+    expect(out.passengers[0].return?.price).toBe(0);
     expect(out.payments[0].transactionAmount).toBe(160);
   });
 
@@ -110,10 +114,11 @@ describe('buildAdminReservePayload', () => {
     expect(out.payments[0].transactionAmount).toBe(200);
   });
 
-  it('IdaVuelta with 3 passengers totals 3x both legs', () => {
+  it('IdaVuelta with 3 passengers totals 3x packagePrice (outbound full, return 0)', () => {
+    // Cada pax: outbound=160 + return=0 = 160 efectivo. 3 pax => 480.
     const pax = adminPax({
-      outbound: { pickupLocationId: 1, dropoffLocationId: 2, price: 80 },
-      return: { pickupLocationId: 2, dropoffLocationId: 1, price: 80 },
+      outbound: { pickupLocationId: 1, dropoffLocationId: 2, price: 160 },
+      return: { pickupLocationId: 2, dropoffLocationId: 1, price: 0 },
     });
     const out = buildAdminReservePayload({
       reserveTypeId: RESERVE_TYPE.ROUND_TRIP,
@@ -203,10 +208,11 @@ describe('buildPublicReservePayload', () => {
     expect(out.passengers[0].return).toBeNull();
   });
 
-  it('builds a public IdaVuelta payload with N passengers', () => {
+  it('builds a public IdaVuelta payload with N passengers (outbound full, return 0)', () => {
+    // Convención Mayo 2026: outbound carga el packagePrice, return va a 0.
     const pax = externalPax({
-      outbound: { pickupLocationId: 1, dropoffLocationId: 2, price: 80 },
-      return: { pickupLocationId: 2, dropoffLocationId: 1, price: 80 },
+      outbound: { pickupLocationId: 1, dropoffLocationId: 2, price: 160 },
+      return: { pickupLocationId: 2, dropoffLocationId: 1, price: 0 },
     });
     const out = buildPublicReservePayload({
       lockToken: 'tok',
@@ -218,6 +224,7 @@ describe('buildPublicReservePayload', () => {
     });
 
     expect(out.passengers).toHaveLength(2);
-    expect(out.passengers[0].return?.price).toBe(80);
+    expect(out.passengers[0].outbound.price).toBe(160);
+    expect(out.passengers[0].return?.price).toBe(0);
   });
 });

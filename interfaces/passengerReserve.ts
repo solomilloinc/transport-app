@@ -44,6 +44,25 @@ export interface PassengerReserveReport extends PassengerReserve {
   pickupLocationName: string;
   dropoffLocationName: string;
   currentBalance: number;
+  /**
+   * Si está poblado, el Passenger fue auto-creado por el batch a partir de la
+   * FrequentSubscription con ese id. Si es null, vino de un alta manual o
+   * checkout externo.
+   *
+   * Permite mostrar un badge "FRECUENTE" en la grilla y (futuro) linkear al
+   * detalle de la suscripción origen.
+   */
+  frequentSubscriptionId: number | null;
+  /**
+   * Si está poblado, este Passenger es la pata del package IdaVuelta — su
+   * "compañero" en la reserva inversa está identificado por `reserveRelatedId`.
+   *
+   * Convención Mayo 2026: el outbound del package carga el monto total y el
+   * return va a 0 (ver utils/bookingPayload.ts y AddReservationFlow.tsx).
+   * Por eso un Passenger con `reserveRelatedId != null && price == 0` no es
+   * gratis: es la vuelta del paquete cuyo cobro vive en el outbound.
+   */
+  reserveRelatedId: number | null;
 }
 
 export interface PassengerReserveUpdate {
