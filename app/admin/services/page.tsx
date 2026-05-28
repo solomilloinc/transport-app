@@ -174,6 +174,9 @@ export default function ServiceManagement() {
           pageSize: 100,
           sortBy: 'fecha',
           sortDescending: true,
+          // Combo de alta/edición — sólo Vehículos Active.
+          // El filtro de Inactive/Suspended sigue disponible en /admin/vehicles.
+          filters: { status: EntityStatus.Active },
         }),
         get<any, PagedResponse<Trip>>('/trip-report', {
           pageNumber: 1,

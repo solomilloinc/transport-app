@@ -2,7 +2,7 @@
 
 import type React from 'react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Edit, Trash, TruckIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,12 @@ export default function DirectionManagement() {
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
+  // Combos de alta/edición — sólo Ciudades Active.
+  const activeCities = useMemo(
+    () => cities.filter((c) => (c as any).status === 'Activo'),
+    [cities]
+  );
+
   const {
     draft,
     setDraftField,
@@ -84,6 +90,10 @@ export default function DirectionManagement() {
           id: type.id.toString(),
           value: type.id.toString(),
           label: type.name,
+          // Conservamos el status para derivar `activeCities` para los combos del form.
+          // `cities` se mantiene unfiltered porque el FilterBar lo reutiliza con
+          // política opuesta (filtra Directions de Ciudades hoy Inactive/Suspended).
+          status: type.status,
         }));
         setCities(formattedTypes);
       }
@@ -329,7 +339,7 @@ export default function DirectionManagement() {
             value={String(addForm.data.cityId)}
             onValueChange={(value) => handleSetCity(value, cities.find((city) => city.id === value)?.defaultQuantity)}
             placeholder="Seleccionar ciudad"
-            options={cities}
+            options={activeCities}
             loading={isOptionsLoading}
             error={optionsError}
             loadingMessage="Cargando ciudades..."
@@ -364,7 +374,7 @@ export default function DirectionManagement() {
               handleSetCity(value, cities.find((city) => city.id === value)?.defaultQuantity);
             }}
             placeholder="Seleccionar ciudad"
-            options={cities}
+            options={activeCities}
             loading={isOptionsLoading}
             error={optionsError}
             loadingMessage="Cargando ciudades..."

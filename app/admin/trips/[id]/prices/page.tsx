@@ -21,6 +21,7 @@ import { PagedResponse } from '@/services/types';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { City } from '@/interfaces/city';
 import { Direction } from '@/interfaces/direction';
+import { EntityStatus } from '@/interfaces/filters/common';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { Trip, TripPrice, emptyTripPriceForm } from '@/interfaces/trip';
 import { getTripById } from '@/services/trip';
@@ -106,6 +107,9 @@ export default function TripPricesManagement() {
           pageSize: 100,
           sortBy: 'name',
           sortDescending: false,
+          // Combo de alta/edición de Precio por Trip — sólo Ciudades Active.
+          // El FilterBar de esta página filtra por tipo de reserva, no por City.
+          filters: { status: EntityStatus.Active },
         }),
         get<any, PagedResponse<Direction>>('/direction-report', {
           pageNumber: 1,

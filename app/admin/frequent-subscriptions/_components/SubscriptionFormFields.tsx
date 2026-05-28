@@ -106,13 +106,19 @@ export function SubscriptionFormFields({
 
   // ----- options builders -----
 
+  // Sólo Customers Active para el combo del form de alta/edición. El array crudo
+  // `customers` se mantiene unfiltered porque el FilterBar de la grilla
+  // (frequent-subscriptions/page.tsx) lo reusa con política opuesta —
+  // necesita ver Customers Inactive/Suspended para filtrar suscripciones viejas.
   const customerOptions: SelectOption[] = useMemo(
     () =>
-      customers.map((c) => ({
-        id: c.customerId,
-        value: String(c.customerId),
-        label: `${c.firstName} ${c.lastName}`.trim(),
-      })),
+      customers
+        .filter((c) => c.status === 'Activo')
+        .map((c) => ({
+          id: c.customerId,
+          value: String(c.customerId),
+          label: `${c.firstName} ${c.lastName}`.trim(),
+        })),
     [customers]
   );
 
