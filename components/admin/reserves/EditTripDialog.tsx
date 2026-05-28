@@ -12,6 +12,7 @@ import { emptyEditReserve, ReserveReport, ReserveUpdate } from '@/interfaces/res
 import { validationConfigEditReserve } from '@/validations/reserveSchema';
 import { Vehicle } from '@/interfaces/vehicle';
 import { PagedResponse } from '@/services/types';
+import { EntityStatus } from '@/interfaces/filters/common';
 
 interface EditTripDialogProps {
   open: boolean;
@@ -36,7 +37,8 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
         pageSize: 100, // Fetch more vehicles
         sortBy: 'name',
         sortDescending: false,
-        filters: {},
+        // Combo de edición de viaje — sólo Vehículos Active.
+        filters: { status: EntityStatus.Active },
       });
       if (response && response.items) {
         const formattedVehicles: SelectOption[] = response.items.map((vehicle) => ({

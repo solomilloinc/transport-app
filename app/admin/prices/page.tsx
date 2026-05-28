@@ -28,6 +28,7 @@ import { ApiSelect, type SelectOption } from '@/components/dashboard/select';
 import { ReservePrice } from '@/interfaces/reservePrice';
 import { City } from '@/interfaces/city';
 import { Service } from '@/interfaces/service';
+import { EntityStatus } from '@/interfaces/filters/common';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { maxValueRule } from '@/utils/validation-rules';
 
@@ -120,6 +121,9 @@ export default function PriceManagement() {
         pageSize: 100,
         sortBy: 'name',
         sortDescending: false,
+        // Combo de alta/edición de Precio — sólo Ciudades Active.
+        // El FilterBar de esta página no usa cities, así que el filtro va directo en la API.
+        filters: { status: EntityStatus.Active },
       });
       if (response) {
         const formattedTypes = response.items.map((city: City) => ({
