@@ -11,6 +11,7 @@ import { put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 
 export default function BulkUpdatePrices() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function BulkUpdatePrices() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Ocurrió un error al actualizar los precios.',
+        description: getApiErrorMessage(error).message,
         variant: 'destructive',
       });
     } finally {

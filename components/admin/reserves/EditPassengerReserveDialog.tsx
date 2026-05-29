@@ -10,6 +10,7 @@ import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 import { CityDirectionsDto } from '@/interfaces/trip';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 interface EditPassengerReserveDialogProps {
   open: boolean;
@@ -101,9 +102,10 @@ export function EditPassengerReserveDialog({
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, form.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar la reserva',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

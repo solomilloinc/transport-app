@@ -14,7 +14,7 @@ import { PlusCircleIcon, TrashIcon } from 'lucide-react';
 import { emptyPaymentCreate, PassengerPaymentCreate, Payment } from '@/interfaces/payment';
 import { validationConfigPayment } from '@/validations/paymentSchema';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
-import { getApiErrorCode } from '@/utils/api-errors';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 
 interface AddPaymentDialogProps {
   open: boolean;
@@ -128,12 +128,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
         toast({ title: 'Error', description: 'Error al crear el pago', variant: 'destructive' });
       }
     } catch (error) {
-      const code = getApiErrorCode(error);
-      const msgs: Record<string, string> = {
-        'Reserve.AlreadyFullyPaid': 'Esta reserva ya esta completamente pagada.',
-        'Reserve.OverPaymentNotAllowed': 'El monto pagado supera la deuda pendiente.',
-      };
-      toast({ title: 'Error', description: msgs[code] || 'Error al crear el pago', variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
     } finally {
       form.setIsSubmitting(false);
     }

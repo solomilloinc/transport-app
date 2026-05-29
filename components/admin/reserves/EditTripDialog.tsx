@@ -13,6 +13,7 @@ import { validationConfigEditReserve } from '@/validations/reserveSchema';
 import { Vehicle } from '@/interfaces/vehicle';
 import { PagedResponse } from '@/services/types';
 import { EntityStatus } from '@/interfaces/filters/common';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 interface EditTripDialogProps {
   open: boolean;
@@ -90,7 +91,8 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
           toast({ title: 'Error', description: 'Error al actualizar el viaje.', variant: 'destructive' });
         }
       } catch (error) {
-        toast({ title: 'Error', description: 'Ocurrió un error al actualizar el viaje.', variant: 'destructive' });
+        bindApiErrorToForm(error, form.setError);
+        toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
       }
     });
   };

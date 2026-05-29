@@ -154,6 +154,12 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
     message: 'Ya existe una reserva para ese tramo, fecha y horario.',
   },
 
+  // ── Payments ──────────────────────────────────────────────────────────────
+  'Payments.InvalidAmount': { message: 'El monto de un pago debe ser mayor a cero.' },
+  'Payments.DuplicatedMethod': {
+    message: 'No se puede repetir el mismo método de pago. Combiná los montos en uno solo.',
+  },
+
   // ── Passenger ─────────────────────────────────────────────────────────────
   'Passenger.NotFound': { message: 'El pasajero no fue encontrado.' },
 

@@ -25,6 +25,7 @@ import { City } from '@/interfaces/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { getTrips } from '@/services/trip';
 import { Trip, emptyTripForm } from '@/interfaces/trip';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   TripReportFilters,
@@ -52,11 +53,12 @@ const tripValidationSchema = {
   description: {
     required: { message: 'La descripción es requerida' },
   },
+  // selects de ciudad cuyo "sin elegir" es 0, que required no detecta
   originCityId: {
-    required: { message: 'La ciudad de origen es requerida' },
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'La ciudad de origen es requerida' }],
   },
   destinationCityId: {
-    required: { message: 'La ciudad de destino es requerida' },
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'La ciudad de destino es requerida' }],
   },
 };
 
@@ -152,9 +154,10 @@ export default function TripManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear la ruta',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -186,9 +189,10 @@ export default function TripManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar la ruta',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

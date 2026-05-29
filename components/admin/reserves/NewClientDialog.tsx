@@ -8,6 +8,7 @@ import { validationConfigPassenger } from '@/validations/passengerSchema';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { Input } from '@/components/ui/input';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 interface NewClientDialogProps {
   open: boolean;
@@ -43,9 +44,10 @@ export function NewClientDialog({ open, onOpenChange, onSuccess }: NewClientDial
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addFormPassenger.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el pasajero',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

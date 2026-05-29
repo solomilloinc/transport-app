@@ -21,10 +21,12 @@ import { Direction } from '@/interfaces/direction';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { Trip, TripPickupStopReportDto, emptyTripPickupStopForm } from '@/interfaces/trip';
 import { getTripById } from '@/services/trip';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 const tripDirectionValidationSchema = {
+  // select de dirección cuyo "sin elegir" es 0, que required no detecta
   directionId: {
-    required: { message: 'La dirección es requerida' },
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'La dirección es requerida' }],
   },
   order: {
     required: { message: 'El orden es requerido' },
@@ -51,7 +53,7 @@ export default function TripStopsManagement() {
       console.error('[TripStopsPage] Error loading trip:', error);
       toast({
         title: 'Error',
-        description: 'Error al cargar la ruta',
+        description: getApiErrorMessage(error).message,
         variant: 'destructive',
       });
     } finally {
@@ -154,9 +156,10 @@ export default function TripStopsManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al agregar la parada',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -188,9 +191,10 @@ export default function TripStopsManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar la parada',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

@@ -15,6 +15,7 @@ import { closeCashBox, getCurrentCashBox } from '@/services/cash-box';
 import CashBox from '@/interfaces/cash-box';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 
 interface PaymentSummaryDialogProps {
   open: boolean;
@@ -48,7 +49,7 @@ export function PaymentSummaryDialog({ open, onOpenChange, currentCashBox, onSuc
       onOpenChange(false);
       if (onSuccess) onSuccess();
     } catch (e) {
-      toast.error('Error al cerrar la caja');
+      toast.error(getApiErrorMessage(e).message);
     }
   };
 

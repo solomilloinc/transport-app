@@ -28,6 +28,7 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 import { usePaginationParams } from '@/utils/pagination';
 import { useApi } from '@/hooks/use-api';
 import { getHolidays } from '@/services/holiday';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 const initialHolidaysForm = {
   holidayName: '',
@@ -90,9 +91,10 @@ export default function HolidaysManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el feriado',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -119,9 +121,10 @@ export default function HolidaysManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar el feriado',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

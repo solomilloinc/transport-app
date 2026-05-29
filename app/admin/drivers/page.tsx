@@ -24,6 +24,7 @@ import { Driver, emptyDriver } from '@/interfaces/driver';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { validationConfigDriver } from '@/validations/driverSchema';
 import { getDriverReport } from '@/services/driver';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   DriverReportFilters,
@@ -95,9 +96,10 @@ export default function DriversManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el chofer',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -124,9 +126,10 @@ export default function DriversManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar el chofer',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

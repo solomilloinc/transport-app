@@ -58,7 +58,7 @@ const customerFilterParsers = {
   ]),
 };
 import { validationConfigPassenger } from '@/validations/passengerSchema';
-import { getApiErrorMessage } from '@/lib/apiErrors';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 export default function PassengersManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -106,6 +106,7 @@ export default function PassengersManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
           description: getApiErrorMessage(error).message,
@@ -135,6 +136,7 @@ export default function PassengersManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
           description: getApiErrorMessage(error).message,
@@ -156,7 +158,7 @@ export default function PassengersManagement() {
     const fields = {
       firstName: passenger.firstName,
       lastName: passenger.lastName,
-      Email: passenger.email,
+      email: passenger.email,
       documentNumber: passenger.documentNumber,
       phone1: passenger.phone1,
       phone2: passenger.phone2,

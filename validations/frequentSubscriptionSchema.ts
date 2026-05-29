@@ -12,20 +12,26 @@ import { ReserveType } from '@/interfaces/frequentSubscription';
  * Wire format = camelCase (coincide con el field name del form 1:1).
  */
 export const validationConfigFrequentSubscription: FormValidationConfig = {
+  // Selects con sentinela 0 = "sin elegir": el chequeo `required` del hook deja
+  // pasar el 0 (solo bloquea undefined/null/''), así que validamos con `> 0`.
   customerId: {
-    required: { message: 'El cliente es requerido' },
+    rules: [{ validate: (value) => Number(value) > 0, message: 'El cliente es requerido' }],
   },
   reserveTypeId: {
     required: { message: 'El tipo de reserva es requerido' },
   },
   outboundServiceId: {
-    required: { message: 'El Servicio Ida es requerido' },
+    rules: [{ validate: (value) => Number(value) > 0, message: 'El Servicio Ida es requerido' }],
   },
   outboundPickupLocationId: {
-    required: { message: 'La dirección de subida (Ida) es requerida' },
+    rules: [
+      { validate: (value) => Number(value) > 0, message: 'La dirección de subida (Ida) es requerida' },
+    ],
   },
   outboundDropoffLocationId: {
-    required: { message: 'La dirección de bajada (Ida) es requerida' },
+    rules: [
+      { validate: (value) => Number(value) > 0, message: 'La dirección de bajada (Ida) es requerida' },
+    ],
   },
 
   // Condicionalmente requeridos cuando es IdaVuelta.

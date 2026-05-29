@@ -21,6 +21,7 @@ import { ReserveReport, ReserveStatusEnum, ReserveUpdate } from '@/interfaces/re
 import { SelectOption } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { toast } from '@/hooks/use-toast';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 import { Direction } from '@/interfaces/direction';
 import { useApi } from '@/hooks/use-api';
 import { getPassengerReserves, getReserves } from '@/services/reserves';
@@ -213,7 +214,7 @@ export default function ReservationsPage() {
         toast({ title: 'Error', description: 'No se pudo actualizar el estado.', variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Ocurrió un error al actualizar el estado.', variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
     } finally {
       // Remover del estado de deshabilitado después de 10 segundos
       setTimeout(() => {
@@ -296,7 +297,7 @@ export default function ReservationsPage() {
         toast({ title: 'Error', description: 'Error al cancelar el viaje.', variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Ocurrió un error al cancelar el viaje.', variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
     } finally {
       setIsCancellingTrip(false);
     }

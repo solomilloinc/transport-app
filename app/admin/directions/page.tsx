@@ -26,6 +26,7 @@ import { City } from '@/interfaces/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { getDirectionReport } from '@/services/direction';
 import { validationConfigDirection } from '@/validations/directionSchema';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   DirectionReportFilters,
@@ -124,9 +125,10 @@ export default function DirectionManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear la dirección',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -153,9 +155,10 @@ export default function DirectionManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar la dirección',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

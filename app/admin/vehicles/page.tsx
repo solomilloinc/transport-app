@@ -28,6 +28,7 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 import { getVehicleReport } from '@/services/vehicle';
 import { withDefaultPagination } from '@/utils/pagination';
 import { validationConfigVehicle } from '@/validations/vehicleSchema';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { VehicleReportFilters, emptyVehicleReportFilters } from '@/interfaces/filters/vehicle-filters';
 import { ENTITY_STATUS_OPTIONS, EntityStatus } from '@/interfaces/filters/common';
@@ -117,9 +118,10 @@ export default function VehicleManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el vehículo',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -146,9 +148,10 @@ export default function VehicleManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar el vehículo',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

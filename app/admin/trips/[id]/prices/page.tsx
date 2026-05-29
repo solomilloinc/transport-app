@@ -25,6 +25,7 @@ import { EntityStatus } from '@/interfaces/filters/common';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { Trip, TripPrice, emptyTripPriceForm } from '@/interfaces/trip';
 import { getTripById } from '@/services/trip';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('es-AR', {
@@ -34,8 +35,9 @@ const formatCurrency = (amount: number) => {
 };
 
 const tripPriceValidationSchema = {
+  // select de ciudad cuyo "sin elegir" es 0, que required no detecta
   cityId: {
-    required: { message: 'La ciudad es requerida' },
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'La ciudad es requerida' }],
   },
   reserveTypeId: {
     required: { message: 'El tipo de reserva es requerido' },
@@ -69,7 +71,7 @@ export default function TripPricesManagement() {
       console.error('[TripPricesPage] Error loading trip:', error);
       toast({
         title: 'Error',
-        description: 'Error al cargar la ruta',
+        description: getApiErrorMessage(error).message,
         variant: 'destructive',
       });
     } finally {
@@ -172,9 +174,10 @@ export default function TripPricesManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al agregar el precio',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -208,9 +211,10 @@ export default function TripPricesManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar el precio',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
