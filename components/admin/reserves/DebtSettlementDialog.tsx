@@ -21,7 +21,7 @@ import { PendingReserve } from '@/interfaces/customerAccount';
 import { PaymentStatusLabels } from '@/interfaces/passengerReserve';
 import { Payment } from '@/interfaces/payment';
 import { getCustomerPendingReserves, settleCustomerDebt } from '@/services/customerAccount';
-import { getApiErrorCode } from '@/utils/api-errors';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 
 interface DebtSettlementDialogProps {
   open: boolean;
@@ -68,7 +68,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
         setSelectedReserveIds([]);
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Error al cargar reservas pendientes.', variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -174,17 +174,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
       // Re-fetch to update the view
       await fetchPendingReserves();
     } catch (error) {
-      const code = getApiErrorCode(error);
-      const msgs: Record<string, string> = {
-        'Customer.NotFound': 'Cliente no encontrado.',
-        'Reserve.NotFound': 'Reserva no encontrada.',
-        'Reserve.NoDebtToSettle': 'No hay deuda pendiente para saldar.',
-        'Reserve.OverPaymentNotAllowed': 'El monto supera la deuda pendiente.',
-        'Payments.InvalidAmount': 'Monto de pago inválido.',
-        'Payments.DuplicatedMethod': 'Método de pago duplicado.',
-        'CashBox.NotFound': 'Caja no encontrada. Abra una caja antes de continuar.',
-      };
-      toast({ title: 'Error', description: msgs[code] || 'Error al saldar la deuda.', variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }

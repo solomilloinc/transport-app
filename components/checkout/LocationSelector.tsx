@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { MapPin, ArrowDown } from 'lucide-react';
 import { getTripById } from '@/services/trip';
 import { Trip, DropoffDirectionOption } from '@/interfaces/trip';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 
 export interface LocationSelectionData {
     pickupDirectionId: number | null;
@@ -100,7 +101,7 @@ export function LocationSelector({
                 }
             } catch (err) {
                 console.error('[LocationSelector] Error loading trip data:', err);
-                setError('Error al cargar las opciones de ubicación');
+                setError(getApiErrorMessage(err).message);
             } finally {
                 setLoading(false);
             }

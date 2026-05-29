@@ -25,7 +25,8 @@ import { RESERVE_TYPE } from '@/constants/reserveType';
 import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
 import { buildPublicReservePayload } from '@/utils/bookingPayload';
 import type { PassengerBookingExternal, ExternalPayment } from '@/interfaces/passengerReserve';
-import { withPriceRetry, getApiErrorCode, RESERVE_ERROR } from '@/utils/api-errors';
+import { withPriceRetry } from '@/utils/api-errors';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 import { toast } from '@/components/ui/use-toast';
 
 export default function CheckoutPage() {
@@ -313,14 +314,7 @@ export default function CheckoutPage() {
         );
       }
     } catch (err) {
-      const code = getApiErrorCode(err);
-      const description =
-        code === RESERVE_ERROR.PRICE_NOT_AVAILABLE
-          ? 'El precio cambió mientras finalizabas la compra. Volvé a revisar e intentá de nuevo.'
-          : code === RESERVE_ERROR.OVERPAYMENT_NOT_ALLOWED
-          ? 'El monto pagado supera el total de la reserva.'
-          : 'Ocurrió un error procesando el pago. Intentá nuevamente.';
-      toast({ title: 'Error', description, variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorMessage(err).message, variant: 'destructive' });
       throw err;
     } finally {
       setIsSubmitting(false);

@@ -20,7 +20,8 @@ import { post } from '@/services/api';
 import { ReserveReport } from '@/interfaces/reserve';
 import { Passenger } from '@/interfaces/passengers';
 import { Payment } from '@/interfaces/payment';
-import { RESERVE_ERROR, getApiErrorCode, withPriceRetry } from '@/utils/api-errors';
+import { withPriceRetry } from '@/utils/api-errors';
+import { getApiErrorMessage } from '@/lib/apiErrors';
 import { Trip } from '@/interfaces/trip';
 import { RESERVE_TYPE } from '@/constants/reserveType';
 import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
@@ -271,7 +272,7 @@ export function AddReservationFlow({
         }
       } catch (error) {
         console.error('[AddReservationFlow] Error fetching trip details:', error);
-        toast({ title: 'Error', description: 'Error al cargar los precios del viaje', variant: 'destructive' });
+        toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
       } finally {
         setIsTripLoading(false);
       }
@@ -547,14 +548,7 @@ export function AddReservationFlow({
         toast({ title: 'Error', description: 'Error al crear la reserva.', variant: 'destructive' });
       }
     } catch (error) {
-      const code = getApiErrorCode(error);
-      const description =
-        code === RESERVE_ERROR.OVERPAYMENT_NOT_ALLOWED
-          ? 'El monto pagado supera el total de la reserva.'
-          : code === RESERVE_ERROR.PRICE_NOT_AVAILABLE
-          ? 'El precio cambió mientras armabas la reserva. Volvé al paso anterior y revisá los importes.'
-          : 'Ocurrió un error al crear la reserva.';
-      toast({ title: 'Error', description, variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
     } finally {
       reserveForm.setIsSubmitting(false);
     }

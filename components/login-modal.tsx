@@ -60,7 +60,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         router.refresh(); // Regular user stays on current page
       }
     } catch (error) {
-      setError("An error occurred. Please try again.");
+      setError("Ocurrió un error. Intentá nuevamente.");
       setIsLoading(false);
     }
   };
@@ -88,7 +88,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         router.refresh(); // Regular user stays on current page
       }
     } catch (error) {
-      setError("An error occurred with Google login. Please try again.");
+      setError("Ocurrió un error con el inicio de sesión de Google. Intentá nuevamente.");
       setIsLoading(false);
     }
   };

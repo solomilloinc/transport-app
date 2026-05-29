@@ -1,5 +1,4 @@
 import { emailRule, maxLengthRule, minLengthRule, numbersOnlyRule } from "@/utils/validation-rules";
-import { ru } from "date-fns/locale";
 
 export const validationConfigPassenger = {
   firstName: {
@@ -8,7 +7,7 @@ export const validationConfigPassenger = {
   lastName: {
     required: { message: 'El apellido es requerido' },
   },
-  Email: {
+  email: {
     required: { message: 'El correo electrónico es requerido' },
     rules: [emailRule],
   },

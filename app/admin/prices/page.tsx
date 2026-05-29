@@ -31,6 +31,7 @@ import { Service } from '@/interfaces/service';
 import { EntityStatus } from '@/interfaces/filters/common';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { maxValueRule } from '@/utils/validation-rules';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('es-AR', {
@@ -60,11 +61,12 @@ export default function PriceManagement() {
   const [currentPriceId, setCurrentPriceId] = useState<number | null>(null);
 
   const validationConfig = {
+    // selects de ID cuyo "sin elegir" es 0, que required no detecta
     originId: {
-      required: { message: 'El origen es requerido' },
+      rules: [{ validate: (v: number) => Number(v) > 0, message: 'El origen es requerido' }],
     },
     destinationId: {
-      required: { message: 'El destino es requerido' },
+      rules: [{ validate: (v: number) => Number(v) > 0, message: 'El destino es requerido' }],
     },
     price: {
       required: { message: 'El precio es requerido' },
@@ -166,9 +168,10 @@ export default function PriceManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el precio',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -201,9 +204,10 @@ export default function PriceManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al editar el precio',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

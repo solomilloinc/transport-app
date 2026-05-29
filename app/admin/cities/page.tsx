@@ -26,6 +26,7 @@ import { City, emptyCity } from '@/interfaces/city';
 import { getCityReport } from '@/services/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { validationConfigCity } from '@/validations/citySchema';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   CityReportFilters,
@@ -93,9 +94,10 @@ export default function CitiesManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear la ciudad',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
@@ -122,9 +124,10 @@ export default function CitiesManagement() {
           });
         }
       } catch (error) {
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al actualizar la ciudad',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }

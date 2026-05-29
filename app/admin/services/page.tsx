@@ -4,7 +4,7 @@ import type React from 'react';
 
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Bus, Clock, Edit, Plus, Search, Trash, Trash2, TruckIcon, UserPlusIcon, Wrench, X } from 'lucide-react';
+import { Edit, Trash, TruckIcon, Wrench } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,12 +23,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useFormReducer } from '@/hooks/use-form-reducer';
 import { toast } from '@/hooks/use-toast';
 import { PagedResponse, PaginationParams } from '@/services/types';
-import { emptyService, Service, formatServiceSlot } from '@/interfaces/service';
+import { Service, formatServiceSlot } from '@/interfaces/service';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { Vehicle } from '@/interfaces/vehicle';
 import { useFormValidation } from '@/hooks/use-form-validation';
-import { getOptionIdByValue } from '@/utils/form-options';
-import { emptyServiceSchedule, ServiceSchedule } from '@/interfaces/serviceSchedule';
 import { Label } from '@/components/ui/label';
 import { getServiceReport } from '@/services/service';
 import { useReportFilters } from '@/hooks/use-report-filters';
@@ -55,53 +53,70 @@ const serviceFilterParsers = {
 import { getTripsForSelect, getTripById } from '@/services/trip';
 import { Trip } from '@/interfaces/trip';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getApiErrorMessage } from '@/lib/apiErrors';
+import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+
+// Modelo actual (ADR 0003): un Service = UN slot único → dayOfWeek + departureHour.
+// `dayOfWeek` se guarda como string en el form ('' = sin elegir, '0'..'6' = día);
+// así `required` lo bloquea cuando está vacío y acepta el 0 (Domingo) una vez elegido.
+const initialAddService = {
+  name: '',
+  tripId: 0,
+  dayOfWeek: '',
+  departureHour: '',
+  estimatedDuration: '01:00',
+  vehicleId: 0,
+};
 
 const initialService = {
   name: '',
   tripId: 0,
-  startDay: '',
-  endDay: '',
-  estimatedDuration: '',
+  dayOfWeek: '',
   departureHour: '',
-  isHoliday: false,
+  estimatedDuration: '',
   vehicleId: 0,
-  schedules: [] as ServiceSchedule[],
 };
 
-const initialSchedule = {
-  serviceScheduleId: 0,
-  serviceId: 0,
-  startDate: '',
-  endDate: '',
-  isHoliday: false,
-  departureHour: '10:30:00',
-};
-
+// tripId/vehicleId son selects de ID cuyo "sin elegir" es 0, que `required` no
+// detecta (sólo cubre undefined/null/""); por eso van con regla > 0.
+// dayOfWeek es string ('' = sin elegir): `required` lo cubre y acepta '0' (Domingo).
 const validationSchema = {
-  name: { required: true, message: 'El nombre es requerido' },
-  tripId: { required: true, message: 'La ruta comercial es requerida' },
-  startDay: { required: true, message: 'El día de inicio es requerido' },
-  endDay: { required: true, message: 'El día de fin es requerido' },
-  estimatedDuration: { required: true, message: 'La duración estimada es requerida' },
-  vehicleId: { required: true, message: 'El vehículo es requerido' },
+  name: { required: { message: 'El nombre es requerido' } },
+  tripId: {
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'La ruta comercial es requerida' }],
+  },
+  dayOfWeek: { required: { message: 'El día es requerido' } },
+  departureHour: { required: { message: 'La hora de partida es requerida' } },
+  estimatedDuration: { required: { message: 'La duración estimada es requerida' } },
+  vehicleId: {
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'El vehículo es requerido' }],
+  },
 };
 
 const editValidationSchema = {
-  name: { required: true, message: 'El nombre es requerido' },
-  tripId: { required: true, message: 'La ruta comercial es requerida' },
-  startDay: { required: true, message: 'El día de inicio es requerido' },
-  endDay: { required: true, message: 'El día de fin es requerido' },
-  estimatedDuration: { required: true, message: 'La duración estimada es requerida' },
-  vehicleId: { required: true, message: 'El vehículo es requerido' },
+  name: { required: { message: 'El nombre es requerido' } },
+  tripId: {
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'La ruta comercial es requerida' }],
+  },
+  dayOfWeek: { required: { message: 'El día es requerido' } },
+  departureHour: { required: { message: 'La hora de partida es requerida' } },
+  estimatedDuration: { required: { message: 'La duración estimada es requerida' } },
+  vehicleId: {
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'El vehículo es requerido' }],
+  },
 };
 
 const tripValidationSchema = {
-  tripId: { required: true, message: 'La ruta comercial es requerida' },
-  departureHour: { required: true, message: 'La hora de partida es requerida' },
-  vehicleId: { required: true, message: 'El vehículo es requerido' },
-  estimatedDuration: { required: true, message: 'La duración estimada es requerida' },
-  reserveDate: { required: true, message: 'La fecha es requerida' },
+  // tripId/vehicleId son selects cuyo "sin elegir" es 0, que `required` no detecta
+  // (sólo cubre undefined/null/""); por eso validamos > 0 con una regla.
+  tripId: {
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'La ruta comercial es requerida' }],
+  },
+  departureHour: { required: { message: 'La hora de partida es requerida' } },
+  vehicleId: {
+    rules: [{ validate: (v: number) => Number(v) > 0, message: 'El vehículo es requerido' }],
+  },
+  estimatedDuration: { required: { message: 'La duración estimada es requerida' } },
+  reserveDate: { required: { message: 'La fecha es requerida' } },
 };
 
 const initialTripForm = {
@@ -120,7 +135,7 @@ export default function ServiceManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddTripModalOpen, setIsAddTripModalOpen] = useState(false);
   const [currentServiceId, setCurrentServiceId] = useState<number | null>(null);
-  const addForm = useFormValidation(emptyService, validationSchema);
+  const addForm = useFormValidation(initialAddService, validationSchema);
   const editForm = useFormValidation(initialService, editValidationSchema);
   const tripForm = useFormValidation(initialTripForm, tripValidationSchema);
   const [vehicles, setVehicles] = useState<SelectOption[]>([]);
@@ -128,9 +143,6 @@ export default function ServiceManagement() {
   const [tripsData, setTripsData] = useState<Trip[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState<string | null>(null);
-
-  const [schedules, setSchedules] = useState<ServiceSchedule[]>([]);
-  const [editSchedules, setEditSchedules] = useState<ServiceSchedule[]>([]);
 
   // Directions whitelist state
   interface DirectionOption {
@@ -187,12 +199,14 @@ export default function ServiceManagement() {
         }),
       ]);
 
-      // Cargar vehículos
+      // Cargar vehículos. La opción se identifica por vehicleId (único por coche);
+      // antes usaba vehicleTypeId, que se repite entre coches del mismo tipo y hacía
+      // que el Select marcara 2 ítems a la vez (y mandaba el id equivocado al backend).
       if (vehicleResponse) {
         const formattedVehicles = vehicleResponse.items.map((vehicle: Vehicle) => ({
-          id: vehicle.vehicleTypeId.toString(),
-          value: vehicle.vehicleTypeId.toString(),
-          label: vehicle.vehicleTypeName + vehicle.internalNumber,
+          id: vehicle.vehicleId.toString(),
+          value: vehicle.vehicleId.toString(),
+          label: `${vehicle.vehicleTypeName} (${vehicle.internalNumber})`,
         }));
         setVehicles(formattedVehicles);
       }
@@ -302,30 +316,18 @@ export default function ServiceManagement() {
     }
   };
 
-  const addSchedule = () => {
-    const newSchedule = emptyServiceSchedule;
-    addForm.setField('schedules', [...addForm.data.schedules, newSchedule]);
-  };
-
-  const removeSchedule = (index: number) => {
-    const updatedSchedules = [...addForm.data.schedules];
-    updatedSchedules.splice(index, 1);
-    addForm.setField('schedules', updatedSchedules);
-  };
-
   const submitAddService = async () => {
     addForm.handleSubmit(async (data) => {
       try {
-        // Transform the data to match the API expectations
+        // Contrato ServiceCreateRequestDto: un slot único (dayOfWeek + departureHour).
         const transformedData = {
-          ...data,
-          estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
-          startDay: data.startDay, // Keep in main service
-          endDay: data.endDay,     // Keep in main service
-          schedules: data.schedules.map(schedule => ({
-            ...schedule,
-            departureHour: schedule.departureHour + ':00' // Convert HH:MM to HH:MM:SS format
-          })),
+          name: data.name,
+          tripId: data.tripId,
+          vehicleId: data.vehicleId,
+          dayOfWeek: Number(data.dayOfWeek),
+          departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+          estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+          isHoliday: false,
           allowedDirectionIds: selectedDirectionIds.length > 0 ? selectedDirectionIds : null,
         };
         const response = await post('/service-create', transformedData);
@@ -345,8 +347,9 @@ export default function ServiceManagement() {
           });
         }
       } catch (error) {
-        // Surface backend error codes (e.g. validación de schedules, conflictos)
+        // Surface backend error codes (validación de campos, conflictos de slot)
         // vía catálogo en español. Service.HasActiveSubscriptions etc también caen acá.
+        bindApiErrorToForm(error, addForm.setError);
         toast({
           title: 'Error',
           description: getApiErrorMessage(error).message,
@@ -357,31 +360,19 @@ export default function ServiceManagement() {
   };
 
   const submitEditService = async () => {
-    console.log('submitEditService called');
-    console.log('editForm.data:', editForm.data);
-    console.log('editForm.errors:', editForm.errors);
-    console.log('currentServiceId:', currentServiceId);
-
     editForm.handleSubmit(async (data) => {
-      console.log('handleSubmit callback called with data:', data);
       try {
-        // Transform the data to match the API expectations
+        // Contrato ServiceUpdateRequestDto: un slot único (dayOfWeek + departureHour).
         const transformedData = {
-          Name: data.name,
+          name: data.name,
           tripId: data.tripId,
-          estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS format
-          startDay: data.startDay,
-          endDay: data.endDay,
           vehicleId: data.vehicleId,
-          schedules: editSchedules.map(schedule => ({
-            ...schedule,
-            departureHour: schedule.departureHour.includes(':')
-              ? schedule.departureHour + ':00'
-              : schedule.departureHour // Convert HH:MM to HH:MM:SS format
-          })),
+          dayOfWeek: Number(data.dayOfWeek),
+          departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+          estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+          isHoliday: false,
           allowedDirectionIds: editSelectedDirectionIds.length > 0 ? editSelectedDirectionIds : null,
         };
-        console.log('Transformed data for update:', transformedData);
         const response = await put(`/service-update/${currentServiceId}`, transformedData);
         if (response) {
           toast({
@@ -402,6 +393,7 @@ export default function ServiceManagement() {
         // Especialmente importante acá: Service.VehicleCapacityBelowSubscriptions
         // (cuando cambian a un Vehicle más chico con subs activas) y
         // Service.HasActiveSubscriptions (cuando intentan desactivar).
+        bindApiErrorToForm(error, editForm.setError);
         toast({
           title: 'Error',
           description: getApiErrorMessage(error).message,
@@ -440,43 +432,16 @@ export default function ServiceManagement() {
           });
         }
       } catch (error) {
+        // Subraya el campo culpable si el backend mandó errors[]/details
+        // (e.g. Validation.VehicleId, Reserve.* con detalle de dirección).
+        bindApiErrorToForm(error, tripForm.setError);
         toast({
           title: 'Error',
-          description: 'Ocurrió un error al crear el viaje',
+          description: getApiErrorMessage(error).message,
           variant: 'destructive',
         });
       }
     });
-  };
-
-  const handleScheduleChange = (index: number, field: string, value: any) => {
-    const updatedSchedules = [...addForm.data.schedules];
-    updatedSchedules[index] = {
-      ...updatedSchedules[index],
-      [field]: value,
-    };
-    addForm.setField('schedules', updatedSchedules);
-  };
-
-  // Edit schedule functions
-  const addEditSchedule = () => {
-    const newSchedule = { ...emptyServiceSchedule } as ServiceSchedule;
-    setEditSchedules([...editSchedules, newSchedule]);
-  };
-
-  const removeEditSchedule = (index: number) => {
-    const updatedSchedules = [...editSchedules];
-    updatedSchedules.splice(index, 1);
-    setEditSchedules(updatedSchedules);
-  };
-
-  const handleEditScheduleChange = (index: number, field: string, value: any) => {
-    const updatedSchedules = [...editSchedules];
-    updatedSchedules[index] = {
-      ...updatedSchedules[index],
-      [field]: value,
-    };
-    setEditSchedules(updatedSchedules);
   };
 
   const handleAddService = () => {
@@ -494,35 +459,16 @@ export default function ServiceManagement() {
     const durationParts = service.estimatedDuration.split(':');
     const formattedDuration = `${durationParts[0]}:${durationParts[1]}`;
 
-    console.log('Service for editing:', service);
-    console.log('Service.schedulers:', service.schedulers);
-
     editForm.setField('name', service.name);
     editForm.setField('tripId', service.tripId);
     editForm.setField('estimatedDuration', formattedDuration);
-    editForm.setField('startDay', service.startDay || 1); // Default to Monday if not provided
-    editForm.setField('endDay', service.endDay || 5);   // Default to Friday if not provided
+    // Modelo actual: un slot único. dayOfWeek se guarda como string ('0'..'6').
+    editForm.setField('dayOfWeek', service.dayOfWeek != null ? String(service.dayOfWeek) : '');
+    editForm.setField(
+      'departureHour',
+      service.departureHour ? service.departureHour.slice(0, 5) : '',
+    );
     editForm.setField('vehicleId', service.vehicle.vehicleId);
-
-    console.log('Setting startDay:', service.startDay);
-    console.log('Setting endDay:', service.endDay);
-    console.log('EditForm data after setting:', editForm.data);
-
-    // Convert schedules DepartureHour from TimeSpan (HH:MM:SS) to HH:MM for time inputs
-    const schedulers = service.schedulers || [];
-    console.log('Original schedulers:', schedulers);
-
-    const formattedSchedulers: ServiceSchedule[] = schedulers.length > 0
-      ? schedulers.map(scheduler => ({
-        ...scheduler,
-        departureHour: scheduler.departureHour.includes(':')
-          ? scheduler.departureHour.split(':').slice(0, 2).join(':')
-          : scheduler.departureHour
-      }))
-      : [{ ...emptyServiceSchedule } as ServiceSchedule]; // Si no hay schedulers, crear uno por defecto
-
-    console.log('Formatted schedulers:', formattedSchedulers);
-    setEditSchedules(formattedSchedulers);
 
     // Load directions for editing - extract IDs from AllowedDirections
     const existingDirectionIds = (service.allowedDirections || []).map(d => d.directionId);
@@ -768,8 +714,8 @@ export default function ServiceManagement() {
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Dia Inicio" required error={addForm.errors.startDay}>
-                <Select onValueChange={(value) => addForm.setField('startDay', Number(value))}>
+              <FormField label="Día" required error={addForm.errors.dayOfWeek}>
+                <Select value={String(addForm.data.dayOfWeek)} onValueChange={(value) => addForm.setField('dayOfWeek', value)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -784,21 +730,14 @@ export default function ServiceManagement() {
                   </SelectContent>
                 </Select>
               </FormField>
-              <FormField label="Dia Fin" required error={addForm.errors.endDay}>
-                <Select onValueChange={(value) => addForm.setField('endDay', Number(value))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccionar Día" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Lunes</SelectItem>
-                    <SelectItem value="2">Martes</SelectItem>
-                    <SelectItem value="3">Miercoles</SelectItem>
-                    <SelectItem value="4">Jueves</SelectItem>
-                    <SelectItem value="5">Viernes</SelectItem>
-                    <SelectItem value="6">Sábado</SelectItem>
-                    <SelectItem value="0">Domingo</SelectItem>
-                  </SelectContent>
-                </Select>
+              <FormField label="Hora de Partida" required error={addForm.errors.departureHour}>
+                <Input
+                  id="departureHour"
+                  type="time"
+                  placeholder="HH:MM"
+                  value={addForm.data.departureHour}
+                  onChange={(e) => addForm.setField('departureHour', e.target.value)}
+                />
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -824,65 +763,6 @@ export default function ServiceManagement() {
                   emptyMessage="No hay vehículos disponibles"
                 />
               </FormField>
-            </div>
-            <div className="space-y-4">
-              <Label className="text-base font-medium">Horarios de Salida</Label>
-
-              {/* Schedule List */}
-              <div className="space-y-3">
-                {(addForm.data.schedules || []).map((schedule, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-sm text-muted-foreground">Hora de Salida</Label>
-                        <Input
-                          type="time"
-                          value={schedule.departureHour}
-                          onChange={(e) => handleScheduleChange(index, 'departureHour', e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm text-muted-foreground">Es Feriado</Label>
-                        <Select
-                          value={schedule.isHoliday.toString()}
-                          onValueChange={(value) => handleScheduleChange(index, 'isHoliday', value === 'true')}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="false">No</SelectItem>
-                            <SelectItem value="true">Sí</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    {(addForm.data.schedules || []).length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSchedule(index)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Add Schedule Button */}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addSchedule}
-                className="w-full border-dashed border-2 h-12 text-muted-foreground hover:text-foreground hover:border-solid bg-transparent"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Horario
-              </Button>
             </div>
 
             {/* Directions Whitelist */}
@@ -972,8 +852,8 @@ export default function ServiceManagement() {
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Dia Inicio" required error={editForm.errors.startDay}>
-                <Select value={String(editForm.data.startDay)} onValueChange={(value) => editForm.setField('startDay', Number(value))}>
+              <FormField label="Día" required error={editForm.errors.dayOfWeek}>
+                <Select value={String(editForm.data.dayOfWeek)} onValueChange={(value) => editForm.setField('dayOfWeek', value)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleccionar Día" />
                   </SelectTrigger>
@@ -988,21 +868,14 @@ export default function ServiceManagement() {
                   </SelectContent>
                 </Select>
               </FormField>
-              <FormField label="Dia Fin" required error={editForm.errors.endDay}>
-                <Select value={String(editForm.data.endDay)} onValueChange={(value) => editForm.setField('endDay', Number(value))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccionar Día" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Lunes</SelectItem>
-                    <SelectItem value="2">Martes</SelectItem>
-                    <SelectItem value="3">Miercoles</SelectItem>
-                    <SelectItem value="4">Jueves</SelectItem>
-                    <SelectItem value="5">Viernes</SelectItem>
-                    <SelectItem value="6">Sábado</SelectItem>
-                    <SelectItem value="0">Domingo</SelectItem>
-                  </SelectContent>
-                </Select>
+              <FormField label="Hora de Partida" required error={editForm.errors.departureHour}>
+                <Input
+                  id="edit-departureHour"
+                  type="time"
+                  placeholder="HH:MM"
+                  value={editForm.data.departureHour}
+                  onChange={(e) => editForm.setField('departureHour', e.target.value)}
+                />
               </FormField>
             </div>
             <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1029,66 +902,6 @@ export default function ServiceManagement() {
                 />
               </FormField>
             </div>
-            <div className="space-y-4">
-              <Label className="text-base font-medium">Horarios de Salida</Label>
-
-              {/* Edit Schedule List */}
-              <div className="space-y-3">
-                {editSchedules.map((schedule, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-sm text-muted-foreground">Hora de Salida</Label>
-                        <Input
-                          type="time"
-                          value={schedule.departureHour}
-                          onChange={(e) => handleEditScheduleChange(index, 'departureHour', e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm text-muted-foreground">Es Feriado</Label>
-                        <Select
-                          value={schedule.isHoliday.toString()}
-                          onValueChange={(value) => handleEditScheduleChange(index, 'isHoliday', value === 'true')}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="false">No</SelectItem>
-                            <SelectItem value="true">Sí</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    {editSchedules.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeEditSchedule(index)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Add Edit Schedule Button */}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addEditSchedule}
-                className="w-full border-dashed border-2 h-12 text-muted-foreground hover:text-foreground hover:border-solid bg-transparent"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Horario
-              </Button>
-            </div>
-
             {/* Directions Whitelist */}
             {editForm.data.tripId > 0 && (
               <div className="space-y-4">
