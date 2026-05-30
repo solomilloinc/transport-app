@@ -21,7 +21,7 @@ import { ReserveReport } from '@/interfaces/reserve';
 import { Passenger } from '@/interfaces/passengers';
 import { Payment } from '@/interfaces/payment';
 import { withPriceRetry } from '@/utils/api-errors';
-import { getApiErrorMessage } from '@/lib/apiErrors';
+import { getApiErrorMessage, getApiErrorToastMessage } from '@/lib/apiErrors';
 import { Trip } from '@/interfaces/trip';
 import { RESERVE_TYPE } from '@/constants/reserveType';
 import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
@@ -548,7 +548,9 @@ export function AddReservationFlow({
         toast({ title: 'Error', description: 'Error al crear la reserva.', variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
+      // Wizard multi-step: no hay un form único donde subrayar el campo culpable,
+      // así que mostramos los mensajes de validación específicos del backend.
+      toast({ title: 'Error', description: getApiErrorToastMessage(error), variant: 'destructive' });
     } finally {
       reserveForm.setIsSubmitting(false);
     }
