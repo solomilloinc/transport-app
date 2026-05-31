@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   getApiErrorMessage,
+  getApiErrorToastMessage,
   getApiErrorCode,
   bindApiErrorToForm,
   API_ERROR_CATALOG,
@@ -46,6 +47,54 @@ describe('getApiErrorMessage', () => {
       }),
     );
     expect(info.field).toBe('inboundDropoffLocationId');
+  });
+});
+
+describe('getApiErrorToastMessage', () => {
+  it('lista los mensajes específicos de una validación agregada', () => {
+    const msg = getApiErrorToastMessage(
+      apiError('Validation.General', {
+        errors: [
+          { code: 'Validation.CustomerId', description: 'CustomerId es obligatorio.' },
+          { code: 'Validation.ReturnReserveId', description: 'ReturnReserveId es obligatorio para IdaVuelta.' },
+        ],
+      }),
+    );
+    expect(msg).toBe('CustomerId es obligatorio. ReturnReserveId es obligatorio para IdaVuelta.');
+    // NO debe quedarse con el genérico del catálogo.
+    expect(msg).not.toBe(API_ERROR_CATALOG['Validation.General'].message);
+  });
+
+  it('deduplica mensajes repetidos', () => {
+    const msg = getApiErrorToastMessage(
+      apiError('Validation.General', {
+        errors: [
+          { code: 'Validation.Passengers[0].Outbound.Price', description: 'El precio no puede ser negativo.' },
+          { code: 'Validation.Passengers[1].Outbound.Price', description: 'El precio no puede ser negativo.' },
+        ],
+      }),
+    );
+    expect(msg).toBe('El precio no puede ser negativo.');
+  });
+
+  it('limita a 3 mensajes y agrega elipsis', () => {
+    const msg = getApiErrorToastMessage(
+      apiError('Validation.General', {
+        errors: [
+          { code: 'Validation.A', description: 'Uno.' },
+          { code: 'Validation.B', description: 'Dos.' },
+          { code: 'Validation.C', description: 'Tres.' },
+          { code: 'Validation.D', description: 'Cuatro.' },
+        ],
+      }),
+    );
+    expect(msg).toBe('Uno. Dos. Tres. …');
+  });
+
+  it('cae al mensaje canónico cuando no hay sub-errores de campo', () => {
+    expect(getApiErrorToastMessage(apiError('Reserve.VehicleNotAvailable'))).toBe(
+      API_ERROR_CATALOG['Reserve.VehicleNotAvailable'].message,
+    );
   });
 });
 

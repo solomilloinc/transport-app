@@ -26,7 +26,7 @@ import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
 import { buildPublicReservePayload } from '@/utils/bookingPayload';
 import type { PassengerBookingExternal, ExternalPayment } from '@/interfaces/passengerReserve';
 import { withPriceRetry } from '@/utils/api-errors';
-import { getApiErrorMessage } from '@/lib/apiErrors';
+import { getApiErrorToastMessage } from '@/lib/apiErrors';
 import { toast } from '@/components/ui/use-toast';
 
 export default function CheckoutPage() {
@@ -314,7 +314,7 @@ export default function CheckoutPage() {
         );
       }
     } catch (err) {
-      toast({ title: 'Error', description: getApiErrorMessage(err).message, variant: 'destructive' });
+      toast({ title: 'Error', description: getApiErrorToastMessage(err), variant: 'destructive' });
       throw err;
     } finally {
       setIsSubmitting(false);

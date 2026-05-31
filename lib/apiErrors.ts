@@ -396,6 +396,40 @@ export function bindApiErrorToForm(err: unknown, setError: FormFieldErrorSetter)
   return bound;
 }
 
+/**
+ * Mensaje para un toast cuando NO hay un form donde subrayar los campos
+ * (flujos multi-step como el alta de reservas del admin, o el checkout).
+ *
+ * Si el error es una validación agregada (`Validation.General`) que trae
+ * sub-errores por campo, devolvemos los mensajes ESPECÍFICOS en vez del
+ * genérico "Hay datos inválidos…": para cada sub-error usamos el override del
+ * catálogo si existe, si no la `description` que mandó el backend. Para el resto
+ * de los errores devolvemos el mensaje canónico normal.
+ *
+ * En páginas con un único form preferí `bindApiErrorToForm` + `getApiErrorMessage`:
+ * ahí los campos se subrayan y el toast queda genérico a propósito.
+ */
+export function getApiErrorToastMessage(err: unknown): string {
+  const info = getApiErrorMessage(err);
+  if (info.fieldErrors.length > 0) {
+    const seen = new Set<string>();
+    const lines: string[] = [];
+    for (const fe of info.fieldErrors) {
+      const msg = (API_ERROR_CATALOG[fe.code]?.message ?? fe.description ?? '').trim();
+      if (msg && !seen.has(msg)) {
+        seen.add(msg);
+        lines.push(msg);
+      }
+    }
+    // Cap defensivo: evitamos un toast kilométrico si fallan muchos campos.
+    if (lines.length) {
+      const shown = lines.slice(0, 3).join(' ');
+      return lines.length > 3 ? `${shown} …` : shown;
+    }
+  }
+  return info.message;
+}
+
 // ---------------------------------------------------------------------------
 // Detail / field resolvers
 // ---------------------------------------------------------------------------
