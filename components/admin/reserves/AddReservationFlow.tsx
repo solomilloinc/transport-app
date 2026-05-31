@@ -17,7 +17,7 @@ import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { NewClientDialog } from '@/components/admin/reserves/NewClientDialog';
 
 import { post } from '@/services/api';
-import { ReserveReport } from '@/interfaces/reserve';
+import { ReserveReport, ReserveReportResponse } from '@/interfaces/reserve';
 import { Passenger } from '@/interfaces/passengers';
 import { Payment } from '@/interfaces/payment';
 import { withPriceRetry } from '@/utils/api-errors';
@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
 
 import { getPassengers } from '@/services/passenger';
-import { getReserves } from '@/services/reserves';
+import { getReserves, GetReservesParams } from '@/services/reserves';
 import { getTripById } from '@/services/trip';
 import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 import { PaginationParams } from '@/services/types';
@@ -242,7 +242,31 @@ export function AddReservationFlow({
     fetch: fetchPassenger,
     reset: resetDataPassenger,
   } = useApi<Passenger, PaginationParams>(getPassengers, { autoFetch: false });
-  const { data: dataReturnReserves, fetch: fetchReturnReserves } = useApi<ReserveReport, string>(getReserves, { autoFetch: false });
+  // Mismo endpoint que el reporte del día: ahora devuelve el wrapper
+  // `{ reserves, availableTrips }`. Acá sólo usamos `reserves.items` para el
+  // selector de la pata de vuelta; ignoramos `availableTrips` y `hasDeparted`.
+  const { data: dataReturnReserves, fetch: fetchReturnReserves } = useApi<ReserveReport, GetReservesParams, ReserveReportResponse>(getReserves, { autoFetch: false });
+
+  // La pata de vuelta es la RUTA INVERSA de la ida: su origen es el destino de la
+  // ida y su destino es el origen de la ida (Lobos→Capital ida ⇒ Capital→Lobos
+  // vuelta). El reporte del día devuelve TODAS las reservas de la fecha, así que
+  // sin este filtro aparecían también las del mismo sentido que la ida. Filtramos
+  // por cityId (robusto); si el reporte no trajera cityId, caemos a los nombres.
+  const returnTripOptions = useMemo(() => {
+    const items = dataReturnReserves?.reserves?.items ?? [];
+    if (!initialTrip) return [];
+    return items.filter((trip) => {
+      if (trip.reserveId === initialTrip.reserveId) return false;
+      const haveCityIds =
+        trip.originCityId && trip.destinationCityId &&
+        initialTrip.originCityId && initialTrip.destinationCityId;
+      return haveCityIds
+        ? trip.originCityId === initialTrip.destinationCityId &&
+            trip.destinationCityId === initialTrip.originCityId
+        : trip.originName === initialTrip.destinationName &&
+            trip.destinationName === initialTrip.originName;
+    });
+  }, [dataReturnReserves, initialTrip]);
 
   const refetchTrip = async () => {
     if (!initialTrip?.tripId) return;
@@ -324,7 +348,7 @@ export function AddReservationFlow({
 
   useEffect(() => {
     if (returnDate) {
-      fetchReturnReserves(format(returnDate, 'yyyyMMdd'));
+      fetchReturnReserves({ date: format(returnDate, 'yyyyMMdd') });
     }
   }, [returnDate]);
 
@@ -711,9 +735,7 @@ export function AddReservationFlow({
                       Viajes para {format(returnDate, "d 'de' MMMM", { locale: es })}
                     </Label>
                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
-                      {dataReturnReserves?.items
-                        ?.filter((trip) => trip.reserveId !== initialTrip?.reserveId)
-                        .map((trip) => (
+                      {returnTripOptions.map((trip) => (
                           <button
                             key={trip.reserveId}
                             type="button"
@@ -729,7 +751,7 @@ export function AddReservationFlow({
                             </span>
                           </button>
                         ))}
-                      {dataReturnReserves?.items?.filter((trip) => trip.reserveId !== initialTrip?.reserveId).length === 0 && (
+                      {returnTripOptions.length === 0 && (
                         <p className="text-center text-sm text-gray-500 p-4">No hay viajes disponibles.</p>
                       )}
                     </div>

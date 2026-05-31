@@ -138,11 +138,13 @@ export function PassengerListTable({
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>DNI: {passenger.documentNumber}</span>
-                      {passenger.documentNumber && (passenger.currentBalance) !== null && passenger.currentBalance !== 0 && (
-                        <span className={(passenger.currentBalance) > 0 ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
-                          {(passenger.currentBalance) > 0
-                            ? `Debe $${passenger.currentBalance.toLocaleString()}`
-                            : `A favor $${Math.abs(passenger.currentBalance).toLocaleString()}`}
+                      {/* "Deuda vencida": saldo SOLO por viajes ya realizados — lo cobrable
+                          sin riesgo (ver CONTEXT.md). `null` = sin cliente; `0` = sin deuda;
+                          en ambos casos no se muestra nada. No se renderiza saldo "a favor"
+                          acá: el crédito es del total de cuenta corriente, no de la deuda vencida. */}
+                      {passenger.overdueBalance != null && passenger.overdueBalance > 0 && (
+                        <span className="text-red-500 font-medium">
+                          Debe ${passenger.overdueBalance.toLocaleString()}
                         </span>
                       )}
                     </div>

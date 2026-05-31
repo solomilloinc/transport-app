@@ -43,7 +43,18 @@ export interface PassengerReserveReport extends PassengerReserve {
   documentNumber: string;
   pickupLocationName: string;
   dropoffLocationName: string;
+  /**
+   * Saldo total histórico de cuenta corriente del Cliente (incluye cargos de
+   * viajes futuros ya debitados). Backend lo sigue enviando; ya NO se muestra en
+   * la columna "debe" — ver `overdueBalance` y CONTEXT.md.
+   */
   currentBalance: number;
+  /**
+   * Deuda vencida: saldo del Cliente SOLO por viajes ya realizados (Reserves ya
+   * partidas). Es lo cobrable sin riesgo. `null` ⇒ el Pasajero no tiene Cliente
+   * registrado; `0` ⇒ Cliente sin deuda vencida. Ver CONTEXT.md.
+   */
+  overdueBalance: number | null;
   /**
    * Si está poblado, el Passenger fue auto-creado por el batch a partir de la
    * FrequentSubscription con ese id. Si es null, vino de un alta manual o

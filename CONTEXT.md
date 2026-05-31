@@ -16,6 +16,13 @@ código difiera de este glosario, el código está mal o todavía no migró.
 Persona registrada. Tiene cuenta corriente (`CurrentBalance`) que se debita/acredita vía
 `CustomerAccountTransaction`. Antes el frontend lo llamaba "Pasajero" (legacy).
 
+Dos lecturas distintas del saldo, que no hay que confundir:
+- **Saldo de cuenta corriente — `currentBalance`**: saldo total histórico. Incluye cargos de
+  viajes **futuros** ya debitados (p. ej. los que generó una [[#suscripción--pasajero-frecuente--frequentsubscription]]).
+- **Deuda vencida — `overdueBalance`**: saldo **solo por viajes ya realizados** (Reserves ya
+  **partidas**, ver más abajo). Es lo cobrable sin riesgo. `null` ⇒ el Pasajero no tiene Cliente
+  registrado; `0` ⇒ Cliente sin deuda vencida.
+
 ### Pasajero — `Passenger`
 Instancia de reserva de un Cliente en una Reserve concreta. **Es la unidad de cobro** (ver ADR
 backend 0002). Tiene snapshot de precio (ver ADR backend 0001) y, si fue auto-creado a partir de
@@ -27,6 +34,25 @@ Slot semanal único por tenant identificado por `(TripId, DayOfWeek, DepartureHo
 - `allowedDirections[]` — whitelist de Direcciones válidas para pickup/dropoff.
 - `vehicle` — Vehículo asignado, define `capacity`.
 - `status` — Active/Inactive.
+
+### Ruta — `Trip`
+Ruta comercial origen→destino. En la UI se llama **"Ruta"** (pantalla "Rutas Comerciales"); tiene
+`description`. Un Servicio pertenece a una Ruta. Id = `tripId` — **nunca** "travelId". Varias
+Reserves de una misma Ruta pueden coexistir en un día (distintas horas de salida).
+_Evitar_: Travel, Viaje (este último está sobrecargado, ver Reserva).
+
+### Reserva del día — `Reserve`
+Un Servicio materializado en una fecha concreta; es la **fila** del reporte de reservas del día.
+Identificada por `reserveId`, referencia su Ruta (`tripId`) y su salida (`reserveDate` +
+`departureHour`).
+> ⚠️ **Overload**: en el panel de reservas la lista de Reserves está rotulada "Viajes" (legacy). El
+> Select de filtro de arriba es por **Ruta** (`Trip`), no por Reserve. Una Ruta puede tener varias
+> Reserves en el día, así que filtrar por Ruta puede dejar varias filas.
+
+### Partida / "ya salió" — `hasDeparted`
+Una Reserve está **partida** cuando su datetime de salida ya pasó: `reserveDate + departureHour <
+ahora` (el corte usa **UTC**). Definición única compartida por los dos reportes: pinta de amarillo
+la fila del reporte del día (`hasDeparted`) y acota la deuda vencida (`overdueBalance`).
 
 ### Dirección — `Direction`
 Punto físico de pickup o dropoff (`Terminal A`, `Retiro`, etc.). El Servicio define qué Direcciones

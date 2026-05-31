@@ -17,14 +17,14 @@ import { TripSelectionPanel } from '@/components/admin/reserves/TripSelectionPan
 import { CancelTripDialog } from '@/components/admin/reserves/CancelTripDialog';
 import { Label } from '@/components/ui/label';
 import { deleteLogic, get, post, put } from '@/services/api';
-import { ReserveReport, ReserveStatusEnum, ReserveUpdate } from '@/interfaces/reserve';
+import { ReserveReport, ReserveReportResponse, ReserveStatusEnum, ReserveUpdate } from '@/interfaces/reserve';
 import { SelectOption } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { toast } from '@/hooks/use-toast';
 import { getApiErrorMessage } from '@/lib/apiErrors';
 import { Direction } from '@/interfaces/direction';
 import { useApi } from '@/hooks/use-api';
-import { getPassengerReserves, getReserves } from '@/services/reserves';
+import { getPassengerReserves, getReserves, GetReservesParams } from '@/services/reserves';
 import { PaymentMethod } from '@/interfaces/payment';
 import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
@@ -50,6 +50,8 @@ export default function ReservationsPage() {
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [selectedTrip, setSelectedTrip] = useState<ReserveReport | null>(null);
+  // Ruta (Trip) por la que se filtra el reporte del día. `null` = todas.
+  const [selectedRuta, setSelectedRuta] = useState<number | null>(null);
   const [selectedPassengerReserve, setSelectedPassengerReserve] = useState<PassengerReserveReport | null>(null);
 
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
@@ -77,7 +79,7 @@ export default function ReservationsPage() {
     data: dataReserves,
     error: errorReserve,
     fetch: fetchReserves,
-  } = useApi<ReserveReport, string>(getReserves, {
+  } = useApi<ReserveReport, GetReservesParams, ReserveReportResponse>(getReserves, {
     autoFetch: false,
   });
 
@@ -106,9 +108,18 @@ export default function ReservationsPage() {
 
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
-    if (selectedDate) fetchReserves(format(selectedDate, 'yyyyMMdd'));
+    // Al cambiar el día, las Rutas disponibles cambian: reseteamos el filtro.
+    setSelectedRuta(null);
+    if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: null });
     setSelectedTrip(null);
   }, [selectedDate]);
+
+  // Filtro server-side por Ruta: re-fetch con `filters.tripId`. `availableTrips`
+  // vuelve estable (se calcula sobre el día completo), así el Select no parpadea.
+  const handleRutaChange = (tripId: number | null) => {
+    setSelectedRuta(tripId);
+    if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId });
+  };
 
   const fetchFullTripDetails = async (tripId: number) => {
     try {
@@ -289,7 +300,7 @@ export default function ReservationsPage() {
         toast({ title: 'Viaje cancelado', description: 'El viaje ha sido cancelado exitosamente.', variant: 'success' });
         setIsCancelTripDialogOpen(false);
         setTripToCancel(null);
-        if (selectedDate) fetchReserves(format(selectedDate, 'yyyyMMdd'));
+        if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
         if (selectedTrip?.reserveId === tripToCancel.reserveId) {
           setSelectedTrip(null);
         }
@@ -355,7 +366,10 @@ export default function ReservationsPage() {
           selectedTrip={selectedTrip}
           onTripSelect={setSelectedTrip}
           onCancelTrip={handleCancelTripClick}
-          trips={dataReserves?.items}
+          trips={dataReserves?.reserves?.items}
+          availableTrips={dataReserves?.availableTrips}
+          selectedRuta={selectedRuta}
+          onRutaChange={handleRutaChange}
           isLoading={loadingReserves}
         />
 
@@ -410,7 +424,7 @@ export default function ReservationsPage() {
         onOpenChange={setIsReserveDialogOpen}
         trip={selectedTrip}
         onSuccess={() => {
-          if (selectedDate) fetchReserves(format(selectedDate, 'yyyyMMdd'));
+          if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
         }}
       />
       <EditPassengerReserveDialog

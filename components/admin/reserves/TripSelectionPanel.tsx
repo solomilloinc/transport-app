@@ -7,7 +7,8 @@ import { X } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
-import { ReserveReport } from '@/interfaces/reserve';
+import { ApiSelect, SelectOption } from '@/components/dashboard/select';
+import { AvailableTrip, ReserveReport } from '@/interfaces/reserve';
 
 interface TripSelectionPanelProps {
   selectedDate: Date | undefined;
@@ -16,11 +17,44 @@ interface TripSelectionPanelProps {
   onTripSelect: (trip: ReserveReport) => void;
   onCancelTrip: (trip: ReserveReport) => void;
   trips: ReserveReport[] | undefined;
+  /** Rutas (Trip) con reservas ese día — opciones del Select de filtro. */
+  availableTrips: AvailableTrip[] | undefined;
+  /** Ruta seleccionada (tripId) o `null` = todas. */
+  selectedRuta: number | null;
+  onRutaChange: (tripId: number | null) => void;
   isLoading: boolean;
 }
 
-export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, onTripSelect, onCancelTrip, trips, isLoading }: TripSelectionPanelProps) {
+// Valor sentinela del Select para "sin filtro" (ApiSelect trabaja con strings).
+const ALL_RUTAS = '0';
+
+export function TripSelectionPanel({
+  selectedDate,
+  onDateChange,
+  selectedTrip,
+  onTripSelect,
+  onCancelTrip,
+  trips,
+  availableTrips,
+  selectedRuta,
+  onRutaChange,
+  isLoading,
+}: TripSelectionPanelProps) {
   const [month, setMonth] = useState<Date>(new Date());
+
+  const rutaOptions: SelectOption[] = [
+    { id: ALL_RUTAS, value: ALL_RUTAS, label: 'Todas las rutas' },
+    ...(availableTrips ?? []).map((t) => ({
+      id: t.tripId,
+      value: t.tripId.toString(),
+      label: t.description,
+    })),
+  ];
+
+  const handleRutaSelect = (value: string) => {
+    const id = Number(value);
+    onRutaChange(id > 0 ? id : null);
+  };
 
   return (
     <Card>
@@ -45,6 +79,15 @@ export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, o
           </div>
           <div className="space-y-2 p-3">
             <div className="text-lg font-medium text-blue-500">Viajes {selectedDate ? format(selectedDate, 'd MMM', { locale: es }) : ''}</div>
+            {availableTrips && availableTrips.length > 0 && (
+              <ApiSelect
+                options={rutaOptions}
+                value={selectedRuta != null ? selectedRuta.toString() : ALL_RUTAS}
+                onValueChange={handleRutaSelect}
+                placeholder="Todas las rutas"
+                triggerClassName="h-8 text-xs"
+              />
+            )}
             <div className="space-y-2">
               {isLoading && <div className="text-center py-4 text-gray-500">Cargando viajes...</div>}
               {!isLoading &&
@@ -52,7 +95,15 @@ export function TripSelectionPanel({ selectedDate, onDateChange, selectedTrip, o
                   <div key={trip.reserveId} className="relative group">
                     <button
                       className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
-                        selectedTrip?.reserveId === trip.reserveId ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                        selectedTrip?.reserveId === trip.reserveId ? 'border-blue-500' : ''
+                      } ${
+                        // Fondo = "ya salió" (amarillo) tiene prioridad sobre la selección;
+                        // el borde azul sigue marcando la selección. Ambas señales visibles.
+                        trip.hasDeparted
+                          ? 'bg-amber-50 hover:bg-amber-100'
+                          : selectedTrip?.reserveId === trip.reserveId
+                            ? 'bg-blue-50'
+                            : 'hover:bg-gray-50'
                       }`}
                       onClick={() => onTripSelect(trip)}
                     >
