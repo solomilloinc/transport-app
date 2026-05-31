@@ -1,6 +1,7 @@
 import { TripPrice, CityDirectionsDto } from './trip';
 import { Auditable } from './auditable';
 import { PassengerReserve } from './passengerReserve';
+import { PagedResponse } from '@/services/types';
 
 export enum ReserveStatusEnum {
   Available = 0,
@@ -34,6 +35,29 @@ export interface ReserveReport {
   prices: TripPrice[];
   relevantCities: CityDirectionsDto[];
   status: number;
+  /**
+   * La Reserve ya partió (`reserveDate + departureHour < ahora`, corte en UTC).
+   * Reporte del día: pinta la fila de amarillo. Ver CONTEXT.md "Partida".
+   */
+  hasDeparted: boolean;
+}
+
+/** Una Ruta (`Trip`) con reservas un día dado — opción del Select de filtro. */
+export interface AvailableTrip {
+  tripId: number;
+  description: string;
+}
+
+/**
+ * Respuesta del reporte de reservas del día (`/reserve-report/{date}`).
+ * `reserves` es el listado paginado de Reserves; `availableTrips` son las Rutas
+ * (`Trip`) con reservas ese día, para poblar el Select de filtro. `availableTrips`
+ * se calcula sobre el día completo (sin aplicar `filters.tripId`), así las
+ * opciones del Select no cambian al elegir una Ruta.
+ */
+export interface ReserveReportResponse {
+  reserves: PagedResponse<ReserveReport>;
+  availableTrips: AvailableTrip[];
 }
 
 export const emptyEditReserve = {
