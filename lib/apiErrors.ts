@@ -153,6 +153,10 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
   'Reserve.SlotAlreadyTaken': {
     message: 'Ya existe una reserva para ese tramo, fecha y horario.',
   },
+  'Reserve.HasActivePassengers': {
+    message:
+      'No se puede cancelar el viaje porque tiene pasajeros activos. Quitá los pasajeros antes de cancelarlo.',
+  },
 
   // ── Payments ──────────────────────────────────────────────────────────────
   'Payments.InvalidAmount': { message: 'El monto de un pago debe ser mayor a cero.' },
