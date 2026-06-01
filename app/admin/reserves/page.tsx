@@ -17,7 +17,7 @@ import { TripSelectionPanel } from '@/components/admin/reserves/TripSelectionPan
 import { CancelTripDialog } from '@/components/admin/reserves/CancelTripDialog';
 import { Label } from '@/components/ui/label';
 import { deleteLogic, get, post, put } from '@/services/api';
-import { ReserveReport, ReserveReportResponse, ReserveStatusEnum, ReserveUpdate } from '@/interfaces/reserve';
+import { ReserveReport, ReserveReportResponse } from '@/interfaces/reserve';
 import { SelectOption } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { toast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ import { getApiErrorMessage } from '@/lib/apiErrors';
 import { Direction } from '@/interfaces/direction';
 import { useApi } from '@/hooks/use-api';
 import { getPassengerReserves, getReserves, GetReservesParams } from '@/services/reserves';
+import { cancelReserveTripAction } from '@/app/admin/reserves/actions';
 import { PaymentMethod } from '@/interfaces/payment';
 import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
@@ -287,28 +288,23 @@ export default function ReservationsPage() {
 
     setIsCancellingTrip(true);
     try {
-      const updatePayload: ReserveUpdate = {
-        vehicleId: null,
-        driverId: null,
-        reserveDate: null,
-        departureHour: null,
-        status: ReserveStatusEnum.Cancelled,
-      };
-      const response = await put(`/reserve-update/${tripToCancel.reserveId}`, updatePayload);
+      // El Server Action devuelve el error como valor (ver actions.ts): así el
+      // código/copy del backend llega al usuario también en producción y un
+      // error de validación no se convierte en un 500.
+      const result = await cancelReserveTripAction(tripToCancel.reserveId);
 
-      if (response) {
-        toast({ title: 'Viaje cancelado', description: 'El viaje ha sido cancelado exitosamente.', variant: 'success' });
-        setIsCancelTripDialogOpen(false);
-        setTripToCancel(null);
-        if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
-        if (selectedTrip?.reserveId === tripToCancel.reserveId) {
-          setSelectedTrip(null);
-        }
-      } else {
-        toast({ title: 'Error', description: 'Error al cancelar el viaje.', variant: 'destructive' });
+      if (!result.ok) {
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
+
+      toast({ title: 'Viaje cancelado', description: 'El viaje ha sido cancelado exitosamente.', variant: 'success' });
+      setIsCancelTripDialogOpen(false);
+      setTripToCancel(null);
+      if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
+      if (selectedTrip?.reserveId === tripToCancel.reserveId) {
+        setSelectedTrip(null);
+      }
     } finally {
       setIsCancellingTrip(false);
     }

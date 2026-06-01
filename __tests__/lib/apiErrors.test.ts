@@ -25,6 +25,13 @@ describe('getApiErrorMessage', () => {
     );
   });
 
+  it('mapea Reserve.HasActivePassengers (cancelar viaje con pasajeros activos)', () => {
+    const info = getApiErrorMessage(apiError('Reserve.HasActivePassengers'));
+    expect(info.code).toBe('Reserve.HasActivePassengers');
+    expect(info.message).toBe(API_ERROR_CATALOG['Reserve.HasActivePassengers'].message);
+    expect(info.message).not.toBe(FALLBACK_MESSAGE);
+  });
+
   it('cae al mensaje base y avisa en dev para un código desconocido', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const info = getApiErrorMessage(apiError('Algo.Inexistente'));
