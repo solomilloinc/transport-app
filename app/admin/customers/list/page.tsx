@@ -93,12 +93,6 @@ export default function PassengersManagement() {
           });
           setIsAddModalOpen(false);
           refetch(); // Refresh the vehicle list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el pasajero',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, addForm.setError);
@@ -123,12 +117,6 @@ export default function PassengersManagement() {
           });
           setIsEditModalOpen(false);
           refetch(); // Refresh the vehicle list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar el pasajero',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, editForm.setError);

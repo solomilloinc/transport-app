@@ -124,8 +124,6 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
         toast({ title: 'Pago cargado', description: 'El pago ha sido cargado exitosamente', variant: 'success' });
         onSuccess();
         onOpenChange(false);
-      } else {
-        toast({ title: 'Error', description: 'Error al crear el pago', variant: 'destructive' });
       }
     } catch (error) {
       toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });

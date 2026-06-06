@@ -160,12 +160,6 @@ export default function PriceManagement() {
           });
           setIsAddModalOpen(false);
           fetchPrices(); // Refresh the vehicle list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el precio',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, addForm.setError);
@@ -196,12 +190,6 @@ export default function PriceManagement() {
           });
           setIsEditModalOpen(false);
           fetchPrices(); // Refresh the vehicle list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al editar el precio',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, editForm.setError);
