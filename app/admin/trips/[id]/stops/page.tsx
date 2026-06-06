@@ -233,7 +233,7 @@ export default function TripStopsManagement() {
   const columns = [
     { header: 'Dirección', accessor: 'directionName', width: '25%' },
     { header: 'Ciudad', accessor: 'cityName', width: '20%' },
-    { header: 'Orden', accessor: 'Order', width: '15%' },
+    { header: 'Orden', accessor: 'order', width: '15%' },
     {
       header: 'Tiempo Offset',
       accessor: 'pickupTimeOffset',

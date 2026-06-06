@@ -277,7 +277,7 @@ export default function TripPricesManagement() {
       width: '15%',
       cell: (price: TripPrice) => formatCurrency(price.price),
     },
-    { header: 'Orden', accessor: 'Order', width: '10%' },
+    { header: 'Orden', accessor: 'order', width: '10%' },
     {
       header: 'Estado',
       accessor: 'Status',

@@ -199,7 +199,7 @@ export default function DirectionManagement() {
 
   const columns = [
     { header: 'Ciudad', accessor: 'cityName', width: '30%' },
-    { header: 'Direccion', accessor: 'Name', width: '50%' },
+    { header: 'Direccion', accessor: 'name', width: '50%' },
     {
       header: 'Acciones',
       accessor: 'actions',

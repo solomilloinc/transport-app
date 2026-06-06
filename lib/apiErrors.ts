@@ -98,6 +98,7 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
   // ── Customer ──────────────────────────────────────────────────────────────
   'Customer.NotFound': { message: 'No se encontró el cliente.' },
   'Customer.AlreadyExists': { message: 'Ya existe un cliente con ese número de documento.' },
+  'Customer.EmailAlreadyExists': { message: 'Ya existe un cliente con ese email.', field: 'email' },
   'Customer.Inactive': { message: 'El cliente no está activo.' },
   'Customer.HasActiveSubscriptions': {
     message: 'No se puede eliminar el cliente: tiene suscripciones activas. Cancelálas primero.',
@@ -166,6 +167,12 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
 
   // ── Passenger ─────────────────────────────────────────────────────────────
   'Passenger.NotFound': { message: 'El pasajero no fue encontrado.' },
+  'Passenger.NotActive': {
+    message: 'No se puede cancelar este pasajero porque no está activo (ya fue cancelado, viajó o no se presentó).',
+  },
+  'Passenger.ReserveDeparted': {
+    message: 'No se puede cancelar este pasajero: el viaje ya partió.',
+  },
 
   // ── City (códigos con sub-código = nombre de campo) ───────────────────────
   'City.CityId': { message: 'La ciudad no existe.' },

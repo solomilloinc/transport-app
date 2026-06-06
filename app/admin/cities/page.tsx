@@ -155,8 +155,8 @@ export default function CitiesManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'Name', width: '30%' },
-    { header: 'Código', accessor: 'Code', width: '25%' },
+    { header: 'Nombre', accessor: 'name', width: '30%' },
+    { header: 'Código', accessor: 'code', width: '25%' },
     {
       header: 'Estado',
       accessor: 'status',

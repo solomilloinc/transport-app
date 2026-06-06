@@ -242,7 +242,7 @@ export default function TripManagement() {
   }, []);
 
   const columns = [
-    { header: 'Descripción', accessor: 'Description', width: '25%' },
+    { header: 'Descripción', accessor: 'description', width: '25%' },
     { header: 'Origen', accessor: 'originCityName', width: '20%' },
     { header: 'Destino', accessor: 'destinationCityName', width: '20%' },
     {
