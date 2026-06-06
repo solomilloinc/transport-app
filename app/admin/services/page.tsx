@@ -339,12 +339,6 @@ export default function ServiceManagement() {
           });
           setIsAddModalOpen(false);
           refetch(); // Refresh the vehicle list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el servicio',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         // Surface backend error codes (validación de campos, conflictos de slot)
@@ -382,12 +376,6 @@ export default function ServiceManagement() {
           });
           setIsEditModalOpen(false);
           refetch(); // Refresh the vehicle list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar el servicio',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         // Especialmente importante acá: Service.VehicleCapacityBelowSubscriptions
@@ -424,12 +412,6 @@ export default function ServiceManagement() {
           });
           setIsAddTripModalOpen(false);
           // Opcionalmente refrescar si hay algo que refrescar
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el viaje',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         // Subraya el campo culpable si el backend mandó errors[]/details

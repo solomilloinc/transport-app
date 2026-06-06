@@ -110,12 +110,6 @@ export default function VehicleManagement() {
           });
           setIsAddModalOpen(false);
           refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el vehículo',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, addForm.setError);
@@ -140,12 +134,6 @@ export default function VehicleManagement() {
           });
           setIsEditModalOpen(false);
           refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar el vehículo',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, editForm.setError);

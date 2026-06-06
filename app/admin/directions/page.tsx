@@ -117,12 +117,6 @@ export default function DirectionManagement() {
           });
           setIsAddModalOpen(false);
           refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear la dirección',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, addForm.setError);
@@ -147,12 +141,6 @@ export default function DirectionManagement() {
           });
           setIsEditModalOpen(false);
           refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar la dirección',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, editForm.setError);

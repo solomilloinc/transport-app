@@ -86,12 +86,6 @@ export default function CitiesManagement() {
           });
           setIsAddModalOpen(false);
           refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear la ciudad',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, addForm.setError);
@@ -116,12 +110,6 @@ export default function CitiesManagement() {
           });
           setIsEditModalOpen(false);
           refetch(); // Refresh the city list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar la ciudad',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, editForm.setError);

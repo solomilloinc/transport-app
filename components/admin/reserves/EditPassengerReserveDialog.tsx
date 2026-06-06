@@ -94,12 +94,6 @@ export function EditPassengerReserveDialog({
           });
           onSuccess();
           onOpenChange(false);
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar la reserva',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, form.setError);

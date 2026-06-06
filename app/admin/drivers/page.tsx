@@ -88,12 +88,6 @@ export default function DriversManagement() {
           });
           setIsAddModalOpen(false);
           refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el chofer',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, addForm.setError);
@@ -118,12 +112,6 @@ export default function DriversManagement() {
           });
           setIsEditModalOpen(false);
           refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar el chofer',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, editForm.setError);

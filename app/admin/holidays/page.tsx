@@ -83,12 +83,6 @@ export default function HolidaysManagement() {
           });
           setIsAddModalOpen(false);
           fetch({ pageNumber: currentPage }); // Refresh the list
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el feriado',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, addForm.setError);
@@ -113,12 +107,6 @@ export default function HolidaysManagement() {
           });
           setIsEditModalOpen(false);
           fetch({ pageNumber: currentPage });
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar el feriado',
-            variant: 'destructive',
-          });
         }
       } catch (error) {
         bindApiErrorToForm(error, editForm.setError);
