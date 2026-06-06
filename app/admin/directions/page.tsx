@@ -53,7 +53,7 @@ export default function DirectionManagement() {
 
   // Combos de alta/edición — sólo Ciudades Active.
   const activeCities = useMemo(
-    () => cities.filter((c) => (c as any).status === 'Activo'),
+    () => cities.filter((c) => (c as any).status === 'Active'),
     [cities]
   );
 
