@@ -430,7 +430,7 @@ export default function VehicleManagement() {
         open={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}
         onConfirm={confirmDelete}
-        description="Esta acción no se puede deshacer. Esto eliminará permanentemente al cliente y todos los datos asociados de nuestros servidores."
+        description="Esta acción no se puede deshacer. Esto eliminará permanentemente el vehículo y todos los datos asociados de nuestros servidores."
       />
     </div>
   );

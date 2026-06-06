@@ -315,7 +315,7 @@ export default function CitiesManagement() {
         open={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}
         onConfirm={confirmDelete}
-        description="Esta acción no se puede deshacer. Esto eliminará permanentemente al cliente y todos los datos asociados de nuestros servidores."
+        description="Esta acción no se puede deshacer. Esto eliminará permanentemente la ciudad y todos los datos asociados de nuestros servidores."
       />
     </div>
   );
