@@ -38,16 +38,11 @@ import {
   dateParser,
   enumParser,
   piiStringParser,
-  stringParser,
 } from '@/hooks/url-parsers';
 
 const customerFilterParsers = {
-  firstName: stringParser,
-  lastName: stringParser,
+  search: piiStringParser,
   email: piiStringParser,
-  documentNumber: piiStringParser,
-  phone1: piiStringParser,
-  phone2: piiStringParser,
   createdFrom: dateParser,
   createdTo: dateParser,
   status: enumParser<EntityStatus>([
@@ -251,22 +246,10 @@ export default function PassengersManagement() {
           <div className="space-y-4 w-full">
             <FilterBar onReset={reset} onApply={apply}>
               <Input
-                className="w-full sm:w-[160px]"
-                placeholder="Nombre"
-                value={draft.firstName ?? ''}
-                onChange={(e) => setDraftField('firstName', e.target.value)}
-              />
-              <Input
-                className="w-full sm:w-[160px]"
-                placeholder="Apellido"
-                value={draft.lastName ?? ''}
-                onChange={(e) => setDraftField('lastName', e.target.value)}
-              />
-              <Input
-                className="w-full sm:w-[160px]"
-                placeholder="Documento"
-                value={draft.documentNumber ?? ''}
-                onChange={(e) => setDraftField('documentNumber', e.target.value)}
+                className="w-full sm:w-[220px]"
+                placeholder="Nombre o documento"
+                value={draft.search ?? ''}
+                onChange={(e) => setDraftField('search', e.target.value)}
               />
               <Input
                 className="w-full sm:w-[180px]"
@@ -378,7 +361,7 @@ export default function PassengersManagement() {
             onChange={(e) => addForm.setField('lastName', e.target.value)}
           />
         </FormField>
-        <FormField label="Email" required error={addForm.errors.email}>
+        <FormField label="Email" error={addForm.errors.email}>
           <Input id="email" value={addForm.data.email} onChange={(e) => addForm.setField('email', e.target.value)} />
         </FormField>
         <FormField label="Número de documento" required error={addForm.errors.documentNumber}>
@@ -390,7 +373,7 @@ export default function PassengersManagement() {
             onChange={(e) => addForm.setField('documentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono 1" required error={addForm.errors.phone1}>
+        <FormField label="Teléfono 1" error={addForm.errors.phone1}>
           <Input id="phone1" value={addForm.data.phone1} onChange={(e) => addForm.setField('phone1', e.target.value)} />
         </FormField>
         <FormField label="Teléfono 2">
@@ -426,7 +409,7 @@ export default function PassengersManagement() {
             onChange={(e) => editForm.setField('lastName', e.target.value)}
           />
         </FormField>
-        <FormField label="Email" required error={editForm.errors.email}>
+        <FormField label="Email" error={editForm.errors.email}>
           <Input id="email" value={editForm.data.email} onChange={(e) => editForm.setField('email', e.target.value)} />
         </FormField>
         <FormField label="Número de documento" required error={editForm.errors.documentNumber}>
@@ -438,7 +421,7 @@ export default function PassengersManagement() {
             onChange={(e) => editForm.setField('documentNumber', e.target.value)}
           />
         </FormField>
-        <FormField label="Teléfono 1" required error={editForm.errors.phone1}>
+        <FormField label="Teléfono 1" error={editForm.errors.phone1}>
           <Input
             id="phone1"
             type="text"

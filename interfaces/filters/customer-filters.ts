@@ -2,27 +2,20 @@ import { EntityStatus } from './common';
 
 /**
  * Espejo de `CustomerReportFilterRequestDto` del backend.
- * PII (no persistir en URL): email, documentNumber, phone1, phone2.
+ * PII (no persistir en URL): search, email.
+ * `search` busca por DNI y nombre completo con OR en el backend.
  */
 export interface CustomerReportFilters {
-  firstName?: string;
-  lastName?: string;
+  search?: string;
   email?: string;
-  documentNumber?: string;
-  phone1?: string;
-  phone2?: string;
   createdFrom?: string; // ISO yyyy-mm-dd
   createdTo?: string;
   status?: EntityStatus;
 }
 
 export const emptyCustomerReportFilters: CustomerReportFilters = {
-  firstName: '',
-  lastName: '',
+  search: '',
   email: '',
-  documentNumber: '',
-  phone1: '',
-  phone2: '',
   createdFrom: '',
   createdTo: '',
   status: undefined,
