@@ -1,9 +1,15 @@
 'use client';
 
-import { ArrowUpDown, ChevronDown, ChevronUp, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
+import { ArrowUpDown, Ban, ChevronDown, ChevronUp, DollarSign, Edit2, MoreVertical, TrashIcon, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PassengerReserveReport, PaymentStatusEnum, PaymentStatusLabels } from '@/interfaces/passengerReserve';
 
 export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
@@ -18,9 +24,12 @@ interface PassengerListTableProps {
   onCheckPassenger: (passenger: PassengerReserveReport, checked: boolean) => void;
   onEdit: (passenger: PassengerReserveReport) => void;
   onDelete: (passenger: PassengerReserveReport) => void;
+  onCancel: (passenger: PassengerReserveReport) => void;
   onAddPayment: (passenger: PassengerReserveReport) => void;
   getClientBalance: (dni: string) => number | null;
   disabledPassengers?: number[];
+  /** La Reserve seleccionada ya partió: gatea Mover/Cancelar de todas las filas. */
+  reserveHasDeparted?: boolean;
 }
 
 export function PassengerListTable({
@@ -32,9 +41,11 @@ export function PassengerListTable({
   onCheckPassenger,
   onEdit,
   onDelete,
+  onCancel,
   onAddPayment,
   getClientBalance,
   disabledPassengers = [],
+  reserveHasDeparted = false,
 }: PassengerListTableProps) {
   const renderSortIndicator = (column: PassengerSortColumn) => {
     if (sortColumn !== column) {
@@ -210,15 +221,53 @@ export function PassengerListTable({
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                    onClick={() => onDelete(passenger)}
-                    title="Eliminar Pasajero"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </Button>
+                  {(() => {
+                    // Gating (ver charter §2 + CONTEXT.md): sólo pasajeros activos
+                    // (PendingPayment/Confirmed) y con la Reserve sin partir.
+                    const status = passenger.status ?? passenger.statusPaymentId;
+                    const isActive =
+                      status === PaymentStatusEnum.PendingPayment ||
+                      status === PaymentStatusEnum.Confirmed;
+                    const canCancel = isActive && !reserveHasDeparted;
+                    const cancelTitle = canCancel
+                      ? 'Cancelar pasajero'
+                      : 'No se puede cancelar: el viaje partió o el pasajero no está activo';
+                    return (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-orange-500 hover:bg-orange-50 hover:text-orange-600 disabled:opacity-40"
+                          onClick={() => onCancel(passenger)}
+                          disabled={!canCancel}
+                          title={cancelTitle}
+                        >
+                          <Ban className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                              title="Más acciones"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                              onClick={() => onDelete(passenger)}
+                            >
+                              <TrashIcon className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
+                    );
+                  })()}
                 </div>
               </td>
             </tr>

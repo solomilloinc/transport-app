@@ -72,6 +72,9 @@ export interface PassengerReserveReport extends PassengerReserve {
    * return va a 0 (ver utils/bookingPayload.ts y AddReservationFlow.tsx).
    * Por eso un Passenger con `reserveRelatedId != null && price == 0` no es
    * gratis: es la vuelta del paquete cuyo cobro vive en el outbound.
+   *
+   * También sirve para `Cancelar`: `reserveRelatedId != null` ⇒ es IdaVuelta ⇒
+   * cancelar arrastra las dos piernas → la UI avisa "se cancelan ambos tramos".
    */
   reserveRelatedId: number | null;
 }

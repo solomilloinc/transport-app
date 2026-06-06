@@ -28,6 +28,30 @@ Instancia de reserva de un Cliente en una Reserve concreta. **Es la unidad de co
 backend 0002). Tiene snapshot de precio (ver ADR backend 0001) y, si fue auto-creado a partir de
 una suscripción, un `frequentSubscriptionId` que lo liga a su origen para cascade de cancel.
 
+#### Dar de baja un Pasajero: `Cancelar` vs `Eliminar` (NO son sinónimos)
+Conviven **dos** operaciones de baja por fila, con audiencia y semántica distintas:
+
+- **Cancelar — `Cancelar` (`passenger-cancel`)**: la baja **canónica y auditable**. Pasa el
+  Passenger a estado **Cancelled** y revierte la deuda vía `CustomerAccountTransaction`
+  (→ **saldo a favor** si había pagado, deuda a cero si no). **No toca la caja** (la plata ya entró).
+  Si es IdaVuelta, **cancela las dos piernas** juntas. El operador **no elige** el destino de la plata:
+  el backend lo decide. Es la opción por defecto que el operador debería usar.
+- **Eliminar — `Eliminar` (`customer-reserve-delete`)**: baja **manual/destructiva** legacy donde el
+  operador **elige** el destino del dinero (`favor` / `debt` / borrar-sin-rastro). Existe sólo para los
+  casos que `Cancelar` no cubre: borrar el registro sin dejar rastro, o forzar `registrar como deuda`
+  en un impago. No marca estado Cancelled ni cascada IdaVuelta.
+
+> Regla de desambiguación para la UI: **`Cancelar` es la baja normal**; **`Eliminar` es el bisturí**.
+> El solapamiento peligroso es `Eliminar → favor` ≈ `Cancelar`. **Resuelto:** en la grilla `Cancelar`
+> va inline (acción visible, camino feliz) y `Eliminar` se relega al menú kebab `⋮` (acción avanzada/
+> destructiva, fuera del camino feliz). La jerarquía visual es la que enseña la diferencia.
+
+#### "Cancelar" es un término sobrecargado — siempre calificarlo
+Hay **tres** "Cancelar" en el dominio, a distinto nivel. Nunca decir "cancelar" a secas:
+- **Cancelar Pasajero** (`passenger-cancel`) — un Passenger (o el par IdaVuelta).
+- **Cancelar Viaje/Reserva** (`reserve-update` con `status=Cancelled`) — una Reserve entera del día.
+- **Cancelar Suscripción** (`FrequentSubscription`) — cascada de todos los Passengers futuros.
+
 ### Servicio — `Service`
 Slot semanal único por tenant identificado por `(TripId, DayOfWeek, DepartureHour)` (ver ADR backend
 0003). Tiene:

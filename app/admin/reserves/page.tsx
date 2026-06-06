@@ -25,11 +25,12 @@ import { getApiErrorMessage } from '@/lib/apiErrors';
 import { Direction } from '@/interfaces/direction';
 import { useApi } from '@/hooks/use-api';
 import { getPassengerReserves, getReserves, GetReservesParams } from '@/services/reserves';
-import { cancelReserveTripAction } from '@/app/admin/reserves/actions';
+import { cancelReserveTripAction, cancelPassengerAction } from '@/app/admin/reserves/actions';
 import { PaymentMethod } from '@/interfaces/payment';
 import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
 import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFlow';
+import { CancelPassengerDialog } from '@/components/admin/reserves/CancelPassengerDialog';
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { PagedResponse } from '@/services/types';
@@ -74,6 +75,11 @@ export default function ReservationsPage() {
   const [disabledPassengers, setDisabledPassengers] = useState<number[]>([]);
 
   const [isAddPaymentReserveModalOpen, setIsAddPaymentReserveModalOpen] = useState(false);
+
+  // Cancelar pasajero individual (acción por fila).
+  const [isCancelPassengerOpen, setIsCancelPassengerOpen] = useState(false);
+  const [passengerToCancel, setPassengerToCancel] = useState<PassengerReserveReport | null>(null);
+  const [isCancellingPassenger, setIsCancellingPassenger] = useState(false);
 
   const {
     loading: loadingReserves,
@@ -317,6 +323,35 @@ export default function ReservationsPage() {
     }
   };
 
+  const handleCancelPassengerClick = (passenger: PassengerReserveReport) => {
+    setPassengerToCancel(passenger);
+    setIsCancelPassengerOpen(true);
+  };
+
+  const handleConfirmCancelPassenger = async () => {
+    if (!passengerToCancel) return;
+
+    setIsCancellingPassenger(true);
+    try {
+      // Server Action que devuelve el error como valor (ver actions.ts): el
+      // code/copy del backend llega al usuario también en producción.
+      const result = await cancelPassengerAction(passengerToCancel.passengerId);
+
+      if (!result.ok) {
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
+      }
+
+      toast({ title: 'Pasajero cancelado', description: 'El pasajero fue dado de baja.', variant: 'success' });
+      setIsCancelPassengerOpen(false);
+      setPassengerToCancel(null);
+      // Refresca la grilla y el saldo del cliente (puede quedar a favor).
+      if (selectedTrip) fetchPassengerReserves(selectedTrip.reserveId);
+    } finally {
+      setIsCancellingPassenger(false);
+    }
+  };
+
   const handleAddPaymentPassengerReserve = (passengerReserve: PassengerReserveReport) => {
     if (passengerReserve) {
       setSelectedPassengerReserve(passengerReserve);
@@ -391,9 +426,11 @@ export default function ReservationsPage() {
                 onCheckPassenger={handlePassengerReserveCheck}
                 onEdit={handleEditPassengerReserve}
                 onDelete={handleDeletePassengerReserveClick}
+                onCancel={handleCancelPassengerClick}
                 onAddPayment={handleAddPaymentPassengerReserve}
                 getClientBalance={() => null} // Placeholder, implement if needed
                 disabledPassengers={disabledPassengers}
+                reserveHasDeparted={selectedTrip?.hasDeparted ?? false}
               />
             </div>
           </CardContent>
@@ -448,6 +485,15 @@ export default function ReservationsPage() {
       />
 
       <CancelTripDialog open={isCancelTripDialogOpen} onOpenChange={setIsCancelTripDialogOpen} trip={tripToCancel} onConfirm={handleConfirmCancelTrip} isConfirming={isCancellingTrip} />
+
+      <CancelPassengerDialog
+        open={isCancelPassengerOpen}
+        onOpenChange={setIsCancelPassengerOpen}
+        passenger={passengerToCancel}
+        onConfirm={handleConfirmCancelPassenger}
+        isConfirming={isCancellingPassenger}
+      />
+
 
       <PaymentSummaryDialog
         open={isPaymentSummaryOpen}

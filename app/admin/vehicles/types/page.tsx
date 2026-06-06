@@ -146,7 +146,7 @@ export default function VehicleManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'Name', width: '40%' },
+    { header: 'Nombre', accessor: 'name', width: '40%' },
     { header: 'Cantidad', accessor: 'quantity', width: '15%' },
     {
       header: 'Estado',
