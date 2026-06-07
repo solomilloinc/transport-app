@@ -153,9 +153,10 @@ export default function VehicleManagement() {
     loadAllOptions();
   };
 
-  const handleSetVehicleType = (value: string, quantity?: string) => {
-    addForm.setField('vehicleTypeId', Number(value));
-    addForm.setField('availableQuantity', Number(quantity));
+  const handleSetVehicleType = (form: typeof addForm, value: string, quantity?: string) => {
+    form.setField('vehicleTypeId', Number(value));
+    const parsedQuantity = Number(quantity);
+    form.setField('availableQuantity', Number.isFinite(parsedQuantity) ? parsedQuantity : 0);
   };
 
   const handleEditVehicle = (vehicle: Vehicle) => {
@@ -354,7 +355,7 @@ export default function VehicleManagement() {
         <FormField label="Tipo" required error={addForm.errors.vehicleTypeId}>
           <ApiSelect
             value={String(addForm.data.vehicleTypeId)}
-            onValueChange={(value) => handleSetVehicleType(value, vehicleTypes.find((type) => type.id === value)?.defaultQuantity)}
+            onValueChange={(value) => handleSetVehicleType(addForm, value, vehicleTypes.find((type) => type.id === value)?.defaultQuantity)}
             placeholder="Seleccionar tipo"
             options={vehicleTypes}
             loading={isOptionsLoading}
@@ -396,7 +397,7 @@ export default function VehicleManagement() {
           <ApiSelect
             value={String(editForm.data.vehicleTypeId)}
             onValueChange={(value) => {
-              handleSetVehicleType(value, vehicleTypes.find((type) => type.id === value)?.defaultQuantity);
+              handleSetVehicleType(editForm, value, vehicleTypes.find((type) => type.id === value)?.defaultQuantity);
             }}
             placeholder="Seleccionar tipo"
             options={vehicleTypes}
