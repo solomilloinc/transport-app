@@ -7,7 +7,16 @@ export const validationConfigVehicle = {
   internalNumber: {
     required: { message: 'El número interno es requerido' },
   },
+  // `required` no detecta NaN (puede llegar así si el autocompletado por tipo
+  // de vehículo no encuentra el `defaultQuantity`), por eso también validamos
+  // que sea un número finito mayor a 0.
   availableQuantity: {
     required: { message: 'La cantidad disponible es requerida' },
+    rules: [
+      {
+        validate: (v: number) => Number.isFinite(Number(v)) && Number(v) > 0,
+        message: 'La cantidad disponible debe ser un número mayor a 0',
+      },
+    ],
   },
 };
