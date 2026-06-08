@@ -135,7 +135,7 @@ export default function CitiesManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/vehicle-delete/${currentCityId}`);
+    const id = await deleteLogic(`/city-delete/${currentCityId}`);
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentCityId(null);

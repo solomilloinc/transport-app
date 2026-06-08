@@ -138,7 +138,7 @@ export default function VehicleManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/vehicle-delete/${currentVehicleTypeId}`);
+    const id = await deleteLogic(`/vehicle-type-delete/${currentVehicleTypeId}`);
     // In a real app, you would delete the vehicle from the database
     setIsDeleteModalOpen(false);
     setCurrentVehicleTypeId(null);
