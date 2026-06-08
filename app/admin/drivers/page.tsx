@@ -138,7 +138,7 @@ export default function DriversManagement() {
   };
 
   const confirmDelete = async () => {
-    await deleteLogic(`/vehicle-delete/${currentDriverId}`);
+    await deleteLogic(`/driver-delete/${currentDriverId}`);
     setIsDeleteModalOpen(false);
     setCurrentDriverId(null);
     refetch();
