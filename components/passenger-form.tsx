@@ -124,14 +124,22 @@ export function PassengerForm({ passengerCount, onDataChange, initialData = [] }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`phone-${index}`}>Teléfono</Label>
+                      <Label htmlFor={`phone-${index}`}>
+                        Teléfono {index === 0 ? "*" : ""}
+                      </Label>
                       <Input
                         id={`phone-${index}`}
                         type="tel"
                         value={passengers[index]?.phone || ""}
                         onChange={(e) => handleInputChange(index, "phone", e.target.value)}
                         placeholder="Enter phone number"
+                        required={index === 0}
                       />
+                      {index === 0 && (
+                        <p className="text-xs text-gray-500">
+                          Se usará como teléfono de contacto de la reserva.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor={`documentNumber-${index}`}>Número de Documento *</Label>

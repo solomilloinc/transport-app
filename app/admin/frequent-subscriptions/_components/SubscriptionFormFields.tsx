@@ -27,7 +27,11 @@ interface SubscriptionFormFieldsProps {
   services: ServiceListItem[];
   /** Lista global de Directions — se filtra por service.allowedDirectionIds. */
   directions: Direction[];
-  /** Lista de clientes (cacheada). */
+  /**
+   * Lista de clientes para el combo (cacheada). En 'create' viene server-filtered
+   * a Active (customer-report status=Active); en 'edit' es la lista completa
+   * porque el combo está disabled y sólo necesita resolver el nombre del cliente.
+   */
   customers: Passenger[];
 
   /** En 'edit' los campos inmutables quedan disabled con tooltip. */
@@ -106,19 +110,17 @@ export function SubscriptionFormFields({
 
   // ----- options builders -----
 
-  // Sólo Customers Active para el combo del form de alta/edición. El array crudo
-  // `customers` se mantiene unfiltered porque el FilterBar de la grilla
-  // (frequent-subscriptions/page.tsx) lo reusa con política opuesta —
-  // necesita ver Customers Inactive/Suspended para filtrar suscripciones viejas.
+  // El filtrado por estado se hace en el server (customer-report con
+  // status=Active), no acá: en 'create' page.tsx pasa la lista server-filtered a
+  // Active; en 'edit' pasa la lista completa para resolver el nombre del cliente
+  // aunque ya esté inactivo (el combo está disabled). Por eso acá no filtramos.
   const customerOptions: SelectOption[] = useMemo(
     () =>
-      customers
-        .filter((c) => c.status === 'Activo')
-        .map((c) => ({
-          id: c.customerId,
-          value: String(c.customerId),
-          label: `${c.firstName} ${c.lastName}`.trim(),
-        })),
+      customers.map((c) => ({
+        id: c.customerId,
+        value: String(c.customerId),
+        label: `${c.firstName} ${c.lastName}`.trim(),
+      })),
     [customers]
   );
 

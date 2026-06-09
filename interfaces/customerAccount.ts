@@ -35,6 +35,8 @@ export interface CustomerAccountSummary {
   customerId: number;
   customerFullName: string;
   currentBalance: number;
+  rangeTotalPagos: number;
+  rangeTotalCargos: number;
   transactions: PagedResponse<Transaction>;
 }
 
