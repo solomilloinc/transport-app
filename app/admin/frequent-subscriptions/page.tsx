@@ -97,7 +97,13 @@ export default function FrequentSubscriptionsPage() {
   // (tripDescription, dayOfWeek, departureHour, origin/destinationCityId, allowedDirectionIds).
   // Más liviano que service-report y purpose-built para este caso.
   const [services, setServices] = useState<ServiceListItem[]>([]);
+  // `customers` = lista completa (todos los estados) para el FilterBar de la grilla,
+  // que necesita ver Customers Inactive/Suspended para filtrar suscripciones viejas.
+  // `activeCustomers` = sólo Active, server-filtered vía customer-report (como en
+  // prices/EditTripDialog) para el combo del form de alta — evita ofrecer clientes
+  // inactivos al crear una suscripción.
   const [customers, setCustomers] = useState<Passenger[]>([]);
+  const [activeCustomers, setActiveCustomers] = useState<Passenger[]>([]);
   // Directions globales: se cruzan con service.allowedDirectionIds para
   // renderear los dropdowns de pickup/dropoff con sus nombres.
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -105,13 +111,18 @@ export default function FrequentSubscriptionsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [svcRes, custRes, dirRes] = await Promise.all([
+        const [svcRes, custRes, activeCustRes, dirRes] = await Promise.all([
           getServicesList(),
           getCustomerReport({ pageSize: CUSTOMERS_PAGE_SIZE }),
+          getCustomerReport({
+            pageSize: CUSTOMERS_PAGE_SIZE,
+            filters: { status: EntityStatus.Active },
+          }),
           getDirectionReport({ pageSize: DIRECTIONS_PAGE_SIZE }),
         ]);
         setServices(svcRes ?? []);
         setCustomers(custRes.items ?? []);
+        setActiveCustomers(activeCustRes.items ?? []);
         setDirections(dirRes.items ?? []);
       } catch (err) {
         toast({
@@ -614,7 +625,7 @@ export default function FrequentSubscriptionsPage() {
         <SubscriptionFormFields
           form={addForm}
           services={services}
-          customers={customers}
+          customers={activeCustomers}
           directions={directions}
           mode="create"
         />

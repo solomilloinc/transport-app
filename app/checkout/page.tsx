@@ -135,6 +135,11 @@ export default function CheckoutPage() {
       ? 0 // package: outbound concentra el total, return queda en 0
       : returnPrice;
 
+    // El backend exige `phone1` no vacío en cada Passenger. El form sólo pide
+    // teléfono obligatorio al primer pasajero (el "contacto" de la compra), así
+    // que ese número se replica como phone1 de todos. Ver isCurrentStepComplete.
+    const contactPhone = passengerData[0]?.phone ?? '';
+
     return passengerData.map((p) => ({
       customerId: null,
       isPayment: true,
@@ -142,7 +147,7 @@ export default function CheckoutPage() {
       firstName: p.firstName ?? '',
       lastName: p.lastName ?? '',
       email: p.email ?? null,
-      phone1: p.phone ?? '',
+      phone1: contactPhone,
       documentNumber: p.documentNumber ?? '',
       outbound: {
         pickupLocationId: outboundLocation.pickupDirectionId,
@@ -213,7 +218,10 @@ export default function CheckoutPage() {
     if (currentStep === 'passengers') {
       return (
         passengerData.length === checkout.passengers &&
-        passengerData.every((p) => p.firstName && p.lastName && p.documentNumber)
+        passengerData.every((p) => p.firstName && p.lastName && p.documentNumber) &&
+        // El primer pasajero es el contacto de la reserva: su teléfono se usa
+        // como phone1 de todos los pasajeros (lo exige el backend).
+        !!passengerData[0]?.phone
       );
     }
     return true;
@@ -314,6 +322,12 @@ export default function CheckoutPage() {
         );
       }
     } catch (err) {
+      // El payload se valida con Zod (buildPublicReservePayload) ANTES del POST;
+      // un ZodError aquí explica un "no llegó a la API". Logueamos el detalle
+      // porque el toast sólo muestra un mensaje genérico.
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[checkout] Pago con tarjeta falló:', err);
+      }
       toast({ title: 'Error', description: getApiErrorToastMessage(err), variant: 'destructive' });
       throw err;
     } finally {

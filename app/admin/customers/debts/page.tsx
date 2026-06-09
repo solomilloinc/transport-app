@@ -87,6 +87,8 @@ export default function DebtsPage() {
       customerId: val.customerId ?? 0,
       customerFullName: val.customerFullName ?? '',
       currentBalance: val.currentBalance ?? 0,
+      rangeTotalPagos: val.rangeTotalPagos ?? 0,
+      rangeTotalCargos: val.rangeTotalCargos ?? 0,
       transactions: {
         items: items.map((t: any) => ({
           id: t.id,
@@ -331,7 +333,7 @@ export default function DebtsPage() {
                   <ArrowUpRight className="h-5 w-5 text-green-500" />
                 </div>
                 <h3 className="text-3xl font-bold text-green-600">
-                  $ {summary?.transactions?.items?.filter((t: any) => t.transactionType === 'Payment').reduce((acc: number, t: any) => acc + Math.abs(t.amount), 0).toLocaleString() ?? 0}
+                  $ {summary?.rangeTotalPagos?.toLocaleString() ?? 0}
                 </h3>
               </CardContent>
             </Card>
@@ -343,7 +345,7 @@ export default function DebtsPage() {
                   <ArrowDownLeft className="h-5 w-5 text-red-500" />
                 </div>
                 <h3 className="text-3xl font-bold text-red-600">
-                  $ {summary?.transactions?.items?.filter((t: any) => t.transactionType === 'Charge').reduce((acc: number, t: any) => acc + t.amount, 0).toLocaleString() ?? 0}
+                  $ {summary?.rangeTotalCargos?.toLocaleString() ?? 0}
                 </h3>
               </CardContent>
             </Card>
