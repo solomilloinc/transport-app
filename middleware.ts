@@ -1,123 +1,128 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { getToken } from "next-auth/jwt"
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { AppRole, isAdminRole, normalizeRole } from "@/lib/auth-role";
 
-// Define los tipos de roles disponibles
-type Role = "admin" | "user" | "client"
-
-// Define la estructura para las configuraciones de ruta
 interface RouteConfig {
-  roles: Role[]
-  redirectTo?: string
+  roles: AppRole[];
+  redirectTo: string;
 }
 
-// Mapa de rutas con sus configuraciones de acceso
 const routeConfigs: Record<string, RouteConfig> = {
-  // Rutas de administrador - permitir acceso a /admin para redirección
-  "/admin/reserves": { roles: ["admin"], redirectTo: "/" },
-  "/admin/customers": { roles: ["admin"], redirectTo: "/" },
-  "/admin/vehicles": { roles: ["admin"], redirectTo: "/" },
-  "/admin/drivers": { roles: ["admin"], redirectTo: "/" },
-  "/admin/directions": { roles: ["admin"], redirectTo: "/" },
-  "/admin/cities": { roles: ["admin"], redirectTo: "/" },
-  "/admin/services": { roles: ["admin"], redirectTo: "/" },
-  "/admin/holidays": { roles: ["admin"], redirectTo: "/" },
-  "/admin/prices": { roles: ["admin"], redirectTo: "/" },
+  "/admin/reserves": { roles: ["admin", "superadmin", "user"], redirectTo: "/" },
+  "/admin/customers": { roles: ["admin", "superadmin", "user"], redirectTo: "/" },
+  "/admin/frequent-subscriptions": { roles: ["admin", "superadmin", "user"], redirectTo: "/" },
+  "/admin/services": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/drivers": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/cities": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/directions": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/vehicles": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/trips": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/prices": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/holidays": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/admin/users": { roles: ["admin", "superadmin"], redirectTo: "/" },
+  "/account/bookings": { roles: ["client"], redirectTo: "/" },
+  "/account/profile": { roles: ["client"], redirectTo: "/" },
+};
 
-  // Rutas de cliente
-  "/passengers/bookings": { roles: ["client"], redirectTo: "/" },
-  "/passengers/profile": { roles: ["client"], redirectTo: "/" },
+const publicRoutePrefixes = ["/api/auth", "/images", "/_next"];
+const publicRoutes = ["/", "/results", "/checkout", "/booking-confirmation", "/unauthorized"];
+const redirectRoutes = ["/admin", "/account"];
+const incompleteClientAllowedPrefixes = ["/api/auth", "/auth"];
+
+function isPublicPath(pathname: string): boolean {
+  return publicRoutes.includes(pathname) || publicRoutePrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
-// Rutas públicas que no requieren autenticación
-const publicRoutes = ["/", "/login", "/register", "/unauthorized", "/api/auth"]
+function getRole(token: Awaited<ReturnType<typeof getToken>>): AppRole | null {
+  const sessionToken = token as Record<string, unknown> | null;
+  const tokenUser =
+    sessionToken && typeof sessionToken.user === "object"
+      ? (sessionToken.user as Record<string, unknown>)
+      : null;
+  const rawRole =
+    tokenUser && typeof tokenUser.role === "string"
+      ? tokenUser.role
+      : typeof sessionToken?.role === "string"
+        ? sessionToken.role
+        : null;
 
-// Rutas especiales que requieren autenticación pero tienen lógica de redirección propia
-const redirectRoutes = ["/admin"]
+  return normalizeRole(rawRole);
+}
+
+function needsProfileCompletion(token: Awaited<ReturnType<typeof getToken>>): boolean {
+  const sessionToken = token as Record<string, unknown> | null;
+  const tokenUser =
+    sessionToken && typeof sessionToken.user === "object"
+      ? (sessionToken.user as Record<string, unknown>)
+      : null;
+
+  if (tokenUser && "needsProfileCompletion" in tokenUser) {
+    return Boolean(tokenUser.needsProfileCompletion);
+  }
+
+  return false;
+}
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname } = request.nextUrl;
 
-  // Verificar si la ruta es pública
-  if (publicRoutes.includes(pathname)) {
-    return NextResponse.next()
-  }
-
-  // Verificar si es una ruta de redirección que necesita autenticación básica
-  if (redirectRoutes.includes(pathname)) {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    })
-
-    // Si no hay token, redirigir al login
-    if (!token) {
-      const url = new URL("/", request.url)
-      return NextResponse.redirect(url)
-    }
-
-    // Si hay token, permitir que la página maneje la redirección
-    return NextResponse.next()
-  }
-
-  // Verificar si la ruta está en nuestras configuraciones
-  const matchingRoute = Object.keys(routeConfigs).find(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  )
-
-  if (!matchingRoute) {
-    // Si la ruta no está en nuestras configuraciones, permitir el acceso
-    return NextResponse.next()
-  }
-
-  // Obtener el token de sesión
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-  })
+  });
 
-  // Si no hay token, redirigir al login
-  if (!token) {
-    const url = new URL("/login", request.url)
-    url.searchParams.set("callbackUrl", encodeURI(request.url))
-    return NextResponse.redirect(url)
-  }
-  // Intentar obtener el rol de diferentes lugares del token
-  let userRole: Role | null = null;
+  const role = getRole(token);
+  const profileIncomplete = role === "client" && needsProfileCompletion(token);
 
-  // Primero intentar desde token.user.role (NextAuth estándar)
-  if (token.user && typeof token.user === 'object' && 'role' in token.user) {
-    userRole = (token.user.role as string).toLowerCase() as Role;
+  if (isPublicPath(pathname)) {
+    return NextResponse.next();
   }
 
-  // Si no está ahí, intentar desde el claim de Microsoft
-  if (!userRole && token.user && typeof token.user === 'object') {
-    const msRole = (token.user as Record<string, unknown>)["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-    if (msRole && typeof msRole === 'string') {
-      userRole = msRole.toLowerCase() as Role;
+  if (profileIncomplete && incompleteClientAllowedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  if (redirectRoutes.includes(pathname)) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/", request.url));
     }
+
+    if (role === "client") {
+      const target = profileIncomplete ? "/" : "/account/bookings";
+      return NextResponse.redirect(new URL(target, request.url));
+    }
+
+    if (role === "user" || isAdminRole(role)) {
+      return NextResponse.redirect(new URL("/admin/reserves", request.url));
+    }
+
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
-  console.log('User role:', userRole, 'Required roles:', routeConfigs[matchingRoute].roles);
+  const matchingRoute = Object.keys(routeConfigs).find(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
 
-  if (!userRole || !routeConfigs[matchingRoute].roles.includes(userRole)) {
-    // Si el usuario no tiene el rol adecuado, redirigir a la página no autorizada
-    const redirectTo = routeConfigs[matchingRoute].redirectTo || "/unauthorized"
-    return NextResponse.redirect(new URL(redirectTo, request.url))
+  if (!matchingRoute) {
+    return NextResponse.next();
   }
 
-  // Si todo está bien, permitir el acceso
-  return NextResponse.next()
+  if (!token) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  if (!role || !routeConfigs[matchingRoute].roles.includes(role)) {
+    return NextResponse.redirect(new URL(routeConfigs[matchingRoute].redirectTo, request.url));
+  }
+
+  if (role === "client" && profileIncomplete) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  return NextResponse.next();
 }
 
-// Configurar en qué rutas se ejecutará el middleware
 export const config = {
-  matcher: [
-    /*
-     * Coincide con todas las rutas excepto:
-     * 1. Archivos estáticos (_next/static, favicon.ico, etc.)
-     * 2. Rutas de API que no necesitan verificación de roles
-     */
-    "/((?!_next/static|_next/image|favicon.ico|images).*)",
-  ],
-}
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

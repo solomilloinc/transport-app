@@ -1,24 +1,22 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Lock, AlertCircle } from "lucide-react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { isAdminRole, normalizeRole } from "@/lib/auth-role";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -32,6 +30,25 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const redirectAfterLogin = async () => {
+    const session = await getSession();
+    const role = normalizeRole(session?.user?.role);
+
+    onClose();
+
+    if (role === "client") {
+      router.push(session?.user?.needsProfileCompletion ? "/account/profile" : "/account/bookings");
+      return;
+    }
+
+    if (role === "user" || isAdminRole(role)) {
+      router.push("/admin/reserves");
+      return;
+    }
+
+    router.refresh();
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -43,24 +60,16 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         email,
         password,
       });
+
       if (result?.error) {
         setError("Credenciales invalidas");
-        setIsLoading(false);
         return;
       }
 
-      // Success - get user session to check role
-      const session = await getSession();
-      onClose();
-      
-      // Redirect based on user role
-      if (session?.user?.role === 'admin') {
-        router.push('/admin/reserves');
-      } else {
-        router.refresh(); // Regular user stays on current page
-      }
-    } catch (error) {
+      await redirectAfterLogin();
+    } catch {
       setError("Ocurrió un error. Intentá nuevamente.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -73,22 +82,13 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       const result = await signIn("google", { redirect: false });
       if (result?.error) {
         setError("Error con login de Google");
-        setIsLoading(false);
         return;
       }
 
-      // Success - get user session to check role
-      const session = await getSession();
-      onClose();
-      
-      // Redirect based on user role
-      if (session?.user?.role === 'admin') {
-        router.push('/admin/reserves');
-      } else {
-        router.refresh(); // Regular user stays on current page
-      }
-    } catch (error) {
+      await redirectAfterLogin();
+    } catch {
       setError("Ocurrió un error con el inicio de sesión de Google. Intentá nuevamente.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -98,7 +98,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-blue-800">
-            Inicia Sesión en tu cuenta
+            Inicia Sesion en tu cuenta
           </DialogTitle>
           <DialogDescription>
             Accede a tus reservas, guarda tus datos de pago y disfruta de una
@@ -107,17 +107,17 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </DialogHeader>
 
         {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+          <div className="mb-4 flex items-start rounded-md bg-red-50 p-3 text-red-700">
+            <AlertCircle className="mr-2 mt-0.5 h-5 w-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleEmailLogin} className="space-y-4 mt-4">
+        <form onSubmit={handleEmailLogin} className="mt-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <Input
                 id="email"
                 type="email"
@@ -131,21 +131,21 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </div>
 
           <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="password">Contraseña</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Contrasena</Label>
               <Button
                 variant="link"
-                className="p-0 h-auto text-xs text-blue-600"
+                className="h-auto p-0 text-xs text-blue-600"
               >
-                Olvido la contraseña?
+                Olvido la contrasena?
               </Button>
             </div>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="********"
                 className="pl-10"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -159,14 +159,15 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             className="w-full bg-blue-600 hover:bg-blue-700"
             disabled={isLoading}
           >
-            {isLoading ? "Logging in..." : "Log in"}
+            {isLoading ? "Ingresando..." : "Ingresar"}
           </Button>
         </form>
-        <div className="space-y-4 mt-4">
+
+        <div className="mt-4 space-y-4">
           <Button
             type="button"
             variant="outline"
-            className="w-full flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2"
             onClick={handleGoogleLogin}
             disabled={isLoading}
           >
@@ -193,19 +194,11 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"
               />
             </svg>
-            Continue con Google
+            Continuar con Google
           </Button>
         </div>
-        <Separator className="my-4" />
 
-        {/* <DialogFooter className="flex flex-col sm:flex-row sm:justify-center gap-2">
-          <div className="text-sm text-center text-gray-600">
-            Don't have an account?{" "}
-            <Button variant="link" className="p-0 h-auto text-blue-600">
-              Sign up
-            </Button>
-          </div>
-        </DialogFooter> */}
+        <Separator className="my-4" />
       </DialogContent>
     </Dialog>
   );

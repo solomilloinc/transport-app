@@ -1,32 +1,21 @@
 "use client";
 
-import { SessionProvider, useSession, signOut } from "next-auth/react";
+import { SessionProvider } from "next-auth/react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { MandatoryProfileDialog } from "@/components/account/mandatory-profile-dialog";
+import { useSessionError } from "@/hooks/use-session-error";
 
-/**
- * Componente interno que detecta errores de sesión y redirige al login
- */
-function SessionErrorHandler({ children }: { children: ReactNode }) {
-  const { data: session } = useSession();
-
-  useEffect(() => {
-    // Si hay un error de refresh token, cerrar sesión y redirigir
-    if (session?.error === 'RefreshTokenError') {
-      console.warn('Sesión expirada - redirigiendo al login');
-      signOut({ callbackUrl: '/', redirect: true });
-    }
-  }, [session?.error]);
-
-  return <>{children}</>;
+function SessionGuards() {
+  useSessionError();
+  return null;
 }
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
-      <SessionErrorHandler>
-        {children}
-      </SessionErrorHandler>
+      <SessionGuards />
+      {children}
+      <MandatoryProfileDialog />
     </SessionProvider>
   );
 }

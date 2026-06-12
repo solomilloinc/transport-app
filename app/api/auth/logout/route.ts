@@ -1,46 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { nextAuthOptions } from '@/auth.config';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { getToken } from "next-auth/jwt";
+import { nextAuthOptions } from "@/auth.config";
 
 export async function POST(request: NextRequest) {
   try {
-    // Obtener la sesión para el accessToken (necesario para el header Authorization)
     const session = await getServerSession(nextAuthOptions);
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-    // Obtener las cookies del request (incluye refreshToken HttpOnly)
-    const cookieHeader = request.headers.get('cookie') || '';
-
-    // Llamar al backend para revocar el refresh token
+    const refreshToken = typeof token?.refreshToken === "string" ? token.refreshToken : null;
     const response = await fetch(`${process.env.BACKEND_URL}/logout`, {
-      method: 'POST',
-      credentials: 'include',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookieHeader,
-        ...(session?.accessToken && {
-          'Authorization': `Bearer ${session.accessToken}`
-        }),
+        "Content-Type": "application/json",
+        ...(refreshToken ? { Cookie: `refreshToken=${encodeURIComponent(refreshToken)}` } : {}),
+        ...(session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {}),
       },
     });
 
-    // Crear respuesta limpiando la cookie de refresh token
-    const nextResponse = NextResponse.json({
-      success: true,
-      message: 'Logout successful'
+    return NextResponse.json({
+      success: response.ok,
+      message: "Logout successful",
     });
-
-    // Propagar las cookies del backend (para limpiar el refreshToken)
-    const setCookieHeader = response.headers.get('set-cookie');
-    if (setCookieHeader) {
-      nextResponse.headers.set('set-cookie', setCookieHeader);
-    }
-
-    return nextResponse;
-  } catch (error) {
-    console.error('Error en logout:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

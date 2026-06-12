@@ -1,51 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { nextAuthOptions } from '@/auth.config';
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 export async function POST(request: NextRequest) {
   try {
-    // Obtener las cookies del request (incluye refreshToken HttpOnly)
-    const cookieHeader = request.headers.get('cookie') || '';
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-    // Llamar al backend para renovar el token
+    const refreshToken = typeof token?.refreshToken === "string" ? token.refreshToken : null;
+    if (!refreshToken) {
+      return NextResponse.json({ error: "Missing refresh token" }, { status: 401 });
+    }
+
     const response = await fetch(`${process.env.BACKEND_URL}/renew-token`, {
-      method: 'POST',
-      credentials: 'include',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookieHeader, // Pasar las cookies al backend
+        "Content-Type": "application/json",
+        Cookie: `refreshToken=${encodeURIComponent(refreshToken)}`,
       },
     });
 
     if (!response.ok) {
-      // Si el refresh token es inválido o fue reusado
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { error: errorData.message || 'Token refresh failed' },
+        { error: errorData.message || "Token refresh failed" },
         { status: response.status }
       );
     }
 
     const data = await response.json();
-
-    // Crear la respuesta con el nuevo accessToken
-    const nextResponse = NextResponse.json({
+    return NextResponse.json({
       token: data.token,
-      success: true
+      refreshToken: data.refreshToken,
+      success: true,
     });
-
-    // Propagar las cookies del backend (nuevo refreshToken) al cliente
-    const setCookieHeader = response.headers.get('set-cookie');
-    if (setCookieHeader) {
-      nextResponse.headers.set('set-cookie', setCookieHeader);
-    }
-
-    return nextResponse;
-  } catch (error) {
-    console.error('Error renovando token:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
