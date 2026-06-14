@@ -9,7 +9,8 @@ import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { formatWithTimezone } from '@/utils/dates';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { lockReserveSlots } from '@/services/locks';
@@ -28,11 +29,28 @@ import type { PassengerBookingExternal, ExternalPayment } from '@/interfaces/pas
 import { withPriceRetry } from '@/utils/api-errors';
 import { getApiErrorToastMessage } from '@/lib/apiErrors';
 import { toast } from '@/components/ui/use-toast';
+import { normalizeRole } from '@/lib/auth-role';
+
+interface CheckoutProfileResponse {
+  userId: number;
+  customerId?: number | null;
+  email: string;
+  role: string;
+  status: number;
+  needsProfileCompletion: boolean;
+  firstName?: string | null;
+  lastName?: string | null;
+  documentNumber?: string | null;
+  phone1?: string | null;
+  phone2?: string | null;
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { checkout, setLockState, isLockValid, clearCheckout } = useCheckout();
+  const { data: session } = useSession();
+  const { checkout, setLockState, isLockValid } = useCheckout();
   const { identity, legal, businessRules } = useTenant();
+  const hasAppliedSessionPrefill = useRef(false);
 
   useEffect(() => {
     if (!checkout.outboundTrip) {
@@ -68,6 +86,63 @@ export default function CheckoutPage() {
   });
 
   const isRoundTrip = !!checkout.returnTrip;
+  const sessionRole = normalizeRole(session?.user?.role);
+  const isCompleteClient =
+    sessionRole === 'client' &&
+    !!session?.user?.customerId &&
+    !session?.user?.needsProfileCompletion;
+
+  useEffect(() => {
+    if (!isCompleteClient || hasAppliedSessionPrefill.current) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const preloadProfile = async () => {
+      try {
+        const response = await fetch('/api/account/profile', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const profile = (await response.json()) as CheckoutProfileResponse;
+        if (!isMounted || profile.needsProfileCompletion) {
+          return;
+        }
+
+        hasAppliedSessionPrefill.current = true;
+        setPassengerData((current) => {
+          const next = [...current];
+          const firstPassenger = next[0] ?? {};
+
+          next[0] = {
+            ...firstPassenger,
+            firstName: firstPassenger.firstName || profile.firstName || '',
+            lastName: firstPassenger.lastName || profile.lastName || '',
+            email: firstPassenger.email || profile.email || '',
+            phone: firstPassenger.phone || profile.phone1 || '',
+            documentNumber: firstPassenger.documentNumber || profile.documentNumber || '',
+          };
+
+          return next;
+        });
+      } catch {
+        // El checkout sigue funcionando aunque no se pueda precargar el perfil.
+      }
+    };
+
+    void preloadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isCompleteClient]);
 
   // True when the booking qualifies for the round-trip discount under the
   // tenant's same-day rule. Drives which dropoff price table to show + send.

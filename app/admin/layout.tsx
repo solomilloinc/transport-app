@@ -48,6 +48,7 @@ import { signOut, useSession } from 'next-auth/react';
 import { logoutFromBackend } from '@/services/auth-client';
 import { useTenant } from '@/contexts/TenantContext';
 import Image from 'next/image';
+import { normalizeRole } from '@/lib/auth-role';
 
 // Tipo para items del menú
 interface MenuItemType {
@@ -106,7 +107,7 @@ const MENU_CONFIG: {
     {
       name: 'Usuarios',
       icon: Settings,
-      path: '/usuarios',
+      path: '/admin/users',
       roles: ['admin'],
     },
     {
@@ -150,20 +151,7 @@ const MENU_CONFIG: {
       roles: ['admin'],
     },
   ],
-  customer: [
-    {
-      name: 'Mis Datos',
-      icon: UserCheck,
-      path: '/passengers/profile',
-      roles: ['cliente'],
-    },
-    {
-      name: 'Mis Reservas',
-      icon: Calendar,
-      path: '/passengers/bookings',
-      roles: ['cliente'],
-    },
-  ],
+  customer: [],
 };
 
 // Componente para renderizar items del menú
@@ -254,9 +242,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { data: session } = useSession();
   const { identity } = useTenant();
   
-  const userRole = (session?.user as any)?.[
-    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
-  ]?.toLowerCase();
+  const userRole = normalizeRole(session?.user?.role) ?? 'user';
 
   const userName = session?.user?.name || 'Usuario';
   const userEmail = session?.user?.email || '';
@@ -281,8 +267,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       await logoutFromBackend();
       // Luego cerrar la sesión de NextAuth
       await signOut({ callbackUrl: '/', redirect: true });
-    } catch (error) {
-      console.error('Error durante logout:', error);
+    } catch {
       // Aún así intentar cerrar la sesión local
       await signOut({ callbackUrl: '/', redirect: true });
     } finally {
@@ -306,7 +291,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     [userRole]
   );
 
-  const isCustomerView = userRole === 'cliente';
+  const isCustomerView = false;
 
   return (
     <SidebarProvider>

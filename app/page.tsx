@@ -48,8 +48,7 @@ async function loadTrips(): Promise<TripSelectOption[]> {
         stopSchedules: trip.stopSchedules,
       }));
     }
-  } catch (error) {
-    console.error('Failed to load trips for landing page:', error);
+  } catch {
     return [];
   }
   return [];

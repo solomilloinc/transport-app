@@ -17,6 +17,8 @@ interface FormDialogProps {
   isLoading?: boolean;
   disabled?: boolean;
   className?: string;
+  showCloseButton?: boolean;
+  preventClose?: boolean;
 }
 
 export function FormDialog({
@@ -30,10 +32,17 @@ export function FormDialog({
   isLoading = false,
   disabled = false,
   className,
+  showCloseButton = true,
+  preventClose = false,
 }: FormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn('max-h-[90vh] overflow-y-auto w-[95%] sm:w-[90%] md:w-[75%] lg:w-[50%] max-w-none', className)}>
+      <DialogContent
+        showCloseButton={showCloseButton}
+        onEscapeKeyDown={preventClose ? (event) => event.preventDefault() : undefined}
+        onInteractOutside={preventClose ? (event) => event.preventDefault() : undefined}
+        className={cn('max-h-[90vh] overflow-y-auto w-[95%] sm:w-[90%] md:w-[75%] lg:w-[50%] max-w-none', className)}
+      >
         <DialogHeader>
           <DialogTitle className="text-blue-500">{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

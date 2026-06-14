@@ -6,6 +6,7 @@ import { LoginModal } from '@/components/login-modal';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { logoutFromBackend } from '@/services/auth-client';
+import { isAdminRole, normalizeRole } from '@/lib/auth-role';
 
 export default function LoginButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,18 +17,21 @@ export default function LoginButton() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Primero revocar el refresh token en el backend
       await logoutFromBackend();
-      // Luego cerrar la sesión de NextAuth
       await signOut({ callbackUrl: '/', redirect: true });
-    } catch (error) {
-      console.error('Error durante logout:', error);
-      // Aún así intentar cerrar la sesión local
+    } catch {
       await signOut({ callbackUrl: '/', redirect: true });
     } finally {
       setIsLoggingOut(false);
     }
   };
+
+  const role = normalizeRole(session?.user?.role);
+  const accountPath = role === 'client'
+    ? (session?.user?.needsProfileCompletion ? '/account/profile' : '/account/bookings')
+    : isAdminRole(role) || role === 'user'
+      ? '/admin/reserves'
+      : '/';
 
   if (session) {
     return (
@@ -35,7 +39,7 @@ export default function LoginButton() {
         <Button
           variant="outline"
           className="border-blue-600 text-blue-600 hover:bg-blue-50"
-          onClick={() => router.push('/admin/services')}
+          onClick={() => router.push(accountPath)}
         >
           Mi cuenta
         </Button>

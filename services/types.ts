@@ -43,6 +43,8 @@ declare module 'next-auth' {
       email: string;
       role: string;
       name?: string;
+      customerId?: number | null;
+      needsProfileCompletion?: boolean;
     };
   }
 }
@@ -50,6 +52,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     accessToken?: string;
+    refreshToken?: string;
     accessTokenExpires?: number;
     error?: string;
     user?: {
@@ -57,6 +60,8 @@ declare module 'next-auth/jwt' {
       email: string;
       role: string;
       name?: string;
+      customerId?: number | null;
+      needsProfileCompletion?: boolean;
     };
   }
 }
