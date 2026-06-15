@@ -1,4 +1,4 @@
-import { TripPrice, CityDirectionsDto } from './trip';
+import { TripPrice, CityDirectionsDto, PickupOption, DropoffCityOption } from './trip';
 import { Auditable } from './auditable';
 import { PassengerReserve } from './passengerReserve';
 import { PagedResponse } from '@/services/types';
@@ -34,6 +34,9 @@ export interface ReserveReport {
   reservedQuantity: number;
   prices: TripPrice[];
   relevantCities: CityDirectionsDto[];
+  pickupOptions?: PickupOption[];
+  dropoffOptionsIda?: DropoffCityOption[];
+  dropoffOptionsIdaVuelta?: DropoffCityOption[];
   status: number;
   /**
    * La Reserve ya partió (`reserveDate + departureHour < ahora`, corte en UTC).

@@ -53,12 +53,17 @@ export type PassengerActionResult =
   | { ok: true }
   | { ok: false; code: string; message: string };
 
-/** Cancela un Pasajero individual (passenger-cancel). Sin body. */
+export interface CancelPassengerRequest {
+  createCreditBalance: boolean;
+}
+
+/** Cancela un Pasajero individual (passenger-cancel). */
 export async function cancelPassengerAction(
   passengerId: number,
+  request: CancelPassengerRequest,
 ): Promise<PassengerActionResult> {
   try {
-    const ok = await post(`/passenger-cancel/${passengerId}`);
+    const ok = await post(`/passenger-cancel/${passengerId}`, request);
     if (!ok) return { ok: false, code: '', message: FALLBACK_MESSAGE };
     return { ok: true };
   } catch (error) {

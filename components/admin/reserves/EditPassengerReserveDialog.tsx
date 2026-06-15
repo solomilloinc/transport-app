@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { put } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
-import { ApiSelect, SelectOption } from '@/components/dashboard/select';
+import { ApiSelect } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
-import { CityDirectionsDto } from '@/interfaces/trip';
+import { CityDirectionsDto, DropoffCityOption, PickupOption } from '@/interfaces/trip';
 import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
 interface EditPassengerReserveDialogProps {
@@ -17,7 +17,8 @@ interface EditPassengerReserveDialogProps {
   onOpenChange: (open: boolean) => void;
   passengerReserve: PassengerReserveReport | null;
   onSuccess: () => void;
-  directions: SelectOption[];
+  pickupOptions: PickupOption[];
+  dropoffOptions: DropoffCityOption[];
   relevantCities: CityDirectionsDto[];
   isLoadingDirections: boolean;
 }
@@ -32,64 +33,84 @@ export function EditPassengerReserveDialog({
   onOpenChange,
   passengerReserve,
   onSuccess,
-  directions,
-  relevantCities,
+  pickupOptions,
+  dropoffOptions,
   isLoadingDirections,
 }: EditPassengerReserveDialogProps) {
   const { toast } = useToast();
   const form = useFormValidation(emptyEditForm, reserveValidationSchema);
-
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
 
-  const availableCities = useMemo(() => {
-    return (relevantCities || []).map((c) => ({
-      id: c.cityId.toString(),
-      label: c.name,
-      value: c.cityId.toString(),
-    }));
-  }, [relevantCities]);
+  const availablePickupOptions = useMemo(
+    () =>
+      (pickupOptions || [])
+        .filter((option) => option && option.directionId != null)
+        .map((option) => ({
+          id: option.directionId.toString(),
+          label: option.displayName || 'Sin nombre',
+          value: option.directionId.toString(),
+        })),
+    [pickupOptions],
+  );
+
+  const availableCities = useMemo(
+    () =>
+      (dropoffOptions || [])
+        .filter((city) => city && city.cityId != null)
+        .map((city) => ({
+          id: city.cityId.toString(),
+          label: city.cityName,
+          value: city.cityId.toString(),
+        })),
+    [dropoffOptions],
+  );
 
   const availableDirections = useMemo(() => {
     if (!selectedCityId) return [];
-    const city = relevantCities?.find((c) => c.cityId === selectedCityId);
-    return (city?.directions || []).map((d) => ({
-      id: d.directionId.toString(),
-      label: d.name,
-      value: d.directionId.toString(),
+
+    const city = dropoffOptions?.find((item) => item.cityId === selectedCityId);
+    return (city?.directions || []).map((direction) => ({
+      id: direction.directionId.toString(),
+      label: direction.displayName || 'Sin nombre',
+      value: direction.directionId.toString(),
     }));
-  }, [selectedCityId, relevantCities]);
+  }, [selectedCityId, dropoffOptions]);
 
   useEffect(() => {
-    if (passengerReserve) {
-      form.setField('pickupLocationId', passengerReserve.pickupLocationId);
-      form.setField('dropoffLocationId', passengerReserve.dropoffLocationId);
+    if (!passengerReserve) return;
 
-      if (passengerReserve.dropoffLocationId) {
-        const city = relevantCities.find((c) =>
-          c.directions.some((d) => d.directionId === passengerReserve.dropoffLocationId),
-        );
-        if (city) {
-          setSelectedCityId(city.cityId);
-        }
-      }
-    }
-  }, [passengerReserve, relevantCities]);
+    form.setField('pickupLocationId', passengerReserve.pickupLocationId);
+    form.setField('dropoffLocationId', passengerReserve.dropoffLocationId);
+
+    const selectedCity = dropoffOptions.find((city) =>
+      (city.directions || []).some(
+        (direction) => direction.directionId === passengerReserve.dropoffLocationId,
+      ),
+    );
+
+    setSelectedCityId(selectedCity?.cityId ?? null);
+  }, [passengerReserve, dropoffOptions]);
 
   const handleSubmit = () => {
     form.handleSubmit(async (data) => {
       if (!passengerReserve) return;
+
       try {
         const updatePayload: PassengerReserveUpdate = {
           pickupLocationId: data.pickupLocationId,
           dropoffLocationId: data.dropoffLocationId,
           hasTraveled: passengerReserve.hasTraveled,
         };
-        const response = await put(`/passenger-reserve-update/${passengerReserve.passengerId}`, updatePayload);
+
+        const response = await put(
+          `/passenger-reserve-update/${passengerReserve.passengerId}`,
+          updatePayload,
+        );
 
         if (response) {
           toast({
             title: 'Reserva actualizada',
-            description: 'La reserva ha sido actualizada exitosamente',
+            description: 'La reserva se actualizó correctamente.',
             variant: 'success',
           });
           onSuccess();
@@ -110,48 +131,50 @@ export function EditPassengerReserveDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Editar Reserva"
+      title="Editar reserva"
       description={`Edita los detalles de la reserva de ${passengerReserve?.fullName}`}
       onSubmit={handleSubmit}
-      submitText="Guardar Cambios"
+      submitText="Guardar cambios"
       isLoading={form.isSubmitting}
     >
       <FormField label="Dirección de subida" required error={form.errors.pickupLocationId}>
         <ApiSelect
-          value={String(form.data.pickupLocationId)}
+          value={String(form.data.pickupLocationId || '')}
           onValueChange={(value) => form.setField('pickupLocationId', Number(value))}
           placeholder="Seleccionar dirección de subida"
-          options={directions}
+          options={availablePickupOptions}
           loading={isLoadingDirections}
           error={null}
           loadingMessage="Cargando direcciones..."
           errorMessage="Error al cargar las direcciones"
-          emptyMessage="No hay direcciones disponibles"
+          emptyMessage="No hay direcciones válidas para esta ruta"
         />
       </FormField>
-      <FormField label="Destino (Ciudad)" required>
+
+      <FormField label="Destino (ciudad)" required>
         <ApiSelect
           value={selectedCityId ? String(selectedCityId) : ''}
-          onValueChange={(v) => {
-            const cityId = Number(v);
+          onValueChange={(value) => {
+            const cityId = Number(value);
             setSelectedCityId(cityId);
             form.setField('dropoffLocationId', 0);
           }}
-          placeholder="Seleccionar Ciudad..."
+          placeholder="Seleccionar ciudad..."
           options={availableCities}
           loading={isLoadingDirections}
           error={null}
+          emptyMessage="No hay ciudades válidas para esta ruta"
         />
       </FormField>
 
       {availableDirections.length > 0 && (
-        <FormField label="Parada (Opcional)" required={false}>
+        <FormField label="Parada (opcional)">
           <ApiSelect
             value={form.data.dropoffLocationId ? String(form.data.dropoffLocationId) : ''}
-            onValueChange={(v) => {
-              form.setField('dropoffLocationId', Number(v));
-            }}
-            placeholder="Seleccionar Parada..."
+            onValueChange={(value) =>
+              form.setField('dropoffLocationId', value ? Number(value) : 0)
+            }
+            placeholder="No seleccionar parada específica"
             options={availableDirections}
           />
         </FormField>
