@@ -10,6 +10,8 @@ interface RouteConfig {
 
 const routeConfigs: Record<string, RouteConfig> = {
   "/admin/reserves": { roles: ["admin", "superadmin", "user"], redirectTo: "/" },
+  "/admin/reporting": { roles: ["admin", "superadmin"], redirectTo: "/admin/reserves" },
+  "/api/reporting": { roles: ["admin", "superadmin"], redirectTo: "/" },
   "/admin/customers": { roles: ["admin", "superadmin", "user"], redirectTo: "/" },
   "/admin/frequent-subscriptions": { roles: ["admin", "superadmin", "user"], redirectTo: "/" },
   "/admin/services": { roles: ["admin", "superadmin"], redirectTo: "/" },

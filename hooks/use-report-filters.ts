@@ -63,6 +63,8 @@ export interface UseReportFiltersResult<TFilter, TItem> {
   setSortBy: (s: string | undefined) => void;
   sortDescending: boolean;
   setSortDescending: (b: boolean) => void;
+  /** Setea orden + dirección y resetea a página 1 en UNA sola escritura de URL. */
+  setSort: (sortBy: string | undefined, sortDescending: boolean) => void;
 
   // Data
   data: PagedResponse<TItem>;
@@ -223,6 +225,18 @@ export function useReportFilters<TFilter extends object, TItem>(
     [writeUrl]
   );
 
+  const setSort = useCallback(
+    (by: string | undefined, descending: boolean) => {
+      writeUrl((sp) => {
+        if (!by) sp.delete(SORT_BY_KEY);
+        else sp.set(SORT_BY_KEY, by);
+        sp.set(SORT_DESC_KEY, String(descending));
+        sp.delete(PAGE_KEY); // reset a página 1
+      });
+    },
+    [writeUrl]
+  );
+
   // ----- Apply / Reset -----
   const apply = useCallback(() => {
     // Partición draft → url-safe vs PII
@@ -334,6 +348,7 @@ export function useReportFilters<TFilter extends object, TItem>(
     setSortBy,
     sortDescending,
     setSortDescending,
+    setSort,
     data,
     loading,
     error,
