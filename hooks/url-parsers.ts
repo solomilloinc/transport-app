@@ -102,6 +102,27 @@ export function enumParser<T extends string | number>(allowed: readonly T[]): Ur
   };
 }
 
+// ----- Number array (CSV en URL) -----
+
+/**
+ * Array de números serializado como CSV (`1,2,3`). Vacío/undefined ⇒ se omite
+ * (null), de modo que el backend aplique su default. Usado para `statuses` de la
+ * Reportería: "omitir = default del backend".
+ */
+export const numberArrayParser: UrlParser<number[]> = {
+  parse: (raw) => {
+    if (raw == null || raw === '') return undefined;
+    const nums = raw
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n));
+    return nums.length ? nums : undefined;
+  },
+  serialize: (value) =>
+    Array.isArray(value) && value.length ? value.join(',') : null,
+  urlSafe: true,
+};
+
 // ----- Helpers -----
 
 /** Elimina claves con valores vacíos (undefined, null, ""). */

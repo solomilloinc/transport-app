@@ -3,6 +3,7 @@
 import type React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  BarChart3,
   Building,
   Bus,
   Calendar,
@@ -72,6 +73,12 @@ const MENU_CONFIG: {
       icon: Calendar,
       path: '/admin/reserves',
       roles: ['admin', 'user'],
+    },
+    {
+      name: 'Reportería',
+      icon: BarChart3,
+      path: '/admin/reporting',
+      roles: ['admin'],
     },
     {
       name: 'Clientes',

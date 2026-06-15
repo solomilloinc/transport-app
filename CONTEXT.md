@@ -73,6 +73,13 @@ Identificada por `reserveId`, referencia su Ruta (`tripId`) y su salida (`reserv
 > Select de filtro de arriba es por **Ruta** (`Trip`), no por Reserve. Una Ruta puede tener varias
 > Reserves en el día, así que filtrar por Ruta puede dejar varias filas.
 
+> **Estado y disponibilidad** (`ReserveStatus`): las Reserves futuras las crea el batch como
+> **`Confirmed` con 0 pasajeros** (`reservedCount: 0`, `availableCount: capacity`) — **eso** es la
+> disponibilidad. El estado `Available` (0) es **legacy**: hoy no lo crea nada. Por eso un rango
+> futuro en la [[#reportería--análisis-sobre-un-rango]] **no** viene vacío por el filtro de estado;
+> si viene vacío es porque el batch todavía no generó esas fechas. Para "dónde hay lugar" se usa el
+> filtro `onlyWithAvailability`, **no** el estado `Available`.
+
 ### Partida / "ya salió" — `hasDeparted`
 Una Reserve está **partida** cuando su datetime de salida ya pasó: `reserveDate + departureHour <
 ahora` (el corte usa **UTC**). Definición única compartida por los dos reportes: pinta de amarillo
@@ -109,6 +116,54 @@ suscripciones activas que `capacity` en un mismo Servicio. Errores relacionados:
 |----|---------------|------------------------------------------------------|
 | 1  | Ida           | Un único viaje. Solo Servicio + pickup/dropoff Ida.  |
 | 2  | IdaVuelta     | Ida + Vuelta. Requiere los 4 fields de pickup/dropoff. |
+
+---
+
+## Reportes — familias y desambiguación
+
+"Reporte" está **sobrecargado**: conviven varios, a distinto propósito. Nunca decir "el reporte" a
+secas.
+
+### Reportería — análisis sobre un rango
+Familia **nueva** de reportes **analíticos** sobre un **rango** de fechas (máx **92 días**), con
+filtros ricos, paginación, agregaciones para gráficos y export a Excel. Auth `Admin` (expone
+ingresos y deuda). Vive en código bajo el namespace `reporting/*` (espejo de las rutas del backend).
+Tiene **dos familias**, cada una con grilla + summary + export:
+
+- **Por pasajero** (ventas / manifiesto): la fila es un [[#pasajero--passenger]].
+- **Por reserva** (ocupación): la fila es una [[#reserva-del-día--reserve]].
+
+Se elige la **dimensión de fecha** sobre la que corre el reporte:
+- **por viaje** (`dateField: travel`) — cuándo **opera** la reserva.
+- **por venta** (`dateField: sale`) — cuándo se **cargó** al sistema.
+
+> ⚠️ No confundir con los reportes que ya existían (no reusar sus nombres):
+> - **Reporte del día / operativo** (`reserve-report/{date}`): una sola fecha, operativo. La
+>   [[#reserva-del-día--reserve]] es su fila. Filtros viejos: `ReserveReportFilters`.
+> - **Búsqueda de disponibilidad** para alta de reservas (filtros `tripId`/`passengers`/fecha).
+> - **Reporte por pasajero-reserva** (`passenger-reserve-report/{id}`): detalle de un Pasajero.
+>   Filtros viejos: `PassengerReserveReportFilters`.
+
+### Vendido vs Cobrado (ingresos de Reportería)
+Dos métricas distintas que **no** hay que mezclar (en el wire, en inglés):
+- **Vendido — `soldAmount`** — suma de precios de [[#pasajero--passenger]] (lo **facturado**).
+- **Cobrado — `collectedAmount`** — suma de pagos aprobados (la **caja real**).
+- **Deuda — `debt`** = `soldAmount − collectedAmount` (la brecha del set filtrado).
+
+Es **otra cosa** que el `currentBalance`/`overdueBalance` de [[#cliente--customer]], que son saldos
+**por Cliente**; acá son **totales del set filtrado** del reporte.
+
+**Netos de cancelaciones:** los ingresos (`soldAmount`, `collectedAmount`, `debt`, y el `soldAmount`
+de cada bucket) cuentan **solo [[#pasajero--passenger]] activos**, aunque el filtro incluya
+`Cancelled`. Los cancelados igual aparecen en la grilla y en `byStatus` (conteo); el reporte por
+pasajero los expone aparte en `totals.cancelled` (conteo) y `totals.cancelledAmount` (monto dado de
+baja, que **no** suma en `soldAmount`). El reporte por reserva ya era neto por diseño. El default de
+estados **sigue incluyendo `Cancelled`** a propósito: la baja se ve, pero ya no infla las ventas.
+
+> **Idioma del contrato:** los **nombres de campo** (grilla y summary) van en **inglés** —
+> `totals`, `byStatus`, `byRoute`, `byDay`, `soldAmount`… Solo quedan en **español** los **valores
+> de `label`** ("Confirmado", "Efectivo") y los headers del Excel (texto de display). El tipo TS es
+> espejo exacto del wire; se traduce únicamente al renderizar.
 
 ---
 
