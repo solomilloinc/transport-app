@@ -1,15 +1,9 @@
 'use client';
 
-import { ArrowUpDown, Ban, ChevronDown, ChevronUp, DollarSign, Edit2, MoreVertical, TrashIcon, UserCheck, UserX } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronUp, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { PassengerReserveReport, PaymentStatusEnum, PaymentStatusLabels } from '@/interfaces/passengerReserve';
 
 export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
@@ -242,29 +236,8 @@ export function PassengerListTable({
                           disabled={!canCancel}
                           title={cancelTitle}
                         >
-                          <Ban className="h-4 w-4" />
+                          <TrashIcon className="h-4 w-4" />
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                              title="Más acciones"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-700 focus:bg-red-50"
-                              onClick={() => onDelete(passenger)}
-                            >
-                              <TrashIcon className="h-4 w-4 mr-2" />
-                              Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </>
                     );
                   })()}

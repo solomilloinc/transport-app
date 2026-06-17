@@ -96,6 +96,7 @@ export default function ReservationsPage() {
     data: dataPassengerReserves,
     error: errorPassengerReserve,
     fetch: fetchPassengerReserves,
+    reset: resetPassengerReserves,
   } = useApi<PassengerReserveReport, number>(getPassengerReserves, {
     autoFetch: false,
   });
@@ -122,12 +123,18 @@ export default function ReservationsPage() {
     [sortedPassengers],
   );
 
+  const currentReservedQuantity = selectedTrip
+    ? Math.max(selectedTrip.reservedQuantity, visiblePassengers.length)
+    : 0;
+
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
     // Al cambiar el día, las Rutas disponibles cambian: reseteamos el filtro.
     setSelectedRuta(null);
-    if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: null });
     setSelectedTrip(null);
+    setSelectedPassengerReserve(null);
+    resetPassengerReserves();
+    if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: null });
   }, [selectedDate]);
 
   // Filtro server-side por Ruta: re-fetch con `filters.tripId`. `availableTrips`
@@ -162,19 +169,34 @@ export default function ReservationsPage() {
   };
 
   useEffect(() => {
-    if (!selectedTrip) return;
+    if (!selectedTrip?.tripId) return;
 
-    // Fetch full trip detail (RelevantCities, Prices) only the first time —
-    // after the merge, selectedTrip.relevantCities is populated, so this branch
-    // doesn't run again and we don't loop.
-    if (selectedTrip.tripId && !selectedTrip.relevantCities) {
+    const needsTripDetails =
+      !selectedTrip.relevantCities ||
+      selectedTrip.relevantCities.length === 0 ||
+      !selectedTrip.pickupOptions ||
+      !selectedTrip.dropoffOptionsIda;
+
+    if (needsTripDetails) {
       fetchFullTripDetails(Number(selectedTrip.tripId));
+    }
+  }, [
+    selectedTrip?.tripId,
+    selectedTrip?.relevantCities,
+    selectedTrip?.pickupOptions,
+    selectedTrip?.dropoffOptionsIda,
+  ]);
+
+  useEffect(() => {
+    if (!selectedTrip?.reserveId) {
+      resetPassengerReserves();
+      return;
     }
 
     fetchPassengerReserves(selectedTrip.reserveId);
     loadAllOptions();
     loadPaymentMethod();
-  }, [selectedTrip]);
+  }, [selectedTrip?.reserveId]);
 
   useEffect(() => {
     if (!selectedTrip) return;
@@ -424,7 +446,7 @@ export default function ReservationsPage() {
   };
 
   const isSelectedTripFull = selectedTrip
-    ? selectedTrip.reservedQuantity >= selectedTrip.availableQuantity
+    ? currentReservedQuantity >= selectedTrip.availableQuantity
     : false;
 
   const isAddPassengerDisabled =
@@ -488,11 +510,12 @@ export default function ReservationsPage() {
             <div className="space-y-4">
               <div className="flex items-center text-xl font-semibold text-blue-500">
                 <UserPlusIcon className="mr-2 h-5 w-5" />
-                {selectedDate
-                  ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
-                  format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
-                  : ''}{' '}
-                - {selectedTrip?.originName} → {selectedTrip?.destinationName}, {selectedTrip?.departureHour}
+                {selectedTrip
+                  ? `${selectedDate
+                    ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
+                      format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
+                    : ''} - ${selectedTrip.originName} → ${selectedTrip.destinationName}, ${selectedTrip.departureHour}`
+                  : 'Seleccioná un viaje para ver sus pasajeros'}
               </div>
 
               <PassengerListTable
@@ -519,8 +542,22 @@ export default function ReservationsPage() {
         open={isAddReservationFlowOpen}
         onOpenChange={setIsAddReservationFlowOpen}
         onSuccess={() => {
+          setSelectedTrip((current) =>
+            current
+              ? {
+                  ...current,
+                  reservedQuantity: Math.min(
+                    current.availableQuantity,
+                    current.reservedQuantity + 1,
+                  ),
+                }
+              : current,
+          );
           if (selectedTrip) {
             fetchPassengerReserves(selectedTrip.reserveId);
+          }
+          if (selectedDate) {
+            fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
           }
         }}
         initialTrip={selectedTrip}

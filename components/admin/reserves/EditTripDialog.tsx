@@ -46,6 +46,7 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
           id: vehicle.vehicleId,
           value: vehicle.vehicleId.toString(),
           label: `${vehicle.vehicleTypeName} (${vehicle.internalNumber})`,
+          availableQuantity: vehicle.availableQuantity,
         }));
         setVehicles(formattedVehicles);
       }
@@ -74,11 +75,25 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
     form.handleSubmit(async (data) => {
       if (!trip) return;
       try {
+        const selectedVehicle = vehicles.find((vehicle) => Number(vehicle.value) === data.vehicleId);
+        const selectedVehicleCapacity = Number(selectedVehicle?.availableQuantity ?? 0);
+
+        if (selectedVehicle && selectedVehicleCapacity < trip.reservedQuantity) {
+          form.setError(
+            'vehicleId',
+            `El vehículo seleccionado tiene ${selectedVehicleCapacity} asientos y el viaje ya tiene ${trip.reservedQuantity} pasajero(s).`,
+          );
+          toast({
+            title: 'Capacidad insuficiente',
+            description: 'No podés asignar un vehículo con menos capacidad que los pasajeros ya reservados.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         const updatePayload: ReserveUpdate = {
           vehicleId: data.vehicleId,
-          driverId: trip.driverId,
-          reserveDate: trip.reserveDate,
-          departureHour: data.departureHour,
+          departureHour: data.departureHour ? `${data.departureHour}:00` : data.departureHour,
           status: trip.status,
         };
         const response = await put(`/reserve-update/${trip.reserveId}`, updatePayload);
