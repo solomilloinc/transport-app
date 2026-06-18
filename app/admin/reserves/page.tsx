@@ -20,6 +20,7 @@ import { deleteLogic, get, post, put } from '@/services/api';
 import { ReserveReport, ReserveReportResponse } from '@/interfaces/reserve';
 import { SelectOption } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
+import { PaymentStatusEnum } from '@/interfaces/passengerReserve';
 import { toast } from '@/hooks/use-toast';
 import { getApiErrorMessage } from '@/lib/apiErrors';
 import { Direction } from '@/interfaces/direction';
@@ -30,7 +31,7 @@ import { PaymentMethod } from '@/interfaces/payment';
 import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
 import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFlow';
-import { CancelPassengerDialog } from '@/components/admin/reserves/CancelPassengerDialog';
+import { CancelPassengerDialog, CancelPassengerPolicy } from '@/components/admin/reserves/CancelPassengerDialog';
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { PagedResponse } from '@/services/types';
@@ -95,6 +96,7 @@ export default function ReservationsPage() {
     data: dataPassengerReserves,
     error: errorPassengerReserve,
     fetch: fetchPassengerReserves,
+    reset: resetPassengerReserves,
   } = useApi<PassengerReserveReport, number>(getPassengerReserves, {
     autoFetch: false,
   });
@@ -113,12 +115,26 @@ export default function ReservationsPage() {
     handleSort,
   } = useTableSort<PassengerReserveReport, PassengerSortColumn>(dataPassengerReserves?.items, 'name', passengerSortFns);
 
+  const visiblePassengers = useMemo(
+    () =>
+      (sortedPassengers ?? []).filter(
+        (passenger) => passenger.status !== PaymentStatusEnum.Cancelled,
+      ),
+    [sortedPassengers],
+  );
+
+  const currentReservedQuantity = selectedTrip
+    ? Math.max(selectedTrip.reservedQuantity, visiblePassengers.length)
+    : 0;
+
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
     // Al cambiar el día, las Rutas disponibles cambian: reseteamos el filtro.
     setSelectedRuta(null);
-    if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: null });
     setSelectedTrip(null);
+    setSelectedPassengerReserve(null);
+    resetPassengerReserves();
+    if (selectedDate) fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: null });
   }, [selectedDate]);
 
   // Filtro server-side por Ruta: re-fetch con `filters.tripId`. `availableTrips`
@@ -142,6 +158,9 @@ export default function ReservationsPage() {
           tripId,
           prices: tripData.prices ?? [],
           relevantCities: tripData.relevantCities ?? [],
+          pickupOptions: tripData.pickupOptions ?? [],
+          dropoffOptionsIda: tripData.dropoffOptionsIda ?? [],
+          dropoffOptionsIdaVuelta: tripData.dropoffOptionsIdaVuelta ?? [],
         };
       });
     } catch (error) {
@@ -150,19 +169,71 @@ export default function ReservationsPage() {
   };
 
   useEffect(() => {
-    if (!selectedTrip) return;
+    if (!selectedTrip?.tripId) return;
 
-    // Fetch full trip detail (RelevantCities, Prices) only the first time —
-    // after the merge, selectedTrip.relevantCities is populated, so this branch
-    // doesn't run again and we don't loop.
-    if (selectedTrip.tripId && !selectedTrip.relevantCities) {
+    const needsTripDetails =
+      !selectedTrip.relevantCities ||
+      selectedTrip.relevantCities.length === 0 ||
+      !selectedTrip.pickupOptions ||
+      !selectedTrip.dropoffOptionsIda;
+
+    if (needsTripDetails) {
       fetchFullTripDetails(Number(selectedTrip.tripId));
+    }
+  }, [
+    selectedTrip?.tripId,
+    selectedTrip?.relevantCities,
+    selectedTrip?.pickupOptions,
+    selectedTrip?.dropoffOptionsIda,
+  ]);
+
+  useEffect(() => {
+    if (!selectedTrip?.reserveId) {
+      resetPassengerReserves();
+      return;
     }
 
     fetchPassengerReserves(selectedTrip.reserveId);
     loadAllOptions();
     loadPaymentMethod();
-  }, [selectedTrip]);
+  }, [selectedTrip?.reserveId]);
+
+  useEffect(() => {
+    if (!selectedTrip) return;
+
+    const currentTrips = dataReserves?.reserves?.items;
+
+    if (!currentTrips) {
+      return;
+    }
+
+    const refreshedTrip = currentTrips.find(
+      (trip) => trip.reserveId === selectedTrip.reserveId,
+    );
+
+    if (!refreshedTrip) {
+      setSelectedTrip(null);
+      return;
+    }
+
+    if (refreshedTrip) {
+      setSelectedTrip((current) => {
+        if (!current || current.reserveId !== refreshedTrip.reserveId) {
+          return current;
+        }
+
+        return {
+          ...refreshedTrip,
+          prices: current.prices ?? refreshedTrip.prices,
+          relevantCities: current.relevantCities ?? refreshedTrip.relevantCities,
+          pickupOptions: current.pickupOptions ?? refreshedTrip.pickupOptions,
+          dropoffOptionsIda: current.dropoffOptionsIda ?? refreshedTrip.dropoffOptionsIda,
+          dropoffOptionsIdaVuelta:
+            current.dropoffOptionsIdaVuelta ?? refreshedTrip.dropoffOptionsIdaVuelta,
+        };
+      });
+    }
+  }, [dataReserves?.reserves?.items, selectedTrip?.reserveId]);
 
   useEffect(() => {
     if (isPaymentSummaryOpen) {
@@ -261,6 +332,9 @@ export default function ReservationsPage() {
         setSelectedPassengerReserve(null);
         if (selectedTrip) {
           fetchPassengerReserves(selectedTrip.reserveId);
+          if (selectedDate) {
+            fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
+          }
         }
       } finally {
         setIsDeleting(false);
@@ -328,14 +402,16 @@ export default function ReservationsPage() {
     setIsCancelPassengerOpen(true);
   };
 
-  const handleConfirmCancelPassenger = async () => {
+  const handleConfirmCancelPassenger = async (policy: CancelPassengerPolicy) => {
     if (!passengerToCancel) return;
 
     setIsCancellingPassenger(true);
     try {
       // Server Action que devuelve el error como valor (ver actions.ts): el
       // code/copy del backend llega al usuario también en producción.
-      const result = await cancelPassengerAction(passengerToCancel.passengerId);
+      const result = await cancelPassengerAction(passengerToCancel.passengerId, {
+        createCreditBalance: policy === 'credit',
+      });
 
       if (!result.ok) {
         toast({ title: 'Error', description: result.message, variant: 'destructive' });
@@ -346,7 +422,12 @@ export default function ReservationsPage() {
       setIsCancelPassengerOpen(false);
       setPassengerToCancel(null);
       // Refresca la grilla y el saldo del cliente (puede quedar a favor).
-      if (selectedTrip) fetchPassengerReserves(selectedTrip.reserveId);
+      if (selectedTrip) {
+        fetchPassengerReserves(selectedTrip.reserveId);
+        if (selectedDate) {
+          fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
+        }
+      }
     } finally {
       setIsCancellingPassenger(false);
     }
@@ -363,6 +444,21 @@ export default function ReservationsPage() {
   const formatSelectedDate = () => {
     return format(selectedDate as Date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
   };
+
+  const isSelectedTripFull = selectedTrip
+    ? currentReservedQuantity >= selectedTrip.availableQuantity
+    : false;
+
+  const isAddPassengerDisabled =
+    !selectedTrip || selectedTrip.hasDeparted || isSelectedTripFull;
+
+  const addPassengerButtonTitle = !selectedTrip
+    ? 'Seleccioná un viaje para agregar pasajeros'
+    : selectedTrip.hasDeparted
+      ? 'No podés agregar pasajeros a un viaje que ya salió'
+      : isSelectedTripFull
+        ? 'El vehículo está completo'
+        : 'Agregar pasajero';
 
   return (
     <div className="space-y-6">
@@ -383,7 +479,11 @@ export default function ReservationsPage() {
             <Button variant="outline" size="icon" title="Resumen de pagos" onClick={() => setIsPaymentSummaryOpen(true)}>
               <DollarSignIcon className="h-4 w-4" />
             </Button>
-            <Button onClick={handleAddPassenger}>
+            <Button
+              onClick={handleAddPassenger}
+              disabled={isAddPassengerDisabled}
+              title={addPassengerButtonTitle}
+            >
               <TicketPlus className=" mr-2 h-6 w-6" />
               Agregar
             </Button>
@@ -410,15 +510,16 @@ export default function ReservationsPage() {
             <div className="space-y-4">
               <div className="flex items-center text-xl font-semibold text-blue-500">
                 <UserPlusIcon className="mr-2 h-5 w-5" />
-                {selectedDate
-                  ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
-                  format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
-                  : ''}{' '}
-                - {selectedTrip?.originName} → {selectedTrip?.destinationName}, {selectedTrip?.departureHour}
+                {selectedTrip
+                  ? `${selectedDate
+                    ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).charAt(0).toUpperCase() +
+                      format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).slice(1)
+                    : ''} - ${selectedTrip.originName} → ${selectedTrip.destinationName}, ${selectedTrip.departureHour}`
+                  : 'Seleccioná un viaje para ver sus pasajeros'}
               </div>
 
               <PassengerListTable
-                passengers={sortedPassengers}
+                passengers={visiblePassengers}
                 isLoading={loadingPassengerReserve}
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
@@ -441,8 +542,22 @@ export default function ReservationsPage() {
         open={isAddReservationFlowOpen}
         onOpenChange={setIsAddReservationFlowOpen}
         onSuccess={() => {
+          setSelectedTrip((current) =>
+            current
+              ? {
+                  ...current,
+                  reservedQuantity: Math.min(
+                    current.availableQuantity,
+                    current.reservedQuantity + 1,
+                  ),
+                }
+              : current,
+          );
           if (selectedTrip) {
             fetchPassengerReserves(selectedTrip.reserveId);
+          }
+          if (selectedDate) {
+            fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
           }
         }}
         initialTrip={selectedTrip}
@@ -465,7 +580,8 @@ export default function ReservationsPage() {
         onOpenChange={setIsEditPassengerReserveModalOpen}
         passengerReserve={selectedPassengerReserve}
         onSuccess={() => fetchPassengerReserves(selectedTrip!.reserveId)}
-        directions={directions}
+        pickupOptions={selectedTrip?.pickupOptions || []}
+        dropoffOptions={selectedTrip?.dropoffOptionsIda || []}
         relevantCities={selectedTrip?.relevantCities || []}
         isLoadingDirections={isOptionsLoading}
       />

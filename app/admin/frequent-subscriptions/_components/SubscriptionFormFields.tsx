@@ -119,7 +119,13 @@ export function SubscriptionFormFields({
       customers.map((c) => ({
         id: c.customerId,
         value: String(c.customerId),
-        label: `${c.firstName} ${c.lastName}`.trim(),
+        label: [
+          `${c.firstName} ${c.lastName}`.trim(),
+          c.documentNumber ? `DNI ${c.documentNumber}` : null,
+          c.email || null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
       })),
     [customers]
   );

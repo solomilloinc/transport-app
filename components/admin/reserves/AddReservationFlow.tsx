@@ -121,6 +121,10 @@ export function AddReservationFlow({
   });
 
   const pickupOptions = useMemo(() => {
+    const pickupOrderMap = new Map(
+      (tripData?.stopSchedules || []).map((stop) => [stop.directionId, stop.order]),
+    );
+
     const options = tripData?.pickupOptions || [];
     return options
       .filter((opt) => opt && opt.directionId != null)
@@ -128,7 +132,10 @@ export function AddReservationFlow({
         id: String(opt.directionId),
         value: String(opt.directionId),
         label: opt.displayName || 'Sin nombre',
-      }));
+        sortOrder: pickupOrderMap.get(opt.directionId) ?? Number.MAX_SAFE_INTEGER,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, 'es'))
+      .map(({ sortOrder: _sortOrder, ...option }) => option);
   }, [tripData]);
 
   const dropoffCityOptions = useMemo(() => {
@@ -147,8 +154,50 @@ export function AddReservationFlow({
       }));
   }, [tripData, useIdaVueltaTariff]);
 
+  useEffect(() => {
+    if (dropoffCityOptions.length === 0) {
+      if (selectedDropoffCityId !== null) {
+        setSelectedDropoffCityId(null);
+      }
+      reserveForm.setField('dropoffLocationId', 0);
+      return;
+    }
+
+    const currentSelection = selectedDropoffCityId
+      ? dropoffCityOptions.find((opt) => opt.id === String(selectedDropoffCityId))
+      : null;
+
+    if (currentSelection) {
+      reserveForm.setField('price', currentSelection.price);
+      return;
+    }
+
+    const fallbackOption =
+      dropoffCityOptions.find((opt) => opt.isMainDestination) ?? dropoffCityOptions[0];
+
+    if (!fallbackOption) {
+      return;
+    }
+
+    setSelectedDropoffCityId(Number(fallbackOption.id));
+    reserveForm.setField('dropoffLocationId', 0);
+    reserveForm.setField('price', fallbackOption.price);
+  }, [dropoffCityOptions, selectedDropoffCityId]);
+
   const dropoffDirectionOptions = useMemo(() => {
     if (!selectedDropoffCityId) return [];
+
+    const dropoffDirectionOrderMap = new Map(
+      (tripData?.prices || [])
+        .filter(
+          (price) =>
+            price.cityId === selectedDropoffCityId &&
+            price.directionId != null &&
+            price.reserveTypeId === RESERVE_TYPE.IDA,
+        )
+        .map((price) => [price.directionId as number, price.order]),
+    );
+
     const city = dropoffCityOptions.find((opt) => opt.id === String(selectedDropoffCityId));
     if (city?.directions?.length) {
       return city.directions
@@ -157,28 +206,29 @@ export function AddReservationFlow({
           id: String(dir.directionId),
           value: String(dir.directionId),
           label: dir.displayName || 'Sin nombre',
-        }));
+          sortOrder: dropoffDirectionOrderMap.get(dir.directionId) ?? Number.MAX_SAFE_INTEGER,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, 'es'))
+        .map(({ sortOrder: _sortOrder, ...option }) => option);
     }
     if (tripData?.relevantCities) {
       const relevantCity = tripData.relevantCities.find(
         (c) => c.cityId?.toString() === String(selectedDropoffCityId),
       );
       if (relevantCity?.directions?.length) {
-        return relevantCity.directions.map((dir) => ({
-          id: String(dir.directionId),
-          value: String(dir.directionId),
-          label: dir.name || 'Sin nombre',
-        }));
+        return relevantCity.directions
+          .map((dir) => ({
+            id: String(dir.directionId),
+            value: String(dir.directionId),
+            label: dir.name || 'Sin nombre',
+            sortOrder: dropoffDirectionOrderMap.get(dir.directionId) ?? Number.MAX_SAFE_INTEGER,
+          }))
+          .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, 'es'))
+          .map(({ sortOrder: _sortOrder, ...option }) => option);
       }
     }
     return [];
   }, [selectedDropoffCityId, dropoffCityOptions, tripData]);
-
-  useEffect(() => {
-    if (dropoffDirectionOptions.length > 0 && !reserveForm.data.dropoffLocationId) {
-      reserveForm.setField('dropoffLocationId', Number(dropoffDirectionOptions[0].id));
-    }
-  }, [dropoffDirectionOptions]);
 
   // Returns the price currently selected from `dropoffCityOptions`. The shape
   // of that list depends on `useIdaVueltaTariff`:
@@ -353,10 +403,10 @@ export function AddReservationFlow({
   }, [returnDate]);
 
   useEffect(() => {
-    if (step === FlowStep.CONFIRM_PAYMENT && !paymentAmount && reservationPayments.length === 0) {
+    if (step === FlowStep.CONFIRM_PAYMENT && reservationPayments.length === 0) {
       setPaymentAmount(getRemainingBalance().toString());
     }
-  }, [step]);
+  }, [step, bookingPassengers, reservationPayments]);
 
   const resetFlow = () => {
     setStep(null);
@@ -367,6 +417,8 @@ export function AddReservationFlow({
     setReturnTrip(null);
     setBookingPassengers([]);
     setReservationPayments([]);
+    setSelectedPaymentMethod('1');
+    setPaymentAmount('');
     setTripData(null);
     setReturnTripData(null);
     setSelectedDropoffCityId(null);
@@ -468,6 +520,9 @@ export function AddReservationFlow({
       };
 
       setBookingPassengers([passenger]);
+      setReservationPayments([]);
+      setSelectedPaymentMethod('1');
+      setPaymentAmount('');
       setStep(FlowStep.CONFIRM_PAYMENT);
     });
   };
@@ -671,9 +726,9 @@ export function AddReservationFlow({
         {dropoffDirectionOptions.length > 0 && (
           <FormField label="Parada específica (opcional)">
             <ApiSelect
-              value={String(reserveForm.data.dropoffLocationId || '')}
-              onValueChange={(v) => reserveForm.setField('dropoffLocationId', Number(v))}
-              placeholder="Seleccionar parada..."
+              value={reserveForm.data.dropoffLocationId ? String(reserveForm.data.dropoffLocationId) : ''}
+              onValueChange={(v) => reserveForm.setField('dropoffLocationId', v ? Number(v) : 0)}
+              placeholder="No seleccionar parada específica"
               options={dropoffDirectionOptions}
             />
           </FormField>
@@ -692,8 +747,6 @@ export function AddReservationFlow({
             onCheckedChange={(c) => {
               const newType = c ? RESERVE_TYPE.ROUND_TRIP : RESERVE_TYPE.IDA;
               reserveForm.setField('reserveTypeId', newType);
-              setSelectedDropoffCityId(null);
-              reserveForm.setField('dropoffLocationId', 0);
               setReturnTrip(null);
               setReturnDate(undefined);
 

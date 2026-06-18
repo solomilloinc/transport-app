@@ -104,6 +104,7 @@ export default function FrequentSubscriptionsPage() {
   // inactivos al crear una suscripción.
   const [customers, setCustomers] = useState<Passenger[]>([]);
   const [activeCustomers, setActiveCustomers] = useState<Passenger[]>([]);
+  const selectableCustomers = activeCustomers.length > 0 ? activeCustomers : customers;
   // Directions globales: se cruzan con service.allowedDirectionIds para
   // renderear los dropdowns de pickup/dropoff con sus nombres.
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -625,7 +626,7 @@ export default function FrequentSubscriptionsPage() {
         <SubscriptionFormFields
           form={addForm}
           services={services}
-          customers={activeCustomers}
+          customers={selectableCustomers}
           directions={directions}
           mode="create"
         />
