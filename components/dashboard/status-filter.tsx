@@ -16,7 +16,7 @@ interface StatusFilterProps {
 
 export function StatusFilter({ value, onChange, options, placeholder = 'Filtrar por estado' }: StatusFilterProps) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value || ''} onValueChange={onChange}>
       <SelectTrigger className="w-full sm:w-[180px]">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

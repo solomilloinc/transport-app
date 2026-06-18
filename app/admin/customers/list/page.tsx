@@ -55,7 +55,7 @@ const customerFilterParsers = {
 import { validationConfigPassenger } from '@/validations/passengerSchema';
 import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
-export default function PassengersManagement() {
+export default function CustomersManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -78,7 +78,7 @@ export default function PassengersManagement() {
     defaults: emptyCustomerReportFilters,
     parsers: customerFilterParsers,
     apiCall: getCustomerReport,
-    initialPageSize: 8,
+    initialPageSize: 10,
   });
 
   const submitAddPassenger = async () => {
@@ -87,8 +87,8 @@ export default function PassengersManagement() {
         const response = await post('/customer-create', data);
         if (response) {
           toast({
-            title: 'Pasajero creado',
-            description: 'El pasajero ha sido creado exitosamente',
+            title: 'Cliente creado',
+            description: 'El cliente ha sido creado exitosamente',
             variant: 'success',
           });
           setIsAddModalOpen(false);
@@ -111,8 +111,8 @@ export default function PassengersManagement() {
         const response = await put(`/customer-update/${currentPassengersId}`, editForm.data);
         if (response) {
           toast({
-            title: 'Pasajero actualizado',
-            description: 'El pasajero ha sido actualizado exitosamente',
+            title: 'Cliente actualizado',
+            description: 'El cliente ha sido actualizado exitosamente',
             variant: 'success',
           });
           setIsEditModalOpen(false);
@@ -177,22 +177,15 @@ export default function PassengersManagement() {
   };
 
   const columns = [
-    { header: 'Nombre', accessor: 'firstName', width: '15%' },
-    { header: 'Apellido', accessor: 'lastName', width: '15%' },
-    { header: 'Documento', accessor: 'documentNumber', width: '12%' },
-    { header: 'Teléfono', accessor: 'phone1', width: '12%' },
-    {
-      header: 'Estado',
-      accessor: 'status',
-      className: 'text-center',
-      width: '10%',
-      cell: (passenger: Passenger) => <StatusBadge status={passenger.status} />,
-    },
+    { header: 'Apellido', accessor: 'lastName', width: '20%' },
+    { header: 'Nombre', accessor: 'firstName', width: '20%' },
+    { header: 'Documento', accessor: 'documentNumber', width: '15%' },
+    { header: 'Teléfono', accessor: 'phone1', width: '15%' },
     {
       header: 'Acciones',
       accessor: 'actions',
       className: 'text-right',
-      width: '15%',
+      width: '30%',
       cell: (passenger: Passenger) => (
         <div className="flex justify-end gap-2">
           <Button
@@ -219,8 +212,8 @@ export default function PassengersManagement() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pasajeros"
-        description="Gestiona y visualiza toda la información de las pasajeros."
+        title="Clientes"
+        description="Gestiona y visualiza toda la información de los clientes."
         action={
           <Button onClick={() => handleAddPassegers()}>
             <UserPlusIcon className="mr-2 h-4 w-4" />
@@ -246,9 +239,9 @@ export default function PassengersManagement() {
                 onChange={(e) => setDraftField('email', e.target.value)}
               />
               <StatusFilter
-                value={draft.status != null ? String(draft.status) : ''}
+                value={draft.status !== undefined ? String(draft.status) : 'all'}
                 onChange={(v) =>
-                  setDraftField('status', v ? (Number(v) as EntityStatus) : undefined)
+                  setDraftField('status', v === 'all' ? undefined : (Number(v) as EntityStatus))
                 }
                 options={ENTITY_STATUS_OPTIONS}
               />
@@ -258,7 +251,7 @@ export default function PassengersManagement() {
               <DashboardTable
                 columns={columns}
                 data={data?.items ?? []}
-                emptyMessage="No se encontraron pasajeros."
+                emptyMessage="No se encontraron clientes."
                 isLoading={loading}
                 skeletonRows={data?.pageSize}
               />
@@ -271,7 +264,7 @@ export default function PassengersManagement() {
                 totalItems={data?.totalRecords}
                 itemsPerPage={data?.pageSize}
                 onPageChange={setPageNumber}
-                itemName="pasajeros"
+                itemName="clientes"
               />
             )}
           </div>

@@ -144,17 +144,6 @@ const MENU_CONFIG: {
       name: 'Rutas',
       icon: Route,
       path: '/admin/trips',
-      key: 'trips',
-      roles: ['admin'],
-      submenu: [
-        { name: 'Gestión', path: '/admin/trips', roles: ['admin'] },
-        { name: 'Precios Masivos', path: '/admin/trips/prices/bulk-update', roles: ['admin'] },
-      ],
-    },
-    {
-      name: 'Precios',
-      icon: CreditCard,
-      path: '/admin/prices',
       roles: ['admin'],
     },
   ],

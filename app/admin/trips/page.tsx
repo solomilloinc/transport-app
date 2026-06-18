@@ -246,23 +246,10 @@ export default function TripManagement() {
     { header: 'Origen', accessor: 'originCityName', width: '20%' },
     { header: 'Destino', accessor: 'destinationCityName', width: '20%' },
     {
-      header: 'Precios',
-      accessor: 'prices',
-      width: '10%',
-      cell: (trip: Trip) => trip.prices?.length || 0,
-    },
-    {
-      header: 'Estado',
-      accessor: 'Status',
-      className: 'text-center',
-      width: '10%',
-      cell: (trip: Trip) => <StatusBadge status={trip.status} />,
-    },
-    {
       header: 'Acciones',
       accessor: 'actions',
       className: 'text-right',
-      width: '15%',
+      width: '35%',
       cell: (trip: Trip) => (
         <div className="flex justify-end gap-2">
           <Button

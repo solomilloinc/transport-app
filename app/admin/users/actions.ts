@@ -6,14 +6,14 @@ export async function createOperativeUserAction(payload: { email: string; passwo
   return createOperativeUser({
     email: payload.email,
     password: payload.password,
-    role: 'User',
+    role: 'Operator',
   });
 }
 
 export async function updateOperativeUserAction(payload: { userId: number; email: string; status: number }) {
   return updateOperativeUser(payload.userId, {
     email: payload.email,
-    role: 'User',
+    role: 'Operator',
     status: payload.status,
   });
 }

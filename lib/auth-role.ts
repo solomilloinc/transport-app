@@ -4,6 +4,7 @@ const ROLE_MAP: Record<string, AppRole> = {
   admin: "admin",
   administrador: "admin",
   user: "user",
+  operator: "user",
   operativo: "user",
   client: "client",
   cliente: "client",

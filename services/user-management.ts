@@ -1,7 +1,8 @@
 'use server';
 
 import { get, getPure, post, postWithResponse, put } from '@/services/api';
-import { PagedRequest, PagedResponse } from '@/services/types';
+import { PagedRequest, PagedResponse, PaginationParams } from '@/services/types';
+import { withDefaultPagination } from '@/utils/pagination';
 
 export interface CurrentUserProfile {
   userId: number;
@@ -62,6 +63,17 @@ export async function completeCurrentUserProfile(request: ClientProfileCompleteR
 
 export async function getOperativeUsers(request?: PagedRequest<OperativeUserFilters>) {
   return get<OperativeUserFilters, PagedResponse<OperativeUserItem>>('/operative-user-report', request);
+}
+
+/**
+ * Variante para `useReportFilters`: recibe el `PaginationParams` que arma el hook
+ * y aplica defaults de paginación, igual que `getDriverReport`.
+ */
+export async function getOperativeUserReport(
+  params: Partial<PaginationParams> & { filters?: OperativeUserFilters }
+): Promise<PagedResponse<OperativeUserItem>> {
+  const finalParams = withDefaultPagination(params);
+  return await get<OperativeUserFilters, PagedResponse<OperativeUserItem>>('/operative-user-report', finalParams);
 }
 
 export async function createOperativeUser(request: OperativeUserCreateRequest) {
