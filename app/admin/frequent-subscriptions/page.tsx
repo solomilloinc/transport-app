@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Edit, Repeat, UserPlusIcon, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,10 @@ const RESERVE_TYPE_FILTER_OPTIONS = [
 
 const CUSTOMERS_PAGE_SIZE = 500;
 const DIRECTIONS_PAGE_SIZE = 500;
+// Búsqueda server-side de clientes en el alta: traemos pocos resultados para
+// empujar al admin a escribir más letras y afinar, en vez de listar todo.
+const CUSTOMER_SEARCH_PAGE_SIZE = 10;
+const CUSTOMER_SEARCH_MIN_CHARS = 3;
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -99,12 +103,9 @@ export default function FrequentSubscriptionsPage() {
   const [services, setServices] = useState<ServiceListItem[]>([]);
   // `customers` = lista completa (todos los estados) para el FilterBar de la grilla,
   // que necesita ver Customers Inactive/Suspended para filtrar suscripciones viejas.
-  // `activeCustomers` = sólo Active, server-filtered vía customer-report (como en
-  // prices/EditTripDialog) para el combo del form de alta — evita ofrecer clientes
-  // inactivos al crear una suscripción.
+  // El combo del ALTA ya no usa esta lista: busca server-side (ver más abajo) para
+  // no precargar todo el catálogo de clientes.
   const [customers, setCustomers] = useState<Passenger[]>([]);
-  const [activeCustomers, setActiveCustomers] = useState<Passenger[]>([]);
-  const selectableCustomers = activeCustomers.length > 0 ? activeCustomers : customers;
   // Directions globales: se cruzan con service.allowedDirectionIds para
   // renderear los dropdowns de pickup/dropoff con sus nombres.
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -112,18 +113,13 @@ export default function FrequentSubscriptionsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [svcRes, custRes, activeCustRes, dirRes] = await Promise.all([
+        const [svcRes, custRes, dirRes] = await Promise.all([
           getServicesList(),
           getCustomerReport({ pageSize: CUSTOMERS_PAGE_SIZE }),
-          getCustomerReport({
-            pageSize: CUSTOMERS_PAGE_SIZE,
-            filters: { status: EntityStatus.Active },
-          }),
           getDirectionReport({ pageSize: DIRECTIONS_PAGE_SIZE }),
         ]);
         setServices(svcRes ?? []);
         setCustomers(custRes.items ?? []);
-        setActiveCustomers(activeCustRes.items ?? []);
         setDirections(dirRes.items ?? []);
       } catch (err) {
         toast({
@@ -133,6 +129,37 @@ export default function FrequentSubscriptionsPage() {
         });
       }
     })();
+  }, []);
+
+  // ----- búsqueda server-side de clientes para el ALTA -----
+  // Antes el combo recibía hasta 500 clientes y filtraba en memoria. Ahora pega
+  // al backend (customer-report con status=Active) recién a partir de
+  // CUSTOMER_SEARCH_MIN_CHARS letras, trayendo CUSTOMER_SEARCH_PAGE_SIZE results.
+  const [customerSearchResults, setCustomerSearchResults] = useState<Passenger[]>([]);
+  const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
+
+  const searchActiveCustomers = useCallback(async (query: string) => {
+    if (query.length < CUSTOMER_SEARCH_MIN_CHARS) {
+      setCustomerSearchResults([]);
+      return;
+    }
+    setCustomerSearchLoading(true);
+    try {
+      const res = await getCustomerReport({
+        pageSize: CUSTOMER_SEARCH_PAGE_SIZE,
+        filters: { search: query, status: EntityStatus.Active },
+      });
+      setCustomerSearchResults(res.items ?? []);
+    } catch (err) {
+      setCustomerSearchResults([]);
+      toast({
+        title: 'Error',
+        description: getApiErrorMessage(err).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setCustomerSearchLoading(false);
+    }
   }, []);
 
   // ----- modales -----
@@ -193,6 +220,7 @@ export default function FrequentSubscriptionsPage() {
     // y volver al siguiente).
     addForm.setField('startDate', todayIso());
     addForm.setField('endDate', oneMonthFromTodayIso());
+    setCustomerSearchResults([]); // combo arranca vacío: se llena al buscar
     setIsAddModalOpen(true);
   };
 
@@ -626,7 +654,9 @@ export default function FrequentSubscriptionsPage() {
         <SubscriptionFormFields
           form={addForm}
           services={services}
-          customers={selectableCustomers}
+          customers={customerSearchResults}
+          onCustomerSearch={searchActiveCustomers}
+          customerSearchLoading={customerSearchLoading}
           directions={directions}
           mode="create"
         />

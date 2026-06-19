@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2Icon, AlertCircleIcon, SearchIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,19 @@ interface ApiSelectProps {
   searchable?: boolean;
   searchPlaceholder?: string;
 
+  /**
+   * Búsqueda server-side. Cuando se provee, el componente NO filtra client-side:
+   * emite la query (debounced) y el padre se encarga de traer las `options`
+   * desde la API. Pensado para combos sobre catálogos grandes (ej. clientes),
+   * donde precargar todo no escala. Sin esta prop, el filtrado sigue siendo
+   * client-side (comportamiento original).
+   */
+  onSearchChange?: (query: string) => void;
+  /** Mínimo de caracteres antes de emitir la búsqueda server-side. Default 0. */
+  minSearchLength?: number;
+  /** Debounce (ms) para `onSearchChange`. Default 350. */
+  searchDebounceMs?: number;
+
   // Mensajes personalizados
   loadingMessage?: string;
   errorMessage?: string;
@@ -79,6 +92,9 @@ export function ApiSelect({
   // Propiedades de búsqueda
   searchable = false,
   searchPlaceholder = 'Buscar...',
+  onSearchChange,
+  minSearchLength = 0,
+  searchDebounceMs = 350,
 
   // Mensajes personalizados
   loadingMessage = 'Cargando opciones...',
@@ -99,6 +115,17 @@ export function ApiSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // Modo búsqueda server-side: el padre provee onSearchChange.
+  const serverSearch = typeof onSearchChange === 'function';
+
+  // Cache value→label de todo lo que pasó por `options`, para que el trigger
+  // siga mostrando el nombre del item elegido aunque luego cambien los results
+  // (típico en server-search: tras elegir, una nueva búsqueda vacía la lista).
+  const seenLabelsRef = useRef<Map<string, string>>(new Map());
+  useEffect(() => {
+    options.forEach((o) => seenLabelsRef.current.set(String(o.value), o.label));
+  }, [options]);
+
   // Actualizar opciones cuando cambian las propOptions
   useEffect(() => {
     if (propOptions) {
@@ -114,9 +141,10 @@ export function ApiSelect({
     setError(propError || null);
   }, [propLoading, propError]);
 
-  // Actualizar opciones filtradas cuando cambia la búsqueda
+  // Actualizar opciones filtradas cuando cambia la búsqueda.
+  // En modo server-search NO filtramos acá: `options` ya viene server-filtered.
   useEffect(() => {
-    if (!searchable || !searchQuery.trim()) {
+    if (serverSearch || !searchable || !searchQuery.trim()) {
       setFilteredOptions(options);
       return;
     }
@@ -127,7 +155,18 @@ export function ApiSelect({
     );
 
     setFilteredOptions(filtered);
-  }, [searchQuery, options, searchable]);
+  }, [searchQuery, options, searchable, serverSearch]);
+
+  // Modo server-search: emite la query (debounced) al padre. Por debajo del
+  // mínimo emite '' para que el padre limpie los resultados.
+  useEffect(() => {
+    if (!serverSearch) return;
+    const q = searchQuery.trim();
+    const handler = setTimeout(() => {
+      onSearchChange?.(q.length >= minSearchLength ? q : '');
+    }, searchDebounceMs);
+    return () => clearTimeout(handler);
+  }, [searchQuery, serverSearch, minSearchLength, searchDebounceMs, onSearchChange]);
 
   // Manejar la apertura del select
   const handleOpenChange = (open: boolean) => {
@@ -140,14 +179,13 @@ export function ApiSelect({
 
   // Modificar la función getSelectedLabel para asegurar que compare correctamente los valores
   const getSelectedLabel = () => {
-    // Si no hay valor seleccionado o estamos cargando, mostrar el placeholder
-    if (!value || loading) {
-      return placeholder;
-    }
+    if (!value) return placeholder;
 
     // Buscar la opción seleccionada - asegurarse de comparar como strings
     const selectedOption = options.find((option) => String(option.value) === String(value));
-    return selectedOption ? selectedOption.label : placeholder;
+    // Fallback al cache de labels: en server-search el item elegido puede ya no
+    // estar en `options` tras una nueva búsqueda.
+    return selectedOption?.label ?? seenLabelsRef.current.get(String(value)) ?? placeholder;
   };
 
   // Renderizar el contenido del select
@@ -166,6 +204,16 @@ export function ApiSelect({
         <div className="flex items-center justify-center py-2 text-sm text-red-500">
           <AlertCircleIcon className="mr-2 h-4 w-4" />
           {errorMessage}
+        </div>
+      );
+    }
+
+    // Modo server-search: si todavía no escribió el mínimo, guiá al usuario en
+    // vez de mostrar "sin resultados".
+    if (serverSearch && searchQuery.trim().length > 0 && searchQuery.trim().length < minSearchLength) {
+      return (
+        <div className="py-2 text-center text-sm text-muted-foreground">
+          {`Escribí al menos ${minSearchLength} letras para buscar`}
         </div>
       );
     }
@@ -190,12 +238,14 @@ export function ApiSelect({
       <Select
         value={value}
         onValueChange={onValueChange}
-        disabled={disabled || loading}
+        // En server-search NO deshabilitamos por `loading`: el spinner va dentro
+        // del dropdown y el input de búsqueda debe seguir usable mientras carga.
+        disabled={disabled || (loading && !serverSearch)}
         onOpenChange={handleOpenChange}
       >
         <SelectTrigger className={cn(loading && 'opacity-70', triggerClassName)} onFocus={onFocus} onBlur={onBlur}>
           <SelectValue placeholder={placeholder}>
-            {loading ? placeholder : value ? getSelectedLabel() : placeholder}
+            {value ? getSelectedLabel() : placeholder}
           </SelectValue>
         </SelectTrigger>
         <SelectContent className={contentClassName}>

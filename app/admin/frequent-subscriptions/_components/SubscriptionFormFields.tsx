@@ -28,11 +28,20 @@ interface SubscriptionFormFieldsProps {
   /** Lista global de Directions — se filtra por service.allowedDirectionIds. */
   directions: Direction[];
   /**
-   * Lista de clientes para el combo (cacheada). En 'create' viene server-filtered
-   * a Active (customer-report status=Active); en 'edit' es la lista completa
+   * Clientes para el combo. En 'create' son los **resultados de la búsqueda
+   * server-side** (no se precarga todo el catálogo): el combo dispara
+   * `onCustomerSearch` a partir de 3 letras. En 'edit' es la lista completa
    * porque el combo está disabled y sólo necesita resolver el nombre del cliente.
    */
   customers: Passenger[];
+
+  /**
+   * Sólo 'create': handler de búsqueda server-side de clientes (≥3 letras).
+   * Si se omite, el combo filtra client-side sobre `customers` (modo legacy).
+   */
+  onCustomerSearch?: (query: string) => void;
+  /** Sólo 'create': loading de la búsqueda de clientes. */
+  customerSearchLoading?: boolean;
 
   /** En 'edit' los campos inmutables quedan disabled con tooltip. */
   mode: 'create' | 'edit';
@@ -65,6 +74,8 @@ export function SubscriptionFormFields({
   services,
   directions,
   customers,
+  onCustomerSearch,
+  customerSearchLoading = false,
   mode,
   alreadyStarted = false,
 }: SubscriptionFormFieldsProps) {
@@ -236,9 +247,17 @@ export function SubscriptionFormFields({
         <div {...immutableProps(isEdit)}>
           <ApiSelect
             searchable
-            searchPlaceholder="Buscar cliente..."
-            placeholder={
-              customerOptions.length === 0 ? 'Cargando clientes...' : 'Seleccioná cliente'
+            searchPlaceholder="Buscar por nombre o DNI..."
+            // En create: búsqueda server-side a partir de 3 letras (no precarga
+            // todo el catálogo de clientes). En edit el combo está disabled.
+            onSearchChange={isEdit ? undefined : onCustomerSearch}
+            minSearchLength={3}
+            loading={customerSearchLoading}
+            placeholder="Seleccioná cliente"
+            emptyMessage={
+              onCustomerSearch && !isEdit
+                ? 'Escribí al menos 3 letras para buscar'
+                : 'No hay clientes disponibles'
             }
             value={form.data.customerId ? String(form.data.customerId) : ''}
             onValueChange={(v) => form.setField('customerId', v ? Number(v) : 0)}
