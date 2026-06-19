@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 import { CheckoutProvider } from '@/contexts/CheckoutContext';
 import { TenantProvider } from '@/contexts/TenantContext';
+import { QueryProvider } from '@/components/query-provider';
 import { TenantStyles } from '@/components/tenant-styles';
 import { getTenantConfig } from '@/services/tenant';
 import { getRequestHost } from '@/lib/get-host';
@@ -63,9 +64,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <TenantProvider config={tenantConfig}>
             <TenantStyles />
             <CheckoutProvider>
-              <AuthProvider>
-                {children}
-              </AuthProvider>
+              <QueryProvider>
+                <AuthProvider>
+                  {children}
+                </AuthProvider>
+              </QueryProvider>
             </CheckoutProvider>
             <Toaster />
           </TenantProvider>

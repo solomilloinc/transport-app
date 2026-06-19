@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { MapPin, ArrowDown } from 'lucide-react';
-import { getTripById } from '@/services/trip';
-import { Trip, DropoffDirectionOption } from '@/interfaces/trip';
+import { DropoffDirectionOption } from '@/interfaces/trip';
 import { getApiErrorMessage } from '@/lib/apiErrors';
+import { useTrip } from '@/hooks/queries/use-trip';
 
 export interface LocationSelectionData {
     pickupDirectionId: number | null;
@@ -45,9 +45,14 @@ export function LocationSelector({
     initialData,
     departureHour,
 }: LocationSelectorProps) {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [tripData, setTripData] = useState<Trip | null>(null);
+    // Carril 2 (ver docs/adr/0006): la lectura del trip va por React Query.
+    // `staleTime` por default del provider (60s) basta para no refetchear al
+    // re-montar durante el checkout. La data es por-reserva (incluye reserveId),
+    // así que la key incluye reserveId y no se mezcla entre reservas.
+    const { data: tripData, isLoading: loading, error: queryError } = useTrip(tripId, reserveId, {
+        enabled: !!tripId && !!reserveId,
+    });
+    const error = queryError ? getApiErrorMessage(queryError).message : null;
 
     const [selectedPickupId, setSelectedPickupId] = useState<string>(
         initialData?.pickupDirectionId?.toString() || ''
@@ -86,31 +91,14 @@ export function LocationSelector({
     };
     const dropoffDirections = getDropoffDirections();
 
+    // Auto-select main destination when there is only one IdaVuelta option.
+    // Derivado de la data de React Query (en vez de hacerlo dentro del fetch).
     useEffect(() => {
-        async function loadTripData() {
-            try {
-                setLoading(true);
-                setError(null);
-                const data = await getTripById(tripId, reserveId);
-                setTripData(data);
-
-                // Auto-select main destination when there is only one IdaVuelta option
-                if (useIdaVueltaTariff && data.dropoffOptionsIdaVuelta?.length === 1) {
-                    const mainDest = data.dropoffOptionsIdaVuelta[0];
-                    setSelectedDropoffCityId(mainDest.cityId.toString());
-                }
-            } catch (err) {
-                console.error('[LocationSelector] Error loading trip data:', err);
-                setError(getApiErrorMessage(err).message);
-            } finally {
-                setLoading(false);
-            }
+        if (useIdaVueltaTariff && tripData?.dropoffOptionsIdaVuelta?.length === 1) {
+            const mainDest = tripData.dropoffOptionsIdaVuelta[0];
+            setSelectedDropoffCityId(mainDest.cityId.toString());
         }
-
-        if (tripId && reserveId) {
-            loadTripData();
-        }
-    }, [tripId, reserveId, useIdaVueltaTariff]);
+    }, [tripData, useIdaVueltaTariff]);
 
     useEffect(() => {
         const dropoffPrice = selectedCity?.price || 0;

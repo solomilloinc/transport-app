@@ -22,7 +22,6 @@ import { Passenger } from '@/interfaces/passengers';
 import { Payment } from '@/interfaces/payment';
 import { withPriceRetry } from '@/utils/api-errors';
 import { getApiErrorMessage, getApiErrorToastMessage } from '@/lib/apiErrors';
-import { Trip } from '@/interfaces/trip';
 import { RESERVE_TYPE } from '@/constants/reserveType';
 import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
 import { buildAdminReservePayloadWithPayments } from '@/utils/bookingPayload';
@@ -35,7 +34,7 @@ import { useTenant } from '@/contexts/TenantContext';
 
 import { getPassengers } from '@/services/passenger';
 import { getReserves, GetReservesParams } from '@/services/reserves';
-import { getTripById } from '@/services/trip';
+import { useTrip } from '@/hooks/queries/use-trip';
 import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 import { PaginationParams } from '@/services/types';
 
@@ -100,11 +99,23 @@ export function AddReservationFlow({
   const [bookingPassengers, setBookingPassengers] = useState<PassengerBooking[]>([]);
   const [reservationPayments, setReservationPayments] = useState<Payment[]>([]);
 
-  const [tripData, setTripData] = useState<Trip | null>(null);
+  // Carril 2 (ver docs/adr/0006): el detalle del trip va por React Query.
+  // staleTime 0 porque la data es por-reserva y los precios son editables: cada
+  // apertura/refetch debe traer lo último (preserva el viejo refetchTrip manual).
+  const tripQuery = useTrip(initialTrip?.tripId, initialTrip?.reserveId, {
+    enabled: open && !!initialTrip,
+    staleTime: 0,
+  });
+  const tripData = tripQuery.data ?? null;
+  const isTripLoading = tripQuery.isFetching;
+
   // Loaded lazily when a return trip is picked. Used to look up the return
   // trip's per-leg Ida price when the booking downgrades (days differ).
-  const [returnTripData, setReturnTripData] = useState<Trip | null>(null);
-  const [isTripLoading, setIsTripLoading] = useState(false);
+  const returnTripQuery = useTrip(returnTrip?.tripId, returnTrip?.reserveId, {
+    enabled: !!returnTrip,
+    staleTime: 0,
+  });
+  const returnTripData = returnTripQuery.data ?? null;
   const [selectedDropoffCityId, setSelectedDropoffCityId] = useState<number | null>(null);
 
   const isRoundTrip = reserveForm.data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP;
@@ -318,66 +329,29 @@ export function AddReservationFlow({
     });
   }, [dataReturnReserves, initialTrip]);
 
+  // Fuerza traer lo último del trip inicial (precios editables). React Query
+  // respeta staleTime:0, así que esto re-fetchea siempre. Se pasa a withPriceRetry
+  // para reintentar tras un conflicto de precio.
   const refetchTrip = async () => {
-    if (!initialTrip?.tripId) return;
-    setIsTripLoading(true);
-    try {
-      const data = await getTripById(initialTrip.tripId, initialTrip.reserveId);
-      setTripData(data);
-    } catch (error) {
-      console.error('[AddReservationFlow] Error refetching trip:', error);
-    } finally {
-      setIsTripLoading(false);
-    }
+    await tripQuery.refetch();
   };
 
+  // Set initial price from the main destination once the trip (re)loads.
+  // El fetch/loading/error los maneja React Query (tripQuery); acá sólo queda
+  // el side-effect sobre la data.
   useEffect(() => {
-    const fetchTripDetails = async () => {
-      if (!initialTrip?.tripId) return;
-      setIsTripLoading(true);
-      try {
-        const data = await getTripById(initialTrip.tripId, initialTrip.reserveId);
-        setTripData(data);
-
-        const dropoffIda = data?.dropoffOptionsIda || [];
-        const mainDest = dropoffIda.find((opt) => opt.isMainDestination);
-        if (mainDest) {
-          reserveForm.setField('price', mainDest.price);
-        }
-      } catch (error) {
-        console.error('[AddReservationFlow] Error fetching trip details:', error);
-        toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
-      } finally {
-        setIsTripLoading(false);
-      }
-    };
-
-    if (open && initialTrip) {
-      fetchTripDetails();
+    const mainDest = tripData?.dropoffOptionsIda?.find((opt) => opt.isMainDestination);
+    if (mainDest) {
+      reserveForm.setField('price', mainDest.price);
     }
-  }, [open, initialTrip?.tripId]);
+  }, [tripData]);
 
-  // Load the return trip's full data (pickup options, dropoffOptionsIda) when
-  // it changes. We need it for the downgrade case so we can look up the return
-  // leg's Ida price.
   useEffect(() => {
-    if (!returnTrip?.tripId) {
-      setReturnTripData(null);
-      return;
+    if (tripQuery.error) {
+      console.error('[AddReservationFlow] Error fetching trip details:', tripQuery.error);
+      toast({ title: 'Error', description: getApiErrorMessage(tripQuery.error).message, variant: 'destructive' });
     }
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await getTripById(returnTrip.tripId, returnTrip.reserveId);
-        if (!cancelled) setReturnTripData(data);
-      } catch (err) {
-        console.error('[AddReservationFlow] Error fetching return trip:', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [returnTrip?.tripId, returnTrip?.reserveId]);
+  }, [tripQuery.error]);
 
   useEffect(() => {
     if (open && initialTrip) {
@@ -419,8 +393,8 @@ export function AddReservationFlow({
     setReservationPayments([]);
     setSelectedPaymentMethod('1');
     setPaymentAmount('');
-    setTripData(null);
-    setReturnTripData(null);
+    // tripData/returnTripData ya no son estado local: los maneja React Query y
+    // se vuelven a evaluar (staleTime:0) al reabrir el diálogo.
     setSelectedDropoffCityId(null);
     onOpenChange(false);
   };

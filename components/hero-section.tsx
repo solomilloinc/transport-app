@@ -12,12 +12,11 @@ import { es } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TripSelectOption } from '@/app/page';
 import { MapPin } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
-import { getTripById } from '@/services/trip';
-import type { TripPickupStopReportDto } from '@/interfaces/trip';
+import { useTrip, STALE_TRIP_CATALOG } from '@/hooks/queries/use-trip';
 
 export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const router = useRouter();
@@ -42,41 +41,15 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
 
   // Pickup stops for the currently selected route. Loaded lazily (only when a
   // user actually picks a route) instead of pre-fetching them for every trip on
-  // landing render. Results are cached per tripId so re-selecting a route — or
-  // toggling back and forth — does not trigger another GetTripById round-trip.
-  // Trip/price data is catalog (changes rarely), so a per-session cache is safe.
-  const [stopSchedules, setStopSchedules] = useState<TripPickupStopReportDto[]>([]);
-  const stopSchedulesCache = useRef<Map<number, TripPickupStopReportDto[]>>(new Map());
-
-  useEffect(() => {
-    if (!selectedTrip) {
-      setStopSchedules([]);
-      return;
-    }
-
-    const tripId = Number(selectedTrip.id);
-    const cached = stopSchedulesCache.current.get(tripId);
-    if (cached) {
-      setStopSchedules(cached);
-      return;
-    }
-
-    let cancelled = false;
-    getTripById(tripId)
-      .then((fullTrip) => {
-        if (cancelled) return;
-        const stops = fullTrip.stopSchedules || [];
-        stopSchedulesCache.current.set(tripId, stops);
-        setStopSchedules(stops);
-      })
-      .catch(() => {
-        if (!cancelled) setStopSchedules([]);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedTrip]);
+  // landing render. React Query dedupes + caches per tripId, so re-selecting a
+  // route — or toggling back and forth — does not re-hit GetTripById. Trip data
+  // is catalog (changes rarely), hence the long staleTime.
+  const { data: selectedTripData } = useTrip(
+    selectedTrip ? Number(selectedTrip.id) : undefined,
+    undefined,
+    { enabled: !!selectedTrip, staleTime: STALE_TRIP_CATALOG }
+  );
+  const stopSchedules = selectedTripData?.stopSchedules ?? [];
 
   // For round trip, find the return trip (inverse route)
   const returnTrip = useMemo(() => {
