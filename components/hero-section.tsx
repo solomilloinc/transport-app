@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { TripSelectOption } from '@/app/page';
 import { MapPin } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
+import { useTrip, STALE_TRIP_CATALOG } from '@/hooks/queries/use-trip';
 
 export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const router = useRouter();
@@ -37,6 +38,18 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   useEffect(() => {
     setSelectedPickupDirectionId('');
   }, [selectedTripId]);
+
+  // Pickup stops for the currently selected route. Loaded lazily (only when a
+  // user actually picks a route) instead of pre-fetching them for every trip on
+  // landing render. React Query dedupes + caches per tripId, so re-selecting a
+  // route — or toggling back and forth — does not re-hit GetTripById. Trip data
+  // is catalog (changes rarely), hence the long staleTime.
+  const { data: selectedTripData } = useTrip(
+    selectedTrip ? Number(selectedTrip.id) : undefined,
+    undefined,
+    { enabled: !!selectedTrip, staleTime: STALE_TRIP_CATALOG }
+  );
+  const stopSchedules = selectedTripData?.stopSchedules ?? [];
 
   // For round trip, find the return trip (inverse route)
   const returnTrip = useMemo(() => {
@@ -188,7 +201,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                     </div>
 
                     {/* Pickup Direction - only show when a trip is selected and has stop schedules */}
-                    {selectedTrip && selectedTrip.stopSchedules.length > 0 && (
+                    {selectedTrip && stopSchedules.length > 0 && (
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-blue-900 flex items-center gap-1">
                           <MapPin className="h-3.5 w-3.5" />
@@ -199,7 +212,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                             <SelectValue placeholder="Selecciona dónde subir (opcional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            {selectedTrip.stopSchedules.map((stop) => (
+                            {stopSchedules.map((stop) => (
                               <SelectItem key={stop.directionId} value={stop.directionId.toString()}>
                                 {stop.directionName}
                               </SelectItem>
