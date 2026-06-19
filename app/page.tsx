@@ -4,19 +4,22 @@ import { SelectOption } from '@/components/dashboard/select';
 import { ScrollToSection } from '@/components/scroll-to-section';
 import { HeroSection } from '@/components/hero-section';
 import Navbar from '@/components/navbar';
-import { getPublicTrips, getTripById, PublicTripDto } from '@/services/trip';
-import { TripPickupStopReportDto } from '@/interfaces/trip';
+import { getPublicTrips } from '@/services/trip';
 import { LandingContent } from '@/components/landing-content';
 import Footer from '@/components/footer';
 
-// Extended SelectOption to include trip data
+// Extended SelectOption to include trip data.
+// `stopSchedules` is intentionally NOT loaded here: the landing only needs the
+// pickup stops for the ONE route a user ends up selecting, so HeroSection loads
+// them lazily on selection (see components/hero-section.tsx). Loading them for
+// every trip up-front caused an N+1 burst of parallel GetTripById calls on each
+// landing render.
 export interface TripSelectOption extends SelectOption {
   originCityId: number;
   originCityName: string;
   destinationCityId: number;
   destinationCityName: string;
   priceFrom: number | null;
-  stopSchedules: TripPickupStopReportDto[];
 }
 
 async function loadTrips(): Promise<TripSelectOption[]> {
@@ -24,19 +27,7 @@ async function loadTrips(): Promise<TripSelectOption[]> {
     const response = await getPublicTrips(1, 100);
 
     if (response && response.items) {
-      // Load full trip data in parallel to get StopSchedules
-      const fullTrips = await Promise.all(
-        response.items.map(async (trip) => {
-          try {
-            const fullTrip = await getTripById(trip.tripId);
-            return { ...trip, stopSchedules: fullTrip.stopSchedules || [] };
-          } catch {
-            return { ...trip, stopSchedules: [] as TripPickupStopReportDto[] };
-          }
-        })
-      );
-
-      return fullTrips.map((trip) => ({
+      return response.items.map((trip) => ({
         id: trip.tripId,
         value: trip.tripId.toString(),
         label: `${trip.originCityName} → ${trip.destinationCityName}`,
@@ -45,7 +36,6 @@ async function loadTrips(): Promise<TripSelectOption[]> {
         destinationCityId: trip.destinationCityId,
         destinationCityName: trip.destinationCityName,
         priceFrom: trip.priceFrom,
-        stopSchedules: trip.stopSchedules,
       }));
     }
   } catch {

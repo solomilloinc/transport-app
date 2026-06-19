@@ -12,10 +12,12 @@ import { es } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TripSelectOption } from '@/app/page';
 import { MapPin } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
+import { getTripById } from '@/services/trip';
+import type { TripPickupStopReportDto } from '@/interfaces/trip';
 
 export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   const router = useRouter();
@@ -37,6 +39,44 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
   useEffect(() => {
     setSelectedPickupDirectionId('');
   }, [selectedTripId]);
+
+  // Pickup stops for the currently selected route. Loaded lazily (only when a
+  // user actually picks a route) instead of pre-fetching them for every trip on
+  // landing render. Results are cached per tripId so re-selecting a route — or
+  // toggling back and forth — does not trigger another GetTripById round-trip.
+  // Trip/price data is catalog (changes rarely), so a per-session cache is safe.
+  const [stopSchedules, setStopSchedules] = useState<TripPickupStopReportDto[]>([]);
+  const stopSchedulesCache = useRef<Map<number, TripPickupStopReportDto[]>>(new Map());
+
+  useEffect(() => {
+    if (!selectedTrip) {
+      setStopSchedules([]);
+      return;
+    }
+
+    const tripId = Number(selectedTrip.id);
+    const cached = stopSchedulesCache.current.get(tripId);
+    if (cached) {
+      setStopSchedules(cached);
+      return;
+    }
+
+    let cancelled = false;
+    getTripById(tripId)
+      .then((fullTrip) => {
+        if (cancelled) return;
+        const stops = fullTrip.stopSchedules || [];
+        stopSchedulesCache.current.set(tripId, stops);
+        setStopSchedules(stops);
+      })
+      .catch(() => {
+        if (!cancelled) setStopSchedules([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTrip]);
 
   // For round trip, find the return trip (inverse route)
   const returnTrip = useMemo(() => {
@@ -188,7 +228,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                     </div>
 
                     {/* Pickup Direction - only show when a trip is selected and has stop schedules */}
-                    {selectedTrip && selectedTrip.stopSchedules.length > 0 && (
+                    {selectedTrip && stopSchedules.length > 0 && (
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-blue-900 flex items-center gap-1">
                           <MapPin className="h-3.5 w-3.5" />
@@ -199,7 +239,7 @@ export function HeroSection({ trips }: { trips: TripSelectOption[] }) {
                             <SelectValue placeholder="Selecciona dónde subir (opcional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            {selectedTrip.stopSchedules.map((stop) => (
+                            {stopSchedules.map((stop) => (
                               <SelectItem key={stop.directionId} value={stop.directionId.toString()}>
                                 {stop.directionName}
                               </SelectItem>
