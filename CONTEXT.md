@@ -165,6 +165,20 @@ estados **sigue incluyendo `Cancelled`** a propósito: la baja se ve, pero ya no
 > de `label`** ("Confirmado", "Efectivo") y los headers del Excel (texto de display). El tipo TS es
 > espejo exacto del wire; se traduce únicamente al renderizar.
 
+### Cobranza — Pagos y Caja
+Familia **separada** de la [[#reportería--análisis-sobre-un-rango]]: otro dominio (caja) y otra auth
+(**Admin + Operator**). Vive bajo `cashbox/*` y en el front en su propia sección `/admin/cashbox`,
+**no** dentro de Reportería — porque Reportería es Admin-only y los Operadores (rol `user`) deben ver
+cobranza. Dos reportes conectados:
+- **Pagos** (`cashbox/payments`): la fila es **un método** de un pago. Si un cobro se parte (ej.
+  tarjeta + efectivo), salen **2 filas**. Orden default **cronológico** (`date` ascendente).
+- **Caja** (`cashbox/report`): la fila es una caja (turno). El **drill-down** de una caja = el
+  reporte de Pagos filtrado por su `cashBoxId`.
+
+> ⚠️ **No existe "QR"** como método: un cobro por QR de MercadoPago entra como **Online (2)**.
+> Métodos: `1` Efectivo, `2` Online (incl. QR), `3` Tarjeta, `4` Transferencia.
+> Estados de pago: `1` Pendiente, `2` Pagado, `3` Cancelado, `4` Reintegrado, `5` Prepago.
+
 ---
 
 ## Doc canónica del contrato
