@@ -38,6 +38,7 @@ import {
 } from '@/services/reporting';
 import {
   ReportingPassengerRow,
+  PassengerStatus,
   PASSENGER_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
 } from '@/interfaces/reporting';
@@ -178,7 +179,14 @@ export function PassengersReportTab({ entityOptions }: { entityOptions: Reportin
       width: '12%',
       sortKey: 'status',
       cell: (r: ReportingPassengerRow) => (
-        <Badge variant="outline">{PASSENGER_STATUS_LABELS[r.status] ?? r.status}</Badge>
+        <Badge
+          variant="outline"
+          className={
+            r.status === PassengerStatus.PendingPayment ? 'border-red-200 text-red-500' : undefined
+          }
+        >
+          {PASSENGER_STATUS_LABELS[r.status] ?? r.status}
+        </Badge>
       ),
     },
     {
@@ -350,7 +358,7 @@ export function PassengersReportTab({ entityOptions }: { entityOptions: Reportin
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Detalle de pasajeros</h3>
                 <ExportButton
-                  family="passengers"
+                  endpoint="/api/reporting/passengers/export"
                   filters={applied as Record<string, any>}
                   sortBy={sortBy}
                   sortDescending={sortDescending}

@@ -225,3 +225,68 @@ export function OccupancyHistogram({
     </ChartCard>
   );
 }
+
+// ─── Genéricos (reusables por Cobranza u otros) ──────────────────────────────
+
+export function GenericPieChart({
+  title,
+  data,
+  dataKey = 'count',
+  nameKey = 'label',
+}: {
+  title: string;
+  data: any[];
+  dataKey?: string;
+  nameKey?: string;
+}) {
+  return (
+    <ChartCard title={title} empty={!data?.length}>
+      <ChartContainer config={{}} className="aspect-auto h-[240px] w-full">
+        <PieChart>
+          <Pie data={data} dataKey={dataKey} nameKey={nameKey} innerRadius={50} outerRadius={90}>
+            {data.map((_, i) => (
+              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(v: number) => v.toLocaleString('es-AR')} />
+          <Legend />
+        </PieChart>
+      </ChartContainer>
+    </ChartCard>
+  );
+}
+
+export function GenericBarChart({
+  title,
+  data,
+  categoryKey,
+  valueKey,
+  asMoney = false,
+}: {
+  title: string;
+  data: any[];
+  categoryKey: string;
+  valueKey: string;
+  asMoney?: boolean;
+}) {
+  return (
+    <ChartCard title={title} empty={!data?.length}>
+      <ChartContainer config={{}} className="aspect-auto h-[240px] w-full">
+        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
+          <CartesianGrid horizontal={false} />
+          <XAxis type="number" hide />
+          <YAxis
+            type="category"
+            dataKey={categoryKey}
+            width={120}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 11 }}
+          />
+          <Tooltip formatter={(v: number) => (asMoney ? money(v) : v.toLocaleString('es-AR'))} />
+          <Bar dataKey={valueKey} fill={COLORS[1]} radius={4} />
+        </BarChart>
+      </ChartContainer>
+    </ChartCard>
+  );
+}

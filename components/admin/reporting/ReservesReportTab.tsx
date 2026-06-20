@@ -379,7 +379,7 @@ export function ReservesReportTab({ entityOptions }: { entityOptions: ReportingE
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Detalle de reservas</h3>
                 <ExportButton
-                  family="reserves"
+                  endpoint="/api/reporting/reserves/export"
                   filters={applied as Record<string, any>}
                   sortBy={sortBy}
                   sortDescending={sortDescending}

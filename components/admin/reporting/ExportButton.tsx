@@ -5,24 +5,24 @@ import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { getApiErrorMessage } from '@/lib/apiErrors';
-import { exportReporting } from '@/services/reporting-export';
-import { ReportingFamily } from '@/interfaces/reporting';
+import { exportReport } from '@/services/reporting-export';
 
 interface Props {
-  family: ReportingFamily;
+  /** Route Handler de export, ej. `/api/reporting/passengers/export` o `/api/cashbox/payments/export`. */
+  endpoint: string;
   filters: Record<string, any>;
   sortBy?: string;
   sortDescending?: boolean;
   disabled?: boolean;
 }
 
-export function ExportButton({ family, filters, sortBy, sortDescending, disabled }: Props) {
+export function ExportButton({ endpoint, filters, sortBy, sortDescending, disabled }: Props) {
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
     setLoading(true);
     try {
-      await exportReporting({ family, filters, sortBy, sortDescending });
+      await exportReport({ endpoint, filters, sortBy, sortDescending });
     } catch (error) {
       toast({
         title: 'No se pudo exportar',

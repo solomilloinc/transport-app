@@ -17,6 +17,7 @@ import {
   User,
   UserCheck,
   Users,
+  Wallet,
   Wrench,
   Home,
   LayoutDashboard,
@@ -79,6 +80,12 @@ const MENU_CONFIG: {
       icon: BarChart3,
       path: '/admin/reporting',
       roles: ['admin'],
+    },
+    {
+      name: 'Cobranza',
+      icon: Wallet,
+      path: '/admin/cashbox',
+      roles: ['admin', 'user'],
     },
     {
       name: 'Clientes',
