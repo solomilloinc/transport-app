@@ -7,10 +7,15 @@ end-to-end (requiere sesión Admin/Operator + backend deployado).
 
 ## Decisión central: sección aparte, no tabs de Reportería
 
-Lo **fuerza la auth**: Reportería es **Admin-only** (gateada así en `middleware.ts`); Cobranza es
+Lo **fuerza la auth**: Reservas es **Admin-only** (gateada así en `middleware.ts`); Cobranza es
 **Admin + Operator**, y `operator` mapea a `user` ([lib/auth-role.ts](../../lib/auth-role.ts)). Si
-fuera un tab de Reportería, los Operadores no entrarían. Por eso vive en `/admin/cashbox`, gateada a
-`admin/superadmin/user`.
+fuera un tab de la página de Reservas, los Operadores no entrarían. Por eso es **ruta aparte**
+(`/admin/cashbox`, gateada a `admin/superadmin/user`).
+
+En el **sidebar** sí se agrupan: el ítem "Reportería" es un submenu con dos sub-items — "Reservas"
+(`/admin/reporting`, roles `['admin']`) y "Cobranza" (`/admin/cashbox`, roles `['admin','user']`).
+El submenu filtra por rol, así que un Operador ve el grupo con sólo "Cobranza". El padre **despliega**
+(no navega), por eso no necesita una página propia.
 
 ## Reuso (casi todo)
 

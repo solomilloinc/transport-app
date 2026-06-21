@@ -20,7 +20,7 @@ export default function ReportingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Reportería"
+        title="Reportería de reservas"
         description="Análisis de ventas y ocupación sobre un rango de fechas, con gráficos y export a Excel."
       />
 
