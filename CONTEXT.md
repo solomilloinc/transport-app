@@ -167,9 +167,11 @@ estados **sigue incluyendo `Cancelled`** a propósito: la baja se ve, pero ya no
 
 ### Cobranza — Pagos y Caja
 Familia **separada** de la [[#reportería--análisis-sobre-un-rango]]: otro dominio (caja) y otra auth
-(**Admin + Operator**). Vive bajo `cashbox/*` y en el front en su propia sección `/admin/cashbox`,
-**no** dentro de Reportería — porque Reportería es Admin-only y los Operadores (rol `user`) deben ver
-cobranza. Dos reportes conectados:
+(**Admin + Operator**). Vive bajo `cashbox/*` en la ruta `/admin/cashbox`. En el sidebar va
+**agrupada** bajo el ítem "Reportería" como sub-item, pero es **ruta y auth aparte**: el sub-item
+"Reservas" (`/admin/reporting`) es **Admin-only** y "Cobranza" es **Admin + Operator** (`user`). El
+submenu filtra por rol, así un Operador ve el grupo con **sólo** "Cobranza" adentro. Dos reportes
+conectados:
 - **Pagos** (`cashbox/payments`): la fila es **un método** de un pago. Si un cobro se parte (ej.
   tarjeta + efectivo), salen **2 filas**. Orden default **cronológico** (`date` ascendente).
 - **Caja** (`cashbox/report`): la fila es una caja (turno). El **drill-down** de una caja = el
