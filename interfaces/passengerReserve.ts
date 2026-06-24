@@ -35,7 +35,9 @@ export interface PassengerReserve extends Auditable {
   status: number;
   isRoundTrip: boolean;
   payments: Payment[];
+  totalAmount: number;
   paidAmount: number;
+  pendingDebt: number;
 }
 
 export interface PassengerReserveReport extends PassengerReserve {

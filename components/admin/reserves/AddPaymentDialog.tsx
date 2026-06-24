@@ -44,11 +44,11 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   }, [open, passengerReserve]);
 
   const getTotalReserveAmount = () => {
-    return passengerReserve?.paidAmount || 0;
+    return passengerReserve?.totalAmount || 0;
   };
 
   const getAlreadyPaidAmount = () => {
-    return passengerReserve?.payments?.reduce((total, p) => total + p.transactionAmount, 0) || 0;
+    return passengerReserve?.paidAmount || 0;
   };
 
   const getCurrentAddedAmount = () => {
@@ -56,9 +56,8 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   };
 
   const getRemainingBalance = () => {
-    const total = getTotalReserveAmount();
-    const paid = getAlreadyPaidAmount() + getCurrentAddedAmount();
-    return Math.max(0, total - paid);
+    const pendingDebt = passengerReserve?.pendingDebt ?? Math.max(0, getTotalReserveAmount() - getAlreadyPaidAmount());
+    return Math.max(0, pendingDebt - getCurrentAddedAmount());
   };
 
   const handleAddPaymentToList = () => {
@@ -102,7 +101,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     }
 
     const totalNew = getCurrentAddedAmount();
-    const maxAllowed = getTotalReserveAmount() - getAlreadyPaidAmount();
+    const maxAllowed = passengerReserve?.pendingDebt ?? Math.max(0, getTotalReserveAmount() - getAlreadyPaidAmount());
     if (totalNew > maxAllowed) {
       toast({
         title: 'Monto excedido',
@@ -119,7 +118,7 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
         paymentMethod: p.paymentMethod,
       }));
 
-      const response = await post(`/reserve-payments-create/${passengerReserve?.reserveId}/${passengerReserve?.customerId}`, payload);
+      const response = await post(`/reserve-payments-create/${passengerReserve?.reserveId}/${passengerReserve?.customerId}?passengerId=${passengerReserve?.passengerId}`, payload);
       if (response) {
         toast({ title: 'Pago cargado', description: 'El pago ha sido cargado exitosamente', variant: 'success' });
         onSuccess();

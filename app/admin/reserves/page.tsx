@@ -46,7 +46,7 @@ const passengerSortFns = {
   pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.pickupLocationName.localeCompare(b.pickupLocationName),
   paid: (a: PassengerReserveReport, b: PassengerReserveReport) => a.statusPaymentId - b.statusPaymentId,
   paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.paymentMethods || '').localeCompare(b.paymentMethods),
-  paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.paidAmount) - Number(b.paidAmount),
+  paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.totalAmount) - Number(b.totalAmount),
 };
 
 export default function ReservationsPage() {

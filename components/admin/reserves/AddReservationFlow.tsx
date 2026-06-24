@@ -241,6 +241,14 @@ export function AddReservationFlow({
     return [];
   }, [selectedDropoffCityId, dropoffCityOptions, tripData]);
 
+  const getDefaultDropoffDirectionId = (): number | null => {
+    const firstDirection = dropoffDirectionOptions[0];
+    if (!firstDirection) return null;
+
+    const directionId = Number(firstDirection.value);
+    return Number.isFinite(directionId) && directionId > 0 ? directionId : null;
+  };
+
   // Returns the price currently selected from `dropoffCityOptions`. The shape
   // of that list depends on `useIdaVueltaTariff`:
   // - true  → package price (TOTAL of round-trip, from dropoffOptionsIdaVuelta)
@@ -427,7 +435,7 @@ export function AddReservationFlow({
         return;
       }
 
-      const dropoffLocationId = data.dropoffLocationId || selectedDropoffCityId;
+      const dropoffLocationId = data.dropoffLocationId || getDefaultDropoffDirectionId();
       const isRT = data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP;
 
       if (isRT && initialTrip!.reserveId === returnTrip!.reserveId) {
