@@ -79,7 +79,7 @@ export function PassengerListTable({
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('paid')}
               >
-                Estado Pago {renderSortIndicator('paid')}
+                Pago {renderSortIndicator('paid')}
               </button>
             </th>
             <th className="py-3 pr-4 w-[22%] text-center">
@@ -129,7 +129,7 @@ export function PassengerListTable({
                         </span>
                       )}
                       {passenger.reserveRelatedId != null &&
-                        (passenger.paidAmount ?? 0) === 0 && (
+                        (passenger.totalAmount ?? 0) === 0 && (
                           // Badge: este Passenger es la pata del package IdaVuelta.
                           // Convención Mayo 2026: el outbound carga el total, el return va a 0.
                           // Sin este badge, el admin podría asumir que el ticket es gratis.
@@ -193,7 +193,7 @@ export function PassengerListTable({
               </td>
               <td className="py-3 pr-4 text-center">{passenger.paymentMethods}</td>
               <td className="py-3 pr-4 text-center font-medium">
-                ${(passenger.paidAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${(passenger.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               <td className="py-3 pl-4 text-right">
                 <div className="flex justify-end items-center">
