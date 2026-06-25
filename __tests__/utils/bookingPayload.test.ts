@@ -193,7 +193,7 @@ describe('buildAdminReservePayload', () => {
 });
 
 describe('buildPublicReservePayload', () => {
-  it('builds a public Ida payload with lockToken', () => {
+  it('builds a public Ida payload with lockToken (wallet, carries receiptEmail)', () => {
     const out = buildPublicReservePayload({
       lockToken: 'abc',
       reserveTypeId: RESERVE_TYPE.IDA,
@@ -201,11 +201,13 @@ describe('buildPublicReservePayload', () => {
       returnReserveId: null,
       passengers: [externalPax()],
       payment: null,
+      receiptEmail: 'comprador@mail.com',
     });
 
     expect(out.lockToken).toBe('abc');
     expect(out.passengers[0].firstName).toBe('Juan');
     expect(out.passengers[0].return).toBeNull();
+    expect(out.receiptEmail).toBe('comprador@mail.com');
   });
 
   it('builds a public IdaVuelta payload with N passengers (outbound full, return 0)', () => {
@@ -221,10 +223,59 @@ describe('buildPublicReservePayload', () => {
       returnReserveId: 2,
       passengers: [pax, pax],
       payment: null,
+      receiptEmail: 'comprador@mail.com',
     });
 
     expect(out.passengers).toHaveLength(2);
     expect(out.passengers[0].outbound.price).toBe(160);
     expect(out.passengers[0].return?.price).toBe(0);
+  });
+
+  it('trims receiptEmail and omits it when blank', () => {
+    const out = buildPublicReservePayload({
+      lockToken: 'abc',
+      reserveTypeId: RESERVE_TYPE.IDA,
+      outboundReserveId: 1,
+      returnReserveId: null,
+      passengers: [externalPax()],
+      payment: {
+        transactionAmount: 100,
+        token: 'tok',
+        description: 'Pasaje',
+        installments: 1,
+        paymentMethodId: 'visa',
+        payerEmail: 'pagador@mp.com',
+      },
+      receiptEmail: '  comprador@mail.com  ',
+    });
+
+    expect(out.receiptEmail).toBe('comprador@mail.com');
+  });
+
+  it('rejects wallet (payment null) without receiptEmail', () => {
+    expect(() =>
+      buildPublicReservePayload({
+        lockToken: 'abc',
+        reserveTypeId: RESERVE_TYPE.IDA,
+        outboundReserveId: 1,
+        returnReserveId: null,
+        passengers: [externalPax()],
+        payment: null,
+      }),
+    ).toThrow();
+  });
+
+  it('rejects an invalid receiptEmail', () => {
+    expect(() =>
+      buildPublicReservePayload({
+        lockToken: 'abc',
+        reserveTypeId: RESERVE_TYPE.IDA,
+        outboundReserveId: 1,
+        returnReserveId: null,
+        passengers: [externalPax()],
+        payment: null,
+        receiptEmail: 'no-es-un-email',
+      }),
+    ).toThrow();
   });
 });

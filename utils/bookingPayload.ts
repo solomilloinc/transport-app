@@ -91,11 +91,13 @@ export interface BuildPublicReservePayloadArgs {
   returnReserveId: number | null;
   passengers: PassengerBookingExternal[];
   payment: ExternalPayment | null;
+  receiptEmail?: string;
 }
 
 export function buildPublicReservePayload(
   args: BuildPublicReservePayloadArgs,
 ): CreateReserveWithLockRequest {
+  const receiptEmail = args.receiptEmail?.trim();
   const payload: CreateReserveWithLockRequest = {
     lockToken: args.lockToken,
     reserveTypeId: args.reserveTypeId,
@@ -104,6 +106,7 @@ export function buildPublicReservePayload(
       args.reserveTypeId === RESERVE_TYPE.ROUND_TRIP ? args.returnReserveId : null,
     payment: args.payment,
     passengers: args.passengers,
+    ...(receiptEmail ? { receiptEmail } : {}),
   };
   return createReserveWithLockRequestSchema.parse(payload);
 }

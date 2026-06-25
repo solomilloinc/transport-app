@@ -31,6 +31,11 @@ import { getApiErrorToastMessage } from '@/lib/apiErrors';
 import { toast } from '@/components/ui/use-toast';
 import { normalizeRole } from '@/lib/auth-role';
 
+// Mismo criterio que el backend: formato de email válido. Sólo bloquea el
+// checkout de wallet; en tarjeta el comprobante es opcional.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (value: string) => EMAIL_REGEX.test(value.trim());
+
 interface CheckoutProfileResponse {
   userId: number;
   customerId?: number | null;
@@ -66,6 +71,11 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'wallet'>('card');
   const [lockError, setLockError] = useState<string | null>(null);
+  // Email donde llega el comprobante de pago. Obligatorio en wallet, opcional
+  // (pero recomendado) en tarjeta. Se prellena con el email de la cuenta si el
+  // usuario está logueado; queda editable.
+  const [receiptEmail, setReceiptEmail] = useState('');
+  const hasPrefilledReceiptEmail = useRef(false);
 
   const [formattedDepartureDate, setFormattedDepartureDate] = useState('');
   const [formattedReturnDate, setFormattedReturnDate] = useState('');
@@ -144,6 +154,19 @@ export default function CheckoutPage() {
     };
   }, [isCompleteClient]);
 
+  // Prellenado del email del comprobante con el de la cuenta logueada (una sola
+  // vez, para no pisar lo que el usuario edite después).
+  useEffect(() => {
+    if (hasPrefilledReceiptEmail.current) {
+      return;
+    }
+    const accountEmail = session?.user?.email;
+    if (accountEmail) {
+      hasPrefilledReceiptEmail.current = true;
+      setReceiptEmail(accountEmail);
+    }
+  }, [session?.user?.email]);
+
   // True when the booking qualifies for the round-trip discount under the
   // tenant's same-day rule. Drives which dropoff price table to show + send.
   const useIdaVueltaTariff = shouldUseIdaVueltaTariff({
@@ -183,6 +206,14 @@ export default function CheckoutPage() {
   const totalPrice = perPassengerTotal * checkout.passengers;
   const serviceFee = 0;
   const finalTotal = useMemo(() => totalPrice + serviceFee, [totalPrice, serviceFee]);
+
+  const isReceiptEmailValid = isValidEmail(receiptEmail);
+  // Wallet exige el comprobante sí o sí; en tarjeta sólo marcamos error si el
+  // usuario escribió algo inválido (es opcional, puede dejarlo vacío).
+  const showReceiptEmailError =
+    paymentMethod === 'wallet'
+      ? !isReceiptEmailValid
+      : receiptEmail.trim() !== '' && !isReceiptEmailValid;
 
   const handlePassengerDataChange = (data: Record<string, any>[]) => {
     if (JSON.stringify(data) !== JSON.stringify(passengerData)) {
@@ -325,6 +356,7 @@ export default function CheckoutPage() {
             returnReserveId: checkout.returnTrip?.reserveId ?? null,
             passengers: buildExternalPassengers(),
             payment,
+            receiptEmail,
           }),
         async () => {
           // No top-level trip refetch — LocationSelector owns it.
@@ -342,6 +374,7 @@ export default function CheckoutPage() {
       isRoundTrip,
       buildExternalPassengers,
       isLockValid,
+      receiptEmail,
     ],
   );
 
@@ -350,13 +383,18 @@ export default function CheckoutPage() {
       if (!finalTotal || finalTotal <= 0) {
         throw new Error('El total debe ser mayor a 0.');
       }
+      // En wallet el backend exige el email del comprobante; lo validamos acá
+      // además de deshabilitar el brick, por si el SDK dispara onSubmit igual.
+      if (!isValidEmail(receiptEmail)) {
+        throw new Error('Ingrese un email válido para recibir el comprobante.');
+      }
       const responseData = await submitBooking(null);
       if (!responseData.preferenceId) {
         throw new Error('No se recibió preferenceId del servidor');
       }
       return responseData.preferenceId;
     },
-    [finalTotal, submitBooking],
+    [finalTotal, submitBooking, receiptEmail],
   );
 
   const handleCardSubmit = async (data: {
@@ -371,6 +409,11 @@ export default function CheckoutPage() {
     try {
       if (!finalTotal || finalTotal <= 0) {
         throw new Error('El total debe ser mayor a 0.');
+      }
+
+      // En tarjeta el comprobante es opcional, pero si cargó algo debe ser válido.
+      if (receiptEmail.trim() && !isValidEmail(receiptEmail)) {
+        throw new Error('Ingrese un email válido para recibir el comprobante.');
       }
 
       const compraDescripcion = checkout.returnTrip ? 'Pasaje ida y vuelta' : 'Pasaje de ida';
@@ -673,6 +716,34 @@ export default function CheckoutPage() {
                     <p className="text-gray-600 mb-6 text-sm sm:text-base">Su información de pago es segura y está encriptada.</p>
 
                     <div className="mb-6">
+                      <label htmlFor="receiptEmail" className="block font-medium text-gray-900 mb-1">
+                        Email para el comprobante
+                        {paymentMethod === 'wallet' && <span className="text-red-500"> *</span>}
+                      </label>
+                      <p className="text-sm text-gray-500 mb-2">
+                        Le enviaremos el comprobante de pago a este correo.
+                      </p>
+                      <input
+                        id="receiptEmail"
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        value={receiptEmail}
+                        onChange={(e) => setReceiptEmail(e.target.value)}
+                        disabled={isSubmitting}
+                        placeholder="comprador@mail.com"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                      />
+                      {showReceiptEmailError && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {receiptEmail.trim()
+                            ? 'Ingrese un email válido.'
+                            : 'Ingrese un email para recibir el comprobante.'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mb-6">
                       <h3 className="font-medium text-gray-900 mb-3">Seleccione su método de pago</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <button
@@ -720,6 +791,10 @@ export default function CheckoutPage() {
                           defaultEmail={passengerData?.[0]?.email}
                           isSubmitting={isSubmitting}
                         />
+                      ) : !isReceiptEmailValid ? (
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                          Ingrese un email válido para el comprobante para continuar con el pago por MercadoPago Wallet.
+                        </div>
                       ) : (
                         <WalletPaymentForm
                           key="wallet-payment-form"

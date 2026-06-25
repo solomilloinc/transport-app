@@ -147,4 +147,10 @@ export interface CreateReserveWithLockRequest {
   returnReserveId: number | null;
   payment: ExternalPayment | null;
   passengers: PassengerBookingExternal[];
+  /**
+   * Email donde el backend envía el comprobante de pago al comprador. Separado
+   * del `payerEmail` de MercadoPago. Obligatorio cuando se paga con wallet
+   * (`payment === null`); opcional en tarjeta, pero conviene enviarlo igual.
+   */
+  receiptEmail?: string;
 }
