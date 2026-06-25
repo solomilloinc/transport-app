@@ -123,5 +123,20 @@ export const createReserveWithLockRequestSchema = z
     passengers: z
       .array(passengerBookingExternalSchema)
       .min(1, 'at least one passenger required'),
+    // Email del comprobante. El backend valida formato y, en wallet, presencia.
+    receiptEmail: z
+      .string()
+      .email('ReceiptEmail debe ser un email válido.')
+      .optional(),
   })
-  .superRefine(sharedWrapperRefine);
+  .superRefine(sharedWrapperRefine)
+  .superRefine((data, ctx) => {
+    // Wallet (sin objeto `payment`) exige receiptEmail; el backend lo rechaza si falta.
+    if (data.payment === null && !data.receiptEmail) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['receiptEmail'],
+        message: 'ReceiptEmail es obligatorio para el comprobante cuando se paga con wallet.',
+      });
+    }
+  });
