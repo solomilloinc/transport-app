@@ -31,7 +31,7 @@ import { PaymentMethod } from '@/interfaces/payment';
 import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
 import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFlow';
-import { CancelPassengerDialog, CancelPassengerPolicy } from '@/components/admin/reserves/CancelPassengerDialog';
+import { CancelPassengerDialog, CancelPassengerPolicy, CancelPassengerScope } from '@/components/admin/reserves/CancelPassengerDialog';
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { PagedResponse } from '@/services/types';
@@ -402,7 +402,7 @@ export default function ReservationsPage() {
     setIsCancelPassengerOpen(true);
   };
 
-  const handleConfirmCancelPassenger = async (policy: CancelPassengerPolicy) => {
+  const handleConfirmCancelPassenger = async (policy: CancelPassengerPolicy, scope: CancelPassengerScope) => {
     if (!passengerToCancel) return;
 
     setIsCancellingPassenger(true);
@@ -411,6 +411,7 @@ export default function ReservationsPage() {
       // code/copy del backend llega al usuario también en producción.
       const result = await cancelPassengerAction(passengerToCancel.passengerId, {
         createCreditBalance: policy === 'credit',
+        cancelScope: scope === 'selected-leg-only' ? 2 : 1,
       });
 
       if (!result.ok) {

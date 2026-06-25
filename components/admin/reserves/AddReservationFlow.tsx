@@ -921,7 +921,7 @@ export function AddReservationFlow({
               if (paid === 0) {
                 return (
                   <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm font-medium text-yellow-800">
-                    Pendiente de Pago
+                    Pendiente
                   </div>
                 );
               }

@@ -9,6 +9,15 @@ import { PassengerReserveReport, PaymentStatusEnum, PaymentStatusLabels } from '
 export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
 type SortDirection = 'asc' | 'desc';
 
+const paymentStatusBadgeClasses: Record<number, string> = {
+  [PaymentStatusEnum.PendingPayment]: 'bg-yellow-100 text-yellow-800',
+  [PaymentStatusEnum.Confirmed]: 'bg-green-100 text-green-700',
+  [PaymentStatusEnum.Cancelled]: 'bg-red-100 text-red-700',
+  [PaymentStatusEnum.Traveled]: 'bg-blue-100 text-blue-700',
+  [PaymentStatusEnum.NoShow]: 'bg-gray-200 text-gray-600',
+  [PaymentStatusEnum.Refunded]: 'bg-purple-100 text-purple-700',
+};
+
 interface PassengerListTableProps {
   passengers: PassengerReserveReport[] | undefined;
   isLoading: boolean;
@@ -66,7 +75,7 @@ export function PassengerListTable({
                 Pasajero {renderSortIndicator('name')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[11%]">
+            <th className="py-3 pr-4 w-[15%]">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('pickup')}
@@ -74,7 +83,7 @@ export function PassengerListTable({
                 Subida {renderSortIndicator('pickup')}
               </button>
             </th>
-            <th className="py-3 pr-4 text-center w-[10%]">
+            <th className="py-3 pr-4 text-center w-[12%]">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('paid')}
@@ -82,7 +91,7 @@ export function PassengerListTable({
                 Pago {renderSortIndicator('paid')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[22%] text-center">
+            <th className="py-3 pr-4 w-[17%] text-center">
               <button
                 className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
                 onClick={() => onSort('paymentMethod')}
@@ -98,7 +107,7 @@ export function PassengerListTable({
                 Monto {renderSortIndicator('paidAmount')}
               </button>
             </th>
-            <th className="py-3 pl-4 text-right w-[25%]">Acciones</th>
+            <th className="py-3 pl-6 text-right w-[20%]">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -115,7 +124,7 @@ export function PassengerListTable({
                   />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <label htmlFor={`passenger-${passenger.passengerId}`} className="font-medium">
+                      <label htmlFor={`passenger-${passenger.passengerId}`} className="text-sm font-medium">
                         {passenger.fullName}
                       </label>
                       {passenger.frequentSubscriptionId != null && (
@@ -128,7 +137,7 @@ export function PassengerListTable({
                           Frecuente
                         </span>
                       )}
-                      {passenger.reserveRelatedId != null &&
+                      {false && passenger.reserveRelatedId != null &&
                         (passenger.totalAmount ?? 0) === 0 && (
                           // Badge: este Passenger es la pata del package IdaVuelta.
                           // Convención Mayo 2026: el outbound carga el total, el return va a 0.
@@ -156,49 +165,47 @@ export function PassengerListTable({
                   </div>
                 </div>
               </td>
-              <td className="py-3 pr-4 text-center">
+              <td className="py-3 pr-4 text-center text-sm">
                 {/* Dropdown for pickup location can be added here if needed */}
-                {passenger.pickupLocationName}
+                <span className="block whitespace-normal break-words leading-tight">
+                  {passenger.pickupLocationName}
+                </span>
               </td>
               <td className="py-3 pr-4 text-center">
                 {(() => {
                   const status = passenger.status ?? passenger.statusPaymentId;
                   const label = PaymentStatusLabels[status] || 'Desconocido';
-                  let badgeClass = 'bg-gray-100 text-gray-700';
-                  if (status === PaymentStatusEnum.PendingPayment) badgeClass = 'bg-yellow-100 text-yellow-800';
-                  else if (status === PaymentStatusEnum.Confirmed) badgeClass = 'bg-green-100 text-green-700';
-                  else if (status === PaymentStatusEnum.Cancelled) badgeClass = 'bg-red-100 text-red-700';
-                  else if (status === PaymentStatusEnum.Traveled) badgeClass = 'bg-blue-100 text-blue-700';
-                  else if (status === PaymentStatusEnum.NoShow) badgeClass = 'bg-gray-200 text-gray-600';
-                  else if (status === PaymentStatusEnum.Refunded) badgeClass = 'bg-purple-100 text-purple-700';
+                  const badgeClass = paymentStatusBadgeClasses[status] || 'bg-gray-100 text-gray-700';
                   return (
-                    <div className="flex items-center justify-center gap-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
+                    <div className="grid grid-cols-[1fr_1.5rem] items-center gap-1">
+                      <span className={`mx-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
                         {label}
                       </span>
-                      {status === PaymentStatusEnum.PendingPayment && (
+                      {status === PaymentStatusEnum.PendingPayment ? (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-yellow-600 hover:bg-yellow-50"
+                          className="h-6 w-6 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
                           onClick={() => onAddPayment(passenger)}
                           title="Agregar pago"
                         >
                           <DollarSign className="h-3.5 w-3.5" />
                         </Button>
+                      ) : (
+                        <span aria-hidden="true" className="h-6 w-6" />
                       )}
                     </div>
                   );
                 })()}
               </td>
-              <td className="py-3 pr-4 text-center">{passenger.paymentMethods}</td>
-              <td className="py-3 pr-4 text-center font-medium">
+              <td className="py-3 pr-4 text-center text-sm">{passenger.paymentMethods}</td>
+              <td className="py-3 pr-4 text-center text-sm font-medium">
                 ${(passenger.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
-              <td className="py-3 pl-4 text-right">
-                <div className="flex justify-end items-center">
+              <td className="py-3 pl-6 text-right">
+                <div className="grid grid-cols-[5.5rem_4.25rem] items-center justify-end gap-2">
                   <div
-                    className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ml-4 mr-2 ${
+                    className={`justify-self-center whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                       passenger.hasTraveled
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-500'
@@ -206,15 +213,16 @@ export function PassengerListTable({
                   >
                     {passenger.hasTraveled ? 'Subió' : 'No subió'}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-blue-500 hover:bg-blue-50 hover:text-blue-600"
-                    onClick={() => onEdit(passenger)}
-                    title="Editar Reserva"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                      onClick={() => onEdit(passenger)}
+                      title="Editar Reserva"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                   {(() => {
                     // Gating (ver charter §2 + CONTEXT.md): sólo pasajeros activos
                     // (PendingPayment/Confirmed) y con la Reserve sin partir.
@@ -227,20 +235,19 @@ export function PassengerListTable({
                       ? 'Cancelar pasajero'
                       : 'No se puede cancelar: el viaje partió o el pasajero no está activo';
                     return (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-orange-500 hover:bg-orange-50 hover:text-orange-600 disabled:opacity-40"
-                          onClick={() => onCancel(passenger)}
-                          disabled={!canCancel}
-                          title={cancelTitle}
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </Button>
-                      </>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-orange-500 hover:bg-orange-50 hover:text-orange-600 disabled:opacity-40"
+                        onClick={() => onCancel(passenger)}
+                        disabled={!canCancel}
+                        title={cancelTitle}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </Button>
                     );
-                  })()}
+                    })()}
+                  </div>
                 </div>
               </td>
             </tr>
