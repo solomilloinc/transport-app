@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpDown, ChevronDown, ChevronUp, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
+import { ArrowUpDown, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -51,11 +51,19 @@ export function PassengerListTable({
   reserveHasDeparted = false,
 }: PassengerListTableProps) {
   const renderSortIndicator = (column: PassengerSortColumn) => {
-    if (sortColumn !== column) {
-      return <ArrowUpDown className="ml-1 h-4 w-4 inline" />;
-    }
-    return sortDirection === 'asc' ? <ChevronUp className="ml-1 h-4 w-4 inline" /> : <ChevronDown className="ml-1 h-4 w-4 inline" />;
+    const isActive = sortColumn === column;
+    return (
+      <ArrowUpDown
+        className={`ml-1 h-4 w-4 inline ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+        aria-hidden="true"
+      />
+    );
   };
+
+  const sortButtonClass = (column: PassengerSortColumn) =>
+    `flex items-center font-medium hover:text-gray-700 ${
+      sortColumn === column ? 'text-gray-900' : 'text-gray-500'
+    }`;
 
   if (isLoading) {
     return <div className="text-center py-10 text-gray-500">Cargando pasajeros...</div>;
@@ -71,43 +79,54 @@ export function PassengerListTable({
         <thead>
           <tr className="border-b text-left text-sm font-medium text-gray-500">
             <th className="py-3 pr-4 w-[24%]">
-              <button className="flex items-center font-medium text-gray-500 hover:text-gray-700" onClick={() => onSort('name')}>
+              <button
+                className={sortButtonClass('name')}
+                onClick={() => onSort('name')}
+                aria-sort={sortColumn === 'name' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 Pasajero {renderSortIndicator('name')}
               </button>
             </th>
             <th className="py-3 pr-4 w-[15%]">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('pickup')} justify-center mx-auto`}
                 onClick={() => onSort('pickup')}
+                aria-sort={sortColumn === 'pickup' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Subida {renderSortIndicator('pickup')}
               </button>
             </th>
             <th className="py-3 pr-4 text-center w-[12%]">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('paid')} justify-center mx-auto`}
                 onClick={() => onSort('paid')}
+                aria-sort={sortColumn === 'paid' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Pago {renderSortIndicator('paid')}
               </button>
             </th>
             <th className="py-3 pr-4 w-[17%] text-center">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('paymentMethod')} justify-center mx-auto`}
                 onClick={() => onSort('paymentMethod')}
+                aria-sort={sortColumn === 'paymentMethod' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Medio de pago {renderSortIndicator('paymentMethod')}
               </button>
             </th>
             <th className="py-3 pr-4 text-center w-[12%]">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('paidAmount')} justify-center mx-auto`}
                 onClick={() => onSort('paidAmount')}
+                aria-sort={sortColumn === 'paidAmount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Monto {renderSortIndicator('paidAmount')}
               </button>
             </th>
-            <th className="py-3 pl-6 text-right w-[20%]">Acciones</th>
+            <th className="py-3 px-4 text-center w-[10%]">
+              <span className="sr-only">Estado de subida</span>
+            </th>
+            <th className="py-3 pl-4 text-right w-[10%]">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -202,10 +221,10 @@ export function PassengerListTable({
               <td className="py-3 pr-4 text-center text-sm font-medium">
                 ${(passenger.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
-              <td className="py-3 pl-6 text-right">
-                <div className="grid grid-cols-[5.5rem_4.25rem] items-center justify-end gap-2">
+              <td className="py-3 px-4 text-center">
+                <div className="inline-flex items-center justify-center">
                   <div
-                    className={`justify-self-center whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                    className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                       passenger.hasTraveled
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-500'
@@ -213,7 +232,10 @@ export function PassengerListTable({
                   >
                     {passenger.hasTraveled ? 'Subió' : 'No subió'}
                   </div>
-                  <div className="flex items-center justify-end gap-1">
+                </div>
+              </td>
+              <td className="py-3 pl-4 text-right">
+                <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -248,7 +270,6 @@ export function PassengerListTable({
                     );
                     })()}
                   </div>
-                </div>
               </td>
             </tr>
           ))}

@@ -88,13 +88,13 @@ export function TripSelectionPanel({
                 triggerClassName="h-8 text-xs"
               />
             )}
-            <div className="space-y-2">
+            <div className="scrollbar-none -mr-3 max-h-[19rem] space-y-2 overflow-y-auto overflow-x-hidden pr-3 pt-2">
               {isLoading && <div className="text-center py-4 text-gray-500">Cargando viajes...</div>}
               {!isLoading &&
                 trips?.map((trip) => (
                   <div key={trip.reserveId} className="relative group">
                     <button
-                      className={`flex w-full items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
+                      className={`flex w-full min-w-0 items-center gap-2 justify-between rounded-md border p-3 text-left text-sm ${
                         selectedTrip?.reserveId === trip.reserveId ? 'border-blue-500' : ''
                       } ${
                         // Fondo = "ya salió" (amarillo) tiene prioridad sobre la selección;
@@ -117,7 +117,7 @@ export function TripSelectionPanel({
                           {trip.reservedQuantity}/{trip.availableQuantity}
                         </span>
                       </div>
-                      <div className="text-gray-600">
+                      <div className="min-w-0 flex-1 text-gray-600">
                         {trip.originName} → {trip.destinationName}
                       </div>
                     </button>
