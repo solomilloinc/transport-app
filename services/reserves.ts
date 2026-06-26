@@ -20,7 +20,7 @@ export interface GetReservesParams {
  */
 export const getReserves = ({ date, tripId }: GetReservesParams): UseApiCall<ReserveReport, ReserveReportResponse> => {
   const finalParams = withDefaultPagination({
-    sortBy: 'reservedate',
+    sortBy: 'departurehour',
     sortDescending: false,
     pageSize: 250, // para que el backend no aplique paginación (el endpoint devuelve todo el día)
     filters: tripId ? { tripId } : {},

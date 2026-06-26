@@ -363,6 +363,8 @@ export function AddReservationFlow({
 
   useEffect(() => {
     if (open && initialTrip) {
+      setPassengerSearchQuery('');
+      resetDataPassenger();
       setStep(FlowStep.SELECT_PASSENGER);
     } else if (!open) {
       resetFlow();
@@ -373,6 +375,8 @@ export function AddReservationFlow({
     const delayDebounce = setTimeout(() => {
       if (passengerSearchQuery.length >= 3) {
         fetchPassenger({ filters: { search: passengerSearchQuery } });
+      } else {
+        resetDataPassenger();
       }
     }, 500);
     return () => clearTimeout(delayDebounce);
@@ -639,7 +643,7 @@ export function AddReservationFlow({
                 >
                   <div>
                     <span className="font-medium">
-                      {p.firstName} {p.lastName}
+                      {p.lastName} {p.firstName}
                     </span>
                     <span className="text-xs text-gray-500 ml-2">DNI: {p.documentNumber}</span>
                   </div>
@@ -825,7 +829,7 @@ export function AddReservationFlow({
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
             <h3 className="font-semibold">Resumen de la Reserva</h3>
             <p className="text-sm">
-              <span className="font-medium">Pasajero:</span> {selectedPassenger?.firstName} {selectedPassenger?.lastName}
+              <span className="font-medium">Pasajero:</span> {selectedPassenger?.lastName} {selectedPassenger?.firstName}
             </p>
             {bookingPassengers[0] && (
               <>

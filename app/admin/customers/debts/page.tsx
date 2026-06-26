@@ -110,11 +110,7 @@ export default function DebtsPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (customerSearch.length >= 3) {
-        // Split into first / last name tokens
-        const tokens = customerSearch.trim().split(/\s+/);
-        const firstName = tokens[0];
-        const lastName = tokens.slice(1).join(' ') || undefined;
-        fetchSearch({ filters: { firstName, lastName } } as any);
+        fetchSearch({ filters: { search: customerSearch.trim() } } as any);
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -129,7 +125,7 @@ export default function DebtsPage() {
 
   const handleSelectCustomer = (customer: Passenger) => {
     setSelectedCustomer(customer);
-    setCustomerSearch(`${customer.firstName} ${customer.lastName}`);
+    setCustomerSearch(`${customer.lastName} ${customer.firstName}`);
     setIsCustomerPopoverOpen(false);
     setCurrentPage(1);
   };
@@ -243,7 +239,7 @@ export default function DebtsPage() {
                               <UserIcon className="h-4 w-4 text-blue-600" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium">{p.firstName} {p.lastName}</p>
+                              <p className="text-sm font-medium">{p.lastName} {p.firstName}</p>
                               <p className="text-xs text-gray-500">DNI: {p.documentNumber}</p>
                             </div>
                           </div>
