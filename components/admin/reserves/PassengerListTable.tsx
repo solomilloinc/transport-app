@@ -123,7 +123,10 @@ export function PassengerListTable({
                 Monto {renderSortIndicator('paidAmount')}
               </button>
             </th>
-            <th className="py-3 pl-6 text-right w-[20%]">Acciones</th>
+            <th className="py-3 px-4 text-center w-[10%]">
+              <span className="sr-only">Estado de subida</span>
+            </th>
+            <th className="py-3 pl-4 text-right w-[10%]">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -218,10 +221,10 @@ export function PassengerListTable({
               <td className="py-3 pr-4 text-center text-sm font-medium">
                 ${(passenger.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
-              <td className="py-3 pl-6 text-right">
-                <div className="grid grid-cols-[5.5rem_4.25rem] items-center justify-end gap-2">
+              <td className="py-3 px-4 text-center">
+                <div className="inline-flex items-center justify-center">
                   <div
-                    className={`justify-self-center whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                    className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                       passenger.hasTraveled
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-500'
@@ -229,7 +232,10 @@ export function PassengerListTable({
                   >
                     {passenger.hasTraveled ? 'Subió' : 'No subió'}
                   </div>
-                  <div className="flex items-center justify-end gap-1">
+                </div>
+              </td>
+              <td className="py-3 pl-4 text-right">
+                <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -264,7 +270,6 @@ export function PassengerListTable({
                     );
                     })()}
                   </div>
-                </div>
               </td>
             </tr>
           ))}
