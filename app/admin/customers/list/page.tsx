@@ -55,6 +55,15 @@ const customerFilterParsers = {
 import { validationConfigPassenger } from '@/validations/passengerSchema';
 import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 
+// El email es opcional. El form arranca con email: '' (emptyPassenger) y el
+// validador de email del backend NO ignora el string vacío: saltea null pero
+// trata '' como formato inválido. Por eso, cuando el admin lo deja en blanco,
+// mandamos null para que el backend lo saltee.
+function withOptionalEmail<T extends { email?: string | null }>(data: T) {
+  const email = data.email?.trim();
+  return { ...data, email: email ? email : null };
+}
+
 export default function CustomersManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -84,7 +93,7 @@ export default function CustomersManagement() {
   const submitAddPassenger = async () => {
     addForm.handleSubmit(async (data) => {
       try {
-        const response = await post('/customer-create', data);
+        const response = await post('/customer-create', withOptionalEmail(data));
         if (response) {
           toast({
             title: 'Cliente creado',
@@ -108,7 +117,7 @@ export default function CustomersManagement() {
   const submitEditPassenger = async () => {
     editForm.handleSubmit(async () => {
       try {
-        const response = await put(`/customer-update/${currentPassengersId}`, editForm.data);
+        const response = await put(`/customer-update/${currentPassengersId}`, withOptionalEmail(editForm.data));
         if (response) {
           toast({
             title: 'Cliente actualizado',
