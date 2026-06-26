@@ -55,6 +55,7 @@ export type PassengerActionResult =
 
 export interface CancelPassengerRequest {
   createCreditBalance: boolean;
+  cancelScope: 1 | 2; // 1 = FullRoundTrip, 2 = SelectedLegOnly
 }
 
 /** Cancela un Pasajero individual (passenger-cancel). */

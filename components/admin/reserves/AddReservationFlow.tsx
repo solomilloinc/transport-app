@@ -94,6 +94,7 @@ export function AddReservationFlow({
   const [month, setMonth] = useState<Date>(new Date());
   const [returnDate, setReturnDate] = useState<Date | undefined>(undefined);
   const [returnTrip, setReturnTrip] = useState<ReserveReport | null>(null);
+  const [returnPickupLocationId, setReturnPickupLocationId] = useState<number>(0);
 
   // Holds the passenger leg(s) ready to send. Built from form state on submit.
   const [bookingPassengers, setBookingPassengers] = useState<PassengerBooking[]>([]);
@@ -148,6 +149,24 @@ export function AddReservationFlow({
       .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, 'es'))
       .map(({ sortOrder: _sortOrder, ...option }) => option);
   }, [tripData]);
+
+  const returnPickupOptions = useMemo(() => {
+    const pickupOrderMap = new Map(
+      (returnTripData?.stopSchedules || []).map((stop) => [stop.directionId, stop.order]),
+    );
+
+    const options = returnTripData?.pickupOptions || [];
+    return options
+      .filter((opt) => opt && opt.directionId != null)
+      .map((opt) => ({
+        id: String(opt.directionId),
+        value: String(opt.directionId),
+        label: opt.displayName || 'Sin nombre',
+        sortOrder: pickupOrderMap.get(opt.directionId) ?? Number.MAX_SAFE_INTEGER,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, 'es'))
+      .map(({ sortOrder: _sortOrder, ...option }) => option);
+  }, [returnTripData]);
 
   const dropoffCityOptions = useMemo(() => {
     const options = useIdaVueltaTariff
@@ -240,6 +259,14 @@ export function AddReservationFlow({
     }
     return [];
   }, [selectedDropoffCityId, dropoffCityOptions, tripData]);
+
+  const getDefaultDropoffDirectionId = (): number | null => {
+    const firstDirection = dropoffDirectionOptions[0];
+    if (!firstDirection) return null;
+
+    const directionId = Number(firstDirection.value);
+    return Number.isFinite(directionId) && directionId > 0 ? directionId : null;
+  };
 
   // Returns the price currently selected from `dropoffCityOptions`. The shape
   // of that list depends on `useIdaVueltaTariff`:
@@ -355,6 +382,8 @@ export function AddReservationFlow({
 
   useEffect(() => {
     if (open && initialTrip) {
+      setPassengerSearchQuery('');
+      resetDataPassenger();
       setStep(FlowStep.SELECT_PASSENGER);
     } else if (!open) {
       resetFlow();
@@ -365,12 +394,17 @@ export function AddReservationFlow({
     const delayDebounce = setTimeout(() => {
       if (passengerSearchQuery.length >= 3) {
         fetchPassenger({ filters: { search: passengerSearchQuery } });
+      } else {
+        resetDataPassenger();
       }
     }, 500);
     return () => clearTimeout(delayDebounce);
   }, [passengerSearchQuery]);
 
   useEffect(() => {
+    setReturnTrip(null);
+    setReturnPickupLocationId(0);
+
     if (returnDate) {
       fetchReturnReserves({ date: format(returnDate, 'yyyyMMdd') });
     }
@@ -389,6 +423,7 @@ export function AddReservationFlow({
     setSelectedPassenger(null);
     setReturnDate(undefined);
     setReturnTrip(null);
+    setReturnPickupLocationId(0);
     setBookingPassengers([]);
     setReservationPayments([]);
     setSelectedPaymentMethod('1');
@@ -426,8 +461,12 @@ export function AddReservationFlow({
         toast({ title: 'Error', description: 'Por favor, selecciona un viaje de vuelta.', variant: 'destructive' });
         return;
       }
+      if (data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP && !returnPickupLocationId) {
+        toast({ title: 'Error', description: 'Por favor, selecciona una direccion de subida para la vuelta.', variant: 'destructive' });
+        return;
+      }
 
-      const dropoffLocationId = data.dropoffLocationId || selectedDropoffCityId;
+      const dropoffLocationId = data.dropoffLocationId || getDefaultDropoffDirectionId();
       const isRT = data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP;
 
       if (isRT && initialTrip!.reserveId === returnTrip!.reserveId) {
@@ -485,8 +524,8 @@ export function AddReservationFlow({
         },
         return: isRT
           ? {
-              // Return leg swaps the outbound endpoints: pickup ← dropoff, dropoff ← pickup.
-              pickupLocationId: dropoffLocationId,
+              // The pickup is selected from the return trip's own stops.
+              pickupLocationId: returnPickupLocationId,
               dropoffLocationId: data.pickupLocationId,
               price: returnLegPrice,
             }
@@ -631,7 +670,7 @@ export function AddReservationFlow({
                 >
                   <div>
                     <span className="font-medium">
-                      {p.firstName} {p.lastName}
+                      {p.lastName} {p.firstName}
                     </span>
                     <span className="text-xs text-gray-500 ml-2">DNI: {p.documentNumber}</span>
                   </div>
@@ -722,6 +761,7 @@ export function AddReservationFlow({
               const newType = c ? RESERVE_TYPE.ROUND_TRIP : RESERVE_TYPE.IDA;
               reserveForm.setField('reserveTypeId', newType);
               setReturnTrip(null);
+              setReturnPickupLocationId(0);
               setReturnDate(undefined);
 
               if (newType === RESERVE_TYPE.ROUND_TRIP) {
@@ -755,7 +795,7 @@ export function AddReservationFlow({
                   className="rounded-md border"
                 />
               </div>
-              <div className="space-y-4">
+              <div className="flex h-full flex-col justify-between gap-4">
                 {returnDate && (
                   <div>
                     <Label className="font-medium mb-2 block text-sm">
@@ -770,7 +810,10 @@ export function AddReservationFlow({
                               ? 'border-blue-500 bg-blue-50'
                               : 'hover:bg-gray-50'
                               }`}
-                            onClick={() => setReturnTrip(trip)}
+                            onClick={() => {
+                              setReturnTrip(trip);
+                              setReturnPickupLocationId(0);
+                            }}
                           >
                             <span className="font-medium">{trip.departureHour}</span>
                             <span className="text-gray-600">
@@ -785,7 +828,19 @@ export function AddReservationFlow({
                   </div>
                 )}
                 {returnTrip && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                  <FormField label="Dirección de subida de vuelta" required>
+                    <ApiSelect
+                      value={returnPickupLocationId ? String(returnPickupLocationId) : ''}
+                      onValueChange={(v) => setReturnPickupLocationId(v ? Number(v) : 0)}
+                      placeholder="Seleccionar dirección de subida..."
+                      options={returnPickupOptions}
+                      loading={returnTripQuery.isFetching}
+                      loadingMessage="Cargando paradas..."
+                    />
+                  </FormField>
+                )}
+                {returnTrip && (
+                  <div className="hidden p-3 bg-green-50 border border-green-200 rounded-md">
                     <p className="text-sm font-medium text-green-800">
                       Vuelta seleccionada: {returnTrip.departureHour} - {returnTrip.originName} → {returnTrip.destinationName}
                     </p>
@@ -793,6 +848,13 @@ export function AddReservationFlow({
                 )}
               </div>
             </div>
+            {returnTrip && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm font-medium text-green-800">
+                  Vuelta seleccionada: {returnTrip.departureHour} - {returnTrip.originName} → {returnTrip.destinationName}
+                </p>
+              </div>
+            )}
             <div className="text-right text-lg font-bold text-blue-600 pt-2 border-t">
               {useIdaVueltaTariff
                 ? `Total Ida y Vuelta (paquete con descuento): $${getRoundTripDisplayTotal().toLocaleString()}`
@@ -817,7 +879,7 @@ export function AddReservationFlow({
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
             <h3 className="font-semibold">Resumen de la Reserva</h3>
             <p className="text-sm">
-              <span className="font-medium">Pasajero:</span> {selectedPassenger?.firstName} {selectedPassenger?.lastName}
+              <span className="font-medium">Pasajero:</span> {selectedPassenger?.lastName} {selectedPassenger?.firstName}
             </p>
             {bookingPassengers[0] && (
               <>
@@ -843,6 +905,10 @@ export function AddReservationFlow({
                     <p className="font-medium mb-1">Viaje de Vuelta</p>
                     <p>
                       <strong>Ruta:</strong> {returnTrip?.departureHour} - {returnTrip?.originName} → {returnTrip?.destinationName}
+                    </p>
+                    <p>
+                      <strong>Subida:</strong>{' '}
+                      {returnPickupOptions.find((opt) => opt.id === String(bookingPassengers[0].return?.pickupLocationId))?.label || 'No especificada'}
                     </p>
                     <p>
                       <strong>Precio:</strong>{' '}
@@ -913,7 +979,7 @@ export function AddReservationFlow({
               if (paid === 0) {
                 return (
                   <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm font-medium text-yellow-800">
-                    Pendiente de Pago
+                    Pendiente
                   </div>
                 );
               }

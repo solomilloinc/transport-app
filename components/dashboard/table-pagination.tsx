@@ -13,6 +13,12 @@ interface TablePaginationProps {
 }
 
 export function TablePagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange, itemName }: TablePaginationProps) {
+  const visiblePages = Array.from(
+    new Set([currentPage - 1, currentPage, currentPage + 1].filter((page) => page >= 1 && page <= totalPages)),
+  );
+  const fromItem = totalItems === 0 ? 0 : Math.min((currentPage - 1) * itemsPerPage + 1, totalItems);
+  const toItem = Math.min(currentPage * itemsPerPage, totalItems);
+
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       onPageChange(currentPage - 1);
@@ -26,25 +32,25 @@ export function TablePagination({ currentPage, totalPages, totalItems, itemsPerP
   };
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
-        Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} a {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} {itemName}
+        Mostrando {fromItem} a {toItem} de {totalItems} {itemName}
       </div>
       <div className="flex items-center space-x-2">
-        <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={currentPage === 1}>
+        <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={currentPage <= 1}>
           <ChevronLeftIcon className="h-4 w-4" />
-          <span className="sr-only">Página Anterior</span>
+          <span className="sr-only">Pagina anterior</span>
         </Button>
         <div className="flex items-center gap-1">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          {visiblePages.map((page) => (
             <Button key={page} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => onPageChange(page)} className="h-8 w-8 p-0">
               {page}
             </Button>
           ))}
         </div>
-        <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>
+        <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage >= totalPages}>
           <ChevronRightIcon className="h-4 w-4" />
-          <span className="sr-only">Página Siguiente</span>
+          <span className="sr-only">Pagina siguiente</span>
         </Button>
       </div>
     </div>

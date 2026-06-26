@@ -12,7 +12,7 @@ export enum PaymentStatusEnum {
 }
 
 export const PaymentStatusLabels: Record<number, string> = {
-  1: 'Pendiente de pago',
+  1: 'Pendiente',
   2: 'Confirmado',
   3: 'Cancelado',
   4: 'Viajó',
@@ -35,7 +35,9 @@ export interface PassengerReserve extends Auditable {
   status: number;
   isRoundTrip: boolean;
   payments: Payment[];
+  totalAmount: number;
   paidAmount: number;
+  pendingDebt: number;
 }
 
 export interface PassengerReserveReport extends PassengerReserve {

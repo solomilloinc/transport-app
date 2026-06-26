@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Edit, Trash, Route, DollarSign, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,11 +80,6 @@ export default function TripManagement() {
   // Combos de alta/edición — sólo Ciudades Active.
   // `cities` se mantiene unfiltered para que el FilterBar de la grilla siga
   // pudiendo filtrar por Ciudades Inactive/Suspended.
-  const activeCities = useMemo(
-    () => cities.filter((c) => (c as any).status === 'Activo'),
-    [cities]
-  );
-
   const {
     draft,
     setDraftField,
@@ -110,15 +105,13 @@ export default function TripManagement() {
         pageSize: 100,
         sortBy: 'name',
         sortDescending: false,
+        filters: { status: EntityStatus.Active },
       });
       if (response) {
         const formattedCities = response.items.map((city: City) => ({
           id: city.id.toString(),
           value: city.id.toString(),
           label: city.name,
-          // Conservamos el status para poder derivar `activeCities` para los combos
-          // del form sin volver a fetchear. El FilterBar reutiliza `cities` (todas).
-          status: city.status,
         }));
         setCities(formattedCities);
       }
@@ -437,7 +430,7 @@ export default function TripManagement() {
               value={String(addForm.data.originCityId)}
               onValueChange={(value) => addForm.setField('originCityId', Number(value))}
               placeholder="Seleccionar ciudad de origen"
-              options={activeCities}
+              options={cities}
               loading={isOptionsLoading}
               error={optionsError}
               loadingMessage="Cargando ciudades..."
@@ -450,7 +443,7 @@ export default function TripManagement() {
               value={String(addForm.data.destinationCityId)}
               onValueChange={(value) => addForm.setField('destinationCityId', Number(value))}
               placeholder="Seleccionar ciudad de destino"
-              options={activeCities.filter(c => c.id !== String(addForm.data.originCityId))}
+              options={cities.filter(c => c.id !== String(addForm.data.originCityId))}
               loading={isOptionsLoading}
               error={optionsError}
               loadingMessage="Cargando ciudades..."
@@ -483,7 +476,7 @@ export default function TripManagement() {
               value={String(editForm.data.originCityId)}
               onValueChange={(value) => editForm.setField('originCityId', Number(value))}
               placeholder="Seleccionar ciudad de origen"
-              options={activeCities}
+              options={cities}
               loading={isOptionsLoading}
               error={optionsError}
               loadingMessage="Cargando ciudades..."
@@ -496,7 +489,7 @@ export default function TripManagement() {
               value={String(editForm.data.destinationCityId)}
               onValueChange={(value) => editForm.setField('destinationCityId', Number(value))}
               placeholder="Seleccionar ciudad de destino"
-              options={activeCities.filter(c => c.id !== String(editForm.data.originCityId))}
+              options={cities.filter(c => c.id !== String(editForm.data.originCityId))}
               loading={isOptionsLoading}
               error={optionsError}
               loadingMessage="Cargando ciudades..."

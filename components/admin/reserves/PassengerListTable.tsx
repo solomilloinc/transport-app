@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpDown, ChevronDown, ChevronUp, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
+import { ArrowUpDown, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,15 @@ type SortDirection = 'asc' | 'desc';
  */
 const AWAITING_EXTERNAL_PAYMENT_TITLE =
   'El pasajero está esperando la confirmación del pago de MercadoPago. No se pueden realizar acciones hasta que el pago se confirme o expire.';
+
+const paymentStatusBadgeClasses: Record<number, string> = {
+  [PaymentStatusEnum.PendingPayment]: 'bg-yellow-100 text-yellow-800',
+  [PaymentStatusEnum.Confirmed]: 'bg-green-100 text-green-700',
+  [PaymentStatusEnum.Cancelled]: 'bg-red-100 text-red-700',
+  [PaymentStatusEnum.Traveled]: 'bg-blue-100 text-blue-700',
+  [PaymentStatusEnum.NoShow]: 'bg-gray-200 text-gray-600',
+  [PaymentStatusEnum.Refunded]: 'bg-purple-100 text-purple-700',
+};
 
 interface PassengerListTableProps {
   passengers: PassengerReserveReport[] | undefined;
@@ -50,11 +59,19 @@ export function PassengerListTable({
   reserveHasDeparted = false,
 }: PassengerListTableProps) {
   const renderSortIndicator = (column: PassengerSortColumn) => {
-    if (sortColumn !== column) {
-      return <ArrowUpDown className="ml-1 h-4 w-4 inline" />;
-    }
-    return sortDirection === 'asc' ? <ChevronUp className="ml-1 h-4 w-4 inline" /> : <ChevronDown className="ml-1 h-4 w-4 inline" />;
+    const isActive = sortColumn === column;
+    return (
+      <ArrowUpDown
+        className={`ml-1 h-4 w-4 inline ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+        aria-hidden="true"
+      />
+    );
   };
+
+  const sortButtonClass = (column: PassengerSortColumn) =>
+    `flex items-center font-medium hover:text-gray-700 ${
+      sortColumn === column ? 'text-gray-900' : 'text-gray-500'
+    }`;
 
   if (isLoading) {
     return <div className="text-center py-10 text-gray-500">Cargando pasajeros...</div>;
@@ -70,43 +87,54 @@ export function PassengerListTable({
         <thead>
           <tr className="border-b text-left text-sm font-medium text-gray-500">
             <th className="py-3 pr-4 w-[24%]">
-              <button className="flex items-center font-medium text-gray-500 hover:text-gray-700" onClick={() => onSort('name')}>
+              <button
+                className={sortButtonClass('name')}
+                onClick={() => onSort('name')}
+                aria-sort={sortColumn === 'name' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 Pasajero {renderSortIndicator('name')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[11%]">
+            <th className="py-3 pr-4 w-[15%]">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('pickup')} justify-center mx-auto`}
                 onClick={() => onSort('pickup')}
+                aria-sort={sortColumn === 'pickup' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Subida {renderSortIndicator('pickup')}
               </button>
             </th>
-            <th className="py-3 pr-4 text-center w-[10%]">
+            <th className="py-3 pr-4 text-center w-[12%]">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('paid')} justify-center mx-auto`}
                 onClick={() => onSort('paid')}
+                aria-sort={sortColumn === 'paid' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
-                Estado Pago {renderSortIndicator('paid')}
+                Pago {renderSortIndicator('paid')}
               </button>
             </th>
-            <th className="py-3 pr-4 w-[22%] text-center">
+            <th className="py-3 pr-4 w-[17%] text-center">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('paymentMethod')} justify-center mx-auto`}
                 onClick={() => onSort('paymentMethod')}
+                aria-sort={sortColumn === 'paymentMethod' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Medio de pago {renderSortIndicator('paymentMethod')}
               </button>
             </th>
             <th className="py-3 pr-4 text-center w-[12%]">
               <button
-                className="flex items-center justify-center font-medium text-gray-500 hover:text-gray-700 mx-auto"
+                className={`${sortButtonClass('paidAmount')} justify-center mx-auto`}
                 onClick={() => onSort('paidAmount')}
+                aria-sort={sortColumn === 'paidAmount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Monto {renderSortIndicator('paidAmount')}
               </button>
             </th>
-            <th className="py-3 pl-4 text-right w-[25%]">Acciones</th>
+            <th className="py-3 px-4 text-center w-[10%]">
+              <span className="sr-only">Estado de subida</span>
+            </th>
+            <th className="py-3 pl-4 text-right w-[10%]">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -134,7 +162,7 @@ export function PassengerListTable({
                   />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <label htmlFor={`passenger-${passenger.passengerId}`} className="font-medium">
+                      <label htmlFor={`passenger-${passenger.passengerId}`} className="text-sm font-medium">
                         {passenger.fullName}
                       </label>
                       {passenger.frequentSubscriptionId != null && (
@@ -147,8 +175,8 @@ export function PassengerListTable({
                           Frecuente
                         </span>
                       )}
-                      {passenger.reserveRelatedId != null &&
-                        (passenger.paidAmount ?? 0) === 0 && (
+                      {false && passenger.reserveRelatedId != null &&
+                        (passenger.totalAmount ?? 0) === 0 && (
                           // Badge: este Passenger es la pata del package IdaVuelta.
                           // Convención Mayo 2026: el outbound carga el total, el return va a 0.
                           // Sin este badge, el admin podría asumir que el ticket es gratis.
@@ -175,21 +203,17 @@ export function PassengerListTable({
                   </div>
                 </div>
               </td>
-              <td className="py-3 pr-4 text-center">
+              <td className="py-3 pr-4 text-center text-sm">
                 {/* Dropdown for pickup location can be added here if needed */}
-                {passenger.pickupLocationName}
+                <span className="block whitespace-normal break-words leading-tight">
+                  {passenger.pickupLocationName}
+                </span>
               </td>
               <td className="py-3 pr-4 text-center">
                 {(() => {
                   const status = passenger.status ?? passenger.statusPaymentId;
                   const label = PaymentStatusLabels[status] || 'Desconocido';
-                  let badgeClass = 'bg-gray-100 text-gray-700';
-                  if (status === PaymentStatusEnum.PendingPayment) badgeClass = 'bg-yellow-100 text-yellow-800';
-                  else if (status === PaymentStatusEnum.Confirmed) badgeClass = 'bg-green-100 text-green-700';
-                  else if (status === PaymentStatusEnum.Cancelled) badgeClass = 'bg-red-100 text-red-700';
-                  else if (status === PaymentStatusEnum.Traveled) badgeClass = 'bg-blue-100 text-blue-700';
-                  else if (status === PaymentStatusEnum.NoShow) badgeClass = 'bg-gray-200 text-gray-600';
-                  else if (status === PaymentStatusEnum.Refunded) badgeClass = 'bg-purple-100 text-purple-700';
+                  const badgeClass = paymentStatusBadgeClasses[status] || 'bg-gray-100 text-gray-700';
                   // En stand-by de pago externo mostramos una etiqueta propia y
                   // distinta del "Pendiente de pago" común, y NO ofrecemos cargar
                   // pago: el cobro lo confirma MercadoPago.
@@ -204,33 +228,35 @@ export function PassengerListTable({
                     );
                   }
                   return (
-                    <div className="flex items-center justify-center gap-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
+                    <div className="grid grid-cols-[1fr_1.5rem] items-center gap-1">
+                      <span className={`mx-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
                         {label}
                       </span>
-                      {status === PaymentStatusEnum.PendingPayment && (
+                      {status === PaymentStatusEnum.PendingPayment ? (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-yellow-600 hover:bg-yellow-50"
+                          className="h-6 w-6 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
                           onClick={() => onAddPayment(passenger)}
                           title="Agregar pago"
                         >
                           <DollarSign className="h-3.5 w-3.5" />
                         </Button>
+                      ) : (
+                        <span aria-hidden="true" className="h-6 w-6" />
                       )}
                     </div>
                   );
                 })()}
               </td>
-              <td className="py-3 pr-4 text-center">{passenger.paymentMethods}</td>
-              <td className="py-3 pr-4 text-center font-medium">
-                ${(passenger.paidAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <td className="py-3 pr-4 text-center text-sm">{passenger.paymentMethods}</td>
+              <td className="py-3 pr-4 text-center text-sm font-medium">
+                ${(passenger.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
-              <td className="py-3 pl-4 text-right">
-                <div className="flex justify-end items-center">
+              <td className="py-3 px-4 text-center">
+                <div className="inline-flex items-center justify-center">
                   <div
-                    className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ml-4 mr-2 ${
+                    className={`whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                       passenger.hasTraveled
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-500'
@@ -238,16 +264,20 @@ export function PassengerListTable({
                   >
                     {passenger.hasTraveled ? 'Subió' : 'No subió'}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40"
-                    onClick={() => onEdit(passenger)}
-                    disabled={isAwaitingExternalPayment}
-                    title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : 'Editar Reserva'}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
+                </div>
+              </td>
+              <td className="py-3 pl-4 text-right">
+                <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40"
+                      onClick={() => onEdit(passenger)}
+                      disabled={isAwaitingExternalPayment}
+                      title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : 'Editar Reserva'}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                   {(() => {
                     // Gating (ver charter §2 + CONTEXT.md): sólo pasajeros activos
                     // (PendingPayment/Confirmed) y con la Reserve sin partir.
@@ -263,21 +293,19 @@ export function PassengerListTable({
                         ? 'Cancelar pasajero'
                         : 'No se puede cancelar: el viaje partió o el pasajero no está activo';
                     return (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-orange-500 hover:bg-orange-50 hover:text-orange-600 disabled:opacity-40"
-                          onClick={() => onCancel(passenger)}
-                          disabled={!canCancel}
-                          title={cancelTitle}
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </Button>
-                      </>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-orange-500 hover:bg-orange-50 hover:text-orange-600 disabled:opacity-40"
+                        onClick={() => onCancel(passenger)}
+                        disabled={!canCancel}
+                        title={cancelTitle}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </Button>
                     );
-                  })()}
-                </div>
+                    })()}
+                  </div>
               </td>
             </tr>
             );

@@ -31,7 +31,7 @@ import { PaymentMethod } from '@/interfaces/payment';
 import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
 import { AddReservationFlow } from '@/components/admin/reserves/AddReservationFlow';
-import { CancelPassengerDialog, CancelPassengerPolicy } from '@/components/admin/reserves/CancelPassengerDialog';
+import { CancelPassengerDialog, CancelPassengerPolicy, CancelPassengerScope } from '@/components/admin/reserves/CancelPassengerDialog';
 import { PaymentSummaryDialog } from '@/components/admin/reserves/PaymentSummaryDialog';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { PagedResponse } from '@/services/types';
@@ -44,9 +44,9 @@ import CashBox from '@/interfaces/cash-box';
 const passengerSortFns = {
   name: (a: PassengerReserveReport, b: PassengerReserveReport) => a.fullName.localeCompare(b.fullName),
   pickup: (a: PassengerReserveReport, b: PassengerReserveReport) => a.pickupLocationName.localeCompare(b.pickupLocationName),
-  paid: (a: PassengerReserveReport, b: PassengerReserveReport) => a.statusPaymentId - b.statusPaymentId,
+  paid: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.status ?? a.statusPaymentId) - (b.status ?? b.statusPaymentId),
   paymentMethod: (a: PassengerReserveReport, b: PassengerReserveReport) => (a.paymentMethods || '').localeCompare(b.paymentMethods),
-  paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.paidAmount) - Number(b.paidAmount),
+  paidAmount: (a: PassengerReserveReport, b: PassengerReserveReport) => Number(a.totalAmount) - Number(b.totalAmount),
 };
 
 export default function ReservationsPage() {
@@ -243,7 +243,7 @@ export default function ReservationsPage() {
 
   const loadPaymentMethod = async () => {
     const formatedDirections: SelectOption[] = Object.entries(PaymentMethod)
-      .filter(([key, value]) => typeof value === 'number')
+      .filter(([key, value]) => typeof value === 'number' && value !== PaymentMethod.Online)
       .map(([key, value]) => ({
         id: value as number,
         value: value.toString(),
@@ -402,7 +402,7 @@ export default function ReservationsPage() {
     setIsCancelPassengerOpen(true);
   };
 
-  const handleConfirmCancelPassenger = async (policy: CancelPassengerPolicy) => {
+  const handleConfirmCancelPassenger = async (policy: CancelPassengerPolicy, scope: CancelPassengerScope) => {
     if (!passengerToCancel) return;
 
     setIsCancellingPassenger(true);
@@ -411,6 +411,7 @@ export default function ReservationsPage() {
       // code/copy del backend llega al usuario también en producción.
       const result = await cancelPassengerAction(passengerToCancel.passengerId, {
         createCreditBalance: policy === 'credit',
+        cancelScope: scope === 'selected-leg-only' ? 2 : 1,
       });
 
       if (!result.ok) {
