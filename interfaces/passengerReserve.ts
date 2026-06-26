@@ -67,6 +67,18 @@ export interface PassengerReserveReport extends PassengerReserve {
    */
   frequentSubscriptionId: number | null;
   /**
+   * `true` ⇒ el Passenger está en stand-by esperando la confirmación de un pago
+   * EXTERNO (wallet / MercadoPago): la reserva ya ocupa el asiento pero el webhook
+   * todavía no confirmó. El back office NO debe operar sobre él (cancelar, editar,
+   * marcar "viajó", cargar pago, saldar deuda, cancelar la reserva) porque choca
+   * con la confirmación en camino o genera doble cobro. El backend bloquea estas
+   * acciones con el código `Passenger.AwaitingExternalPayment` (ver lib/apiErrors).
+   *
+   * Importante: un PendingPayment de mostrador (alta del operador, espera cobro en
+   * efectivo) viene con `false` y SIGUE siendo accionable — no se bloquea.
+   */
+  isAwaitingExternalPayment: boolean;
+  /**
    * Si está poblado, este Passenger es la pata del package IdaVuelta — su
    * "compañero" en la reserva inversa está identificado por `reserveRelatedId`.
    *

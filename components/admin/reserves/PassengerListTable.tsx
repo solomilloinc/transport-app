@@ -9,6 +9,14 @@ import { PassengerReserveReport, PaymentStatusEnum, PaymentStatusLabels } from '
 export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
 type SortDirection = 'asc' | 'desc';
 
+/**
+ * Copy del tooltip cuando una acción se deshabilita por stand-by de pago externo
+ * (wallet / MercadoPago). El mismo motivo lo defiende el backend con el código
+ * `Passenger.AwaitingExternalPayment` (ver lib/apiErrors.ts).
+ */
+const AWAITING_EXTERNAL_PAYMENT_TITLE =
+  'El pasajero está esperando la confirmación del pago de MercadoPago. No se pueden realizar acciones hasta que el pago se confirme o expire.';
+
 const paymentStatusBadgeClasses: Record<number, string> = {
   [PaymentStatusEnum.PendingPayment]: 'bg-yellow-100 text-yellow-800',
   [PaymentStatusEnum.Confirmed]: 'bg-green-100 text-green-700',
@@ -130,8 +138,15 @@ export function PassengerListTable({
           </tr>
         </thead>
         <tbody>
-          {passengers.map((passenger) => (
-            <tr key={passenger.passengerId} className="border-b">
+          {passengers.map((passenger) => {
+            // Stand-by de pago externo (wallet/MercadoPago): la fila no es
+            // accionable hasta que el webhook confirme o expire el pago.
+            const isAwaitingExternalPayment = passenger.isAwaitingExternalPayment === true;
+            return (
+            <tr
+              key={passenger.passengerId}
+              className={`border-b${isAwaitingExternalPayment ? ' bg-violet-50/60' : ''}`}
+            >
               <td className="py-3 pr-4">
                 <div className="flex items-center">
                   <Checkbox
@@ -139,7 +154,11 @@ export function PassengerListTable({
                     checked={passenger.hasTraveled}
                     onCheckedChange={(checked) => onCheckPassenger(passenger, checked as boolean)}
                     className="mr-2"
-                    disabled={disabledPassengers.includes(passenger.passengerId)}
+                    disabled={
+                      disabledPassengers.includes(passenger.passengerId) ||
+                      isAwaitingExternalPayment
+                    }
+                    title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : undefined}
                   />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -195,6 +214,19 @@ export function PassengerListTable({
                   const status = passenger.status ?? passenger.statusPaymentId;
                   const label = PaymentStatusLabels[status] || 'Desconocido';
                   const badgeClass = paymentStatusBadgeClasses[status] || 'bg-gray-100 text-gray-700';
+                  // En stand-by de pago externo mostramos una etiqueta propia y
+                  // distinta del "Pendiente de pago" común, y NO ofrecemos cargar
+                  // pago: el cobro lo confirma MercadoPago.
+                  if (isAwaitingExternalPayment) {
+                    return (
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700"
+                        title={AWAITING_EXTERNAL_PAYMENT_TITLE}
+                      >
+                        Esperando pago (MercadoPago)
+                      </span>
+                    );
+                  }
                   return (
                     <div className="grid grid-cols-[1fr_1.5rem] items-center gap-1">
                       <span className={`mx-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
@@ -239,23 +271,27 @@ export function PassengerListTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                      className="h-7 w-7 text-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40"
                       onClick={() => onEdit(passenger)}
-                      title="Editar Reserva"
+                      disabled={isAwaitingExternalPayment}
+                      title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : 'Editar Reserva'}
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
                   {(() => {
                     // Gating (ver charter §2 + CONTEXT.md): sólo pasajeros activos
                     // (PendingPayment/Confirmed) y con la Reserve sin partir.
+                    // Además se bloquea si está en stand-by de pago externo.
                     const status = passenger.status ?? passenger.statusPaymentId;
                     const isActive =
                       status === PaymentStatusEnum.PendingPayment ||
                       status === PaymentStatusEnum.Confirmed;
-                    const canCancel = isActive && !reserveHasDeparted;
-                    const cancelTitle = canCancel
-                      ? 'Cancelar pasajero'
-                      : 'No se puede cancelar: el viaje partió o el pasajero no está activo';
+                    const canCancel = isActive && !reserveHasDeparted && !isAwaitingExternalPayment;
+                    const cancelTitle = isAwaitingExternalPayment
+                      ? AWAITING_EXTERNAL_PAYMENT_TITLE
+                      : canCancel
+                        ? 'Cancelar pasajero'
+                        : 'No se puede cancelar: el viaje partió o el pasajero no está activo';
                     return (
                       <Button
                         variant="ghost"
@@ -272,7 +308,8 @@ export function PassengerListTable({
                   </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

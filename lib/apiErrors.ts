@@ -173,6 +173,10 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
   'Passenger.ReserveDeparted': {
     message: 'No se puede cancelar este pasajero: el viaje ya partió.',
   },
+  'Passenger.AwaitingExternalPayment': {
+    message:
+      'El pasajero está esperando la confirmación de un pago externo (MercadoPago). No se pueden realizar acciones hasta que el pago se confirme o expire.',
+  },
 
   // ── City (códigos con sub-código = nombre de campo) ───────────────────────
   'City.CityId': { message: 'La ciudad no existe.' },
