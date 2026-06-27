@@ -223,7 +223,7 @@ export function PassengersReportTab({ entityOptions }: { entityOptions: Reportin
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
-          <FilterBar onReset={reset} onApply={apply}>
+          <FilterBar onReset={reset} onApply={apply} labels={['Fechas', 'Campo fecha', 'Estados', 'Ruta', 'Vehículo', 'Chofer', 'Búsqueda', 'Medio de pago', 'Viajó', 'Frecuencia']}>
             <ReportingDateRangePicker
               value={{ dateFrom: draft.dateFrom ?? '', dateTo: draft.dateTo ?? '' }}
               onChange={(r) => {

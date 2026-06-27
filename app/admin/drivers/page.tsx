@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { deleteLogic, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
-import { FilterBar } from '@/components/dashboard/filter-bar';
 import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
@@ -194,33 +193,51 @@ export default function DriversManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={reset} onApply={apply}>
-              <Input
-                className="w-full sm:w-[180px]"
-                placeholder="Nombre"
-                value={draft.firstName ?? ''}
-                onChange={(e) => setDraftField('firstName', e.target.value)}
-              />
-              <Input
-                className="w-full sm:w-[180px]"
-                placeholder="Apellido"
-                value={draft.lastName ?? ''}
-                onChange={(e) => setDraftField('lastName', e.target.value)}
-              />
-              <Input
-                className="w-full sm:w-[180px]"
-                placeholder="Documento"
-                value={draft.documentNumber ?? ''}
-                onChange={(e) => setDraftField('documentNumber', e.target.value)}
-              />
-              <StatusFilter
-                value={draft.status != null ? String(draft.status) : ''}
-                onChange={(v) =>
-                  setDraftField('status', v ? (Number(v) as EntityStatus) : undefined)
-                }
-                options={ENTITY_STATUS_OPTIONS}
-              />
-            </FilterBar>
+            <div className="grid gap-4 lg:grid-cols-[180px_180px_180px_180px_auto] lg:items-end">
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Nombre</span>
+                <Input
+                  className="w-full"
+                  placeholder="Nombre"
+                  value={draft.firstName ?? ''}
+                  onChange={(e) => setDraftField('firstName', e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Apellido</span>
+                <Input
+                  className="w-full"
+                  placeholder="Apellido"
+                  value={draft.lastName ?? ''}
+                  onChange={(e) => setDraftField('lastName', e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Documento</span>
+                <Input
+                  className="w-full"
+                  placeholder="Documento"
+                  value={draft.documentNumber ?? ''}
+                  onChange={(e) => setDraftField('documentNumber', e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Estado</span>
+                <StatusFilter
+                  value={draft.status != null ? String(draft.status) : ''}
+                  onChange={(v) =>
+                    setDraftField('status', v ? (Number(v) as EntityStatus) : undefined)
+                  }
+                  options={ENTITY_STATUS_OPTIONS}
+                />
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <Button onClick={apply}>Aplicar</Button>
+                <Button variant="outline" onClick={reset}>
+                  Restablecer
+                </Button>
+              </div>
+            </div>
 
             <div className="hidden md:block w-full">
               <DashboardTable

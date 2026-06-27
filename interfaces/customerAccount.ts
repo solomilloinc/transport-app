@@ -65,6 +65,15 @@ export interface CustomerDebtSettleRequest {
   payments: { transactionAmount: number; paymentMethod: number }[];
 }
 
+export type CustomerAccountAdjustmentKind = 'Credit' | 'Debt';
+
+export interface CustomerAccountAdjustmentRequest {
+  adjustmentKind: CustomerAccountAdjustmentKind;
+  amount: number;
+  date: string;
+  description: string;
+}
+
 export interface PendingReservePassenger {
   passengerId: number;
   fullName: string;

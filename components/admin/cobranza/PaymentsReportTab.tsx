@@ -164,7 +164,7 @@ export function PaymentsReportTab({ initialCashBoxId }: { initialCashBoxId?: num
     <div className="space-y-6">
       <Card>
         <CardContent className="pt-6 space-y-3">
-          <FilterBar onReset={reset} onApply={apply}>
+          <FilterBar onReset={reset} onApply={apply} labels={['Fechas', 'Métodos', 'Estado', 'Pagador']}>
             <ReportingDateRangePicker
               value={{ dateFrom: draft.dateFrom ?? '', dateTo: draft.dateTo ?? '' }}
               onChange={(r) => {

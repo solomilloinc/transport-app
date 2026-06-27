@@ -210,7 +210,7 @@ export function ReservesReportTab({ entityOptions }: { entityOptions: ReportingE
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
-          <FilterBar onReset={reset} onApply={apply}>
+          <FilterBar onReset={reset} onApply={apply} labels={['Fechas', 'Campo fecha', 'Estados', 'Ruta', 'Vehículo', 'Chofer', 'Origen', 'Feriado', 'Cupo', 'Pasajeros', 'Ocupación']}>
             <ReportingDateRangePicker
               value={{ dateFrom: draft.dateFrom ?? '', dateTo: draft.dateTo ?? '' }}
               onChange={(r) => {

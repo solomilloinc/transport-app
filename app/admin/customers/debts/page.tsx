@@ -5,14 +5,13 @@ import { format, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   Search,
-  Calendar as CalendarIcon,
   User as UserIcon,
-  ArrowRight,
   Download,
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
   DollarSign,
+  Plus,
   Undo2,
   Loader2
 } from 'lucide-react';
@@ -20,17 +19,18 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
+import { FormDialog } from '@/components/dashboard/form-dialog';
+import { FormField } from '@/components/dashboard/form-field';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { useApi } from '@/hooks/use-api';
 import { getPassengers } from '@/services/passenger';
-import { getCustomerAccountSummary, refundPaymentCash } from '@/services/customerAccount';
+import { createCustomerAccountAdjustment, getCustomerAccountSummary, refundPaymentCash } from '@/services/customerAccount';
 import { Passenger } from '@/interfaces/passengers';
-import { CustomerAccountSummary, Transaction, TransactionTypeLabels, TransactionTypeOptions } from '@/interfaces/customerAccount';
+import { CustomerAccountAdjustmentKind, CustomerAccountSummary, Transaction, TransactionTypeLabels, TransactionTypeOptions } from '@/interfaces/customerAccount';
 import { PaginationParams } from '@/services/types';
 import { usePaginationParams } from '@/utils/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -49,6 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DebtsPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Passenger | null>(null);
@@ -62,6 +63,12 @@ export default function DebtsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [isDebtSettlementOpen, setIsDebtSettlementOpen] = useState(false);
+  const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+  const [adjustmentKind, setAdjustmentKind] = useState<CustomerAccountAdjustmentKind>('Credit');
+  const [adjustmentAmount, setAdjustmentAmount] = useState('');
+  const [adjustmentDate, setAdjustmentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [adjustmentDescription, setAdjustmentDescription] = useState('');
+  const [isSavingAdjustment, setIsSavingAdjustment] = useState(false);
 
   const { toast } = useToast();
   // Fila (movimiento de pago) pendiente de confirmar la devolución de caja.
@@ -153,6 +160,9 @@ export default function DebtsPage() {
   };
 
   const resetFilters = () => {
+    setSelectedCustomer(null);
+    setCustomerSearch('');
+    setIsCustomerPopoverOpen(false);
     setFromDate(format(subMonths(new Date(), 3), 'yyyy-MM-dd'));
     setToDate(format(new Date(), 'yyyy-MM-dd'));
     setTransactionType('');
@@ -171,6 +181,62 @@ export default function DebtsPage() {
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const resetAdjustmentForm = () => {
+    setAdjustmentKind('Credit');
+    setAdjustmentAmount('');
+    setAdjustmentDate(format(new Date(), 'yyyy-MM-dd'));
+    setAdjustmentDescription('');
+  };
+
+  const handleCreateAdjustment = async () => {
+    if (!selectedCustomer) return;
+
+    const amount = Number(adjustmentAmount);
+    const description = adjustmentDescription.trim();
+
+    if (!amount || amount <= 0) {
+      toast({ title: 'Monto inválido', description: 'El monto debe ser mayor a cero.', variant: 'destructive' });
+      return;
+    }
+
+    if (!adjustmentDate) {
+      toast({ title: 'Fecha requerida', description: 'Seleccioná una fecha para el ajuste.', variant: 'destructive' });
+      return;
+    }
+
+    if (!description) {
+      toast({ title: 'Descripción requerida', description: 'Ingresá una descripción para el ajuste.', variant: 'destructive' });
+      return;
+    }
+
+    setIsSavingAdjustment(true);
+    try {
+      await createCustomerAccountAdjustment(selectedCustomer.customerId, {
+        adjustmentKind,
+        amount,
+        date: adjustmentDate,
+        description,
+      });
+
+      toast({
+        title: 'Ajuste registrado',
+        description: adjustmentKind === 'Credit'
+          ? 'Se registró un ajuste a favor del pasajero.'
+          : 'Se registró un ajuste adeudado.',
+        variant: 'success',
+      });
+      setIsAdjustmentOpen(false);
+      resetAdjustmentForm();
+      const refreshedParams = { ...params, pageNumber: 1 };
+      setCurrentPage(1);
+      fetchSummary(refreshedParams);
+    } catch (error) {
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
+    } finally {
+      setIsSavingAdjustment(false);
     }
   };
 
@@ -227,17 +293,25 @@ export default function DebtsPage() {
       header: '',
       accessor: 'actions',
       className: 'text-right',
-      width: '10%',
+      width: '8%',
       cell: (t: Transaction) =>
         t.transactionType === 'Payment' && t.reservePaymentStatus === 'Paid' && t.reservePaymentId != null ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setRefundTarget(t)}
-          >
-            <Undo2 className="mr-1 h-3.5 w-3.5" />
-            Devolver
-          </Button>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  aria-label="Devolver dinero"
+                  onClick={() => setRefundTarget(t)}
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Devolver dinero</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : null,
     },
   ];
@@ -257,9 +331,9 @@ export default function DebtsPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="customer-search">Pasajero</Label>
+          <div className="grid gap-3 lg:grid-cols-[260px_190px_150px_150px_auto] lg:items-end">
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Pasajero</span>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 <Input
@@ -314,8 +388,8 @@ export default function DebtsPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Tipo de Transacción</Label>
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Tipo de transacción</span>
               <Select value={transactionType || 'all'} onValueChange={(value) => { setTransactionType(value === 'all' ? '' : value); setCurrentPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -330,8 +404,8 @@ export default function DebtsPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Desde</Label>
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Desde</span>
               <Input
                 type="date"
                 value={fromDate}
@@ -339,16 +413,19 @@ export default function DebtsPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Hasta</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                />
-                <Button variant="ghost" className="px-3" onClick={resetFilters}>X</Button>
-              </div>
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Hasta</span>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button variant="outline" onClick={resetFilters}>
+                Restablecer
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -409,6 +486,14 @@ export default function DebtsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Transacciones</CardTitle>
+              <Button
+                size="sm"
+                onClick={() => setIsAdjustmentOpen(true)}
+                disabled={!selectedCustomer}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Agregar ajuste
+              </Button>
             </CardHeader>
             <CardContent>
               <DashboardTable
@@ -453,6 +538,64 @@ export default function DebtsPage() {
           if (selectedCustomer) fetchSummary(params);
         }}
       />
+
+      <FormDialog
+        open={isAdjustmentOpen}
+        onOpenChange={(open) => {
+          setIsAdjustmentOpen(open);
+          if (!open && !isSavingAdjustment) resetAdjustmentForm();
+        }}
+        title="Agregar ajuste"
+        description="Registrá un ajuste manual en la cuenta corriente del pasajero."
+        onSubmit={handleCreateAdjustment}
+        submitText="Guardar ajuste"
+        isLoading={isSavingAdjustment}
+        disabled={!selectedCustomer || isSavingAdjustment}
+        preventClose={isSavingAdjustment}
+        className="sm:max-w-md"
+      >
+        <FormField label="Tipo de ajuste" required>
+          <Select
+            value={adjustmentKind}
+            onValueChange={(value) => setAdjustmentKind(value as CustomerAccountAdjustmentKind)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Credit">A favor</SelectItem>
+              <SelectItem value="Debt">Adeudado</SelectItem>
+            </SelectContent>
+          </Select>
+        </FormField>
+
+        <FormField label="Monto" required>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0"
+            value={adjustmentAmount}
+            onChange={(e) => setAdjustmentAmount(e.target.value)}
+          />
+        </FormField>
+
+        <FormField label="Fecha" required>
+          <Input
+            type="date"
+            value={adjustmentDate}
+            onChange={(e) => setAdjustmentDate(e.target.value)}
+          />
+        </FormField>
+
+        <FormField label="Descripción" required>
+          <Input
+            placeholder="Motivo del ajuste"
+            value={adjustmentDescription}
+            onChange={(e) => setAdjustmentDescription(e.target.value)}
+          />
+        </FormField>
+      </FormDialog>
 
       <AlertDialog open={refundTarget != null} onOpenChange={(open) => { if (!open && !isRefunding) setRefundTarget(null); }}>
         <AlertDialogContent>

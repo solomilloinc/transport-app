@@ -204,7 +204,7 @@ export default function HolidaysManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={resetFilters}>
+            <FilterBar onReset={resetFilters} labels={['Búsqueda']}>
               <SearchFilter value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
             </FilterBar>
 

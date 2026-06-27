@@ -1,5 +1,5 @@
 import { get, getPure, postWithResponse } from "./api"
-import { CustomerAccountSummary, CustomerDebtSettleRequest, PendingReserve, Transaction } from "@/interfaces/customerAccount"
+import { CustomerAccountAdjustmentRequest, CustomerAccountSummary, CustomerDebtSettleRequest, PendingReserve, Transaction } from "@/interfaces/customerAccount"
 import { PagedRequest, PagedResponse, PaginationParams, UseApiCall } from "./types"
 import { withDefaultPagination } from "@/utils/pagination"
 
@@ -29,6 +29,15 @@ export const getCustomerPendingReserves = async (customerId: number) => {
 export const settleCustomerDebt = async (request: CustomerDebtSettleRequest) => {
     return postWithResponse<CustomerDebtSettleRequest, { isSuccess: boolean; value: boolean }>(
         '/customer-debt-settle', request
+    );
+};
+
+export const createCustomerAccountAdjustment = async (
+    customerId: number,
+    request: CustomerAccountAdjustmentRequest
+) => {
+    return postWithResponse<CustomerAccountAdjustmentRequest, { isSuccess: boolean; value: boolean }>(
+        `/customer-account-adjustment/${customerId}`, request
     );
 };
 
