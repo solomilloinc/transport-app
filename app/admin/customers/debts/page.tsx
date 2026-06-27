@@ -18,7 +18,6 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
@@ -131,6 +130,9 @@ export default function DebtsPage() {
   };
 
   const resetFilters = () => {
+    setSelectedCustomer(null);
+    setCustomerSearch('');
+    setIsCustomerPopoverOpen(false);
     setFromDate(format(subMonths(new Date(), 3), 'yyyy-MM-dd'));
     setToDate(format(new Date(), 'yyyy-MM-dd'));
     setTransactionType('');
@@ -198,9 +200,9 @@ export default function DebtsPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="customer-search">Pasajero</Label>
+          <div className="grid gap-3 lg:grid-cols-[260px_190px_150px_150px_auto] lg:items-end">
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Pasajero</span>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                 <Input
@@ -255,8 +257,8 @@ export default function DebtsPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Tipo de Transacción</Label>
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Tipo de transacción</span>
               <Select value={transactionType || 'all'} onValueChange={(value) => { setTransactionType(value === 'all' ? '' : value); setCurrentPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -271,8 +273,8 @@ export default function DebtsPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Desde</Label>
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Desde</span>
               <Input
                 type="date"
                 value={fromDate}
@@ -280,16 +282,19 @@ export default function DebtsPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Hasta</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                />
-                <Button variant="ghost" className="px-3" onClick={resetFilters}>X</Button>
-              </div>
+            <div className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Hasta</span>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button variant="outline" onClick={resetFilters}>
+                Restablecer
+              </Button>
             </div>
           </div>
         </CardContent>

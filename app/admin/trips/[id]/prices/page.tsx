@@ -349,7 +349,7 @@ export default function TripPricesManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={() => setFilterReserveType('')}>
+            <FilterBar onReset={() => setFilterReserveType('')} labels={['Tipo de reserva']}>
               <ApiSelect
                 value={filterReserveType}
                 onValueChange={setFilterReserveType}

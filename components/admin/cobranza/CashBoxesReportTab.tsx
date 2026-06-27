@@ -148,7 +148,7 @@ export function CashBoxesReportTab({
     <div className="space-y-6">
       <Card>
         <CardContent className="pt-6">
-          <FilterBar onReset={reset} onApply={apply}>
+          <FilterBar onReset={reset} onApply={apply} labels={['Fechas', 'Estado']}>
             <ReportingDateRangePicker
               value={{ dateFrom: draft.fromDate ?? '', dateTo: draft.toDate ?? '' }}
               onChange={(r) => {

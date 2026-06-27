@@ -574,7 +574,7 @@ export default function ServiceManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={reset} onApply={apply}>
+            <FilterBar onReset={reset} onApply={apply} labels={['Nombre', 'Estado']}>
               <Input
                 className="w-full sm:w-[180px]"
                 placeholder="Nombre"

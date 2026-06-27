@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
-import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
 import { MobileCard } from '@/components/dashboard/mobile-card';
@@ -512,66 +511,84 @@ export default function FrequentSubscriptionsPage() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={reset} onApply={apply}>
-              <ApiSelect
-                searchable
-                searchPlaceholder="Buscar cliente..."
-                className="w-full sm:w-[220px]"
-                value={draft.customerId !== undefined ? String(draft.customerId) : 'all'}
-                onValueChange={(v) =>
-                  setDraftField('customerId', v === 'all' ? undefined : Number(v))
-                }
-                options={customerFilterOptions}
-                placeholder="Todos los clientes"
-              />
-              <ApiSelect
-                className="w-full sm:w-[220px]"
-                value={
-                  draft.outboundServiceId !== undefined
-                    ? String(draft.outboundServiceId)
-                    : 'all'
-                }
-                onValueChange={(v) =>
-                  setDraftField('outboundServiceId', v === 'all' ? undefined : Number(v))
-                }
-                options={serviceFilterOptions}
-                placeholder="Todos los servicios"
-              />
-              <ApiSelect
-                className="w-full sm:w-[160px]"
-                value={
-                  draft.reserveTypeId !== undefined ? String(draft.reserveTypeId) : 'all'
-                }
-                onValueChange={(v) =>
-                  setDraftField(
-                    'reserveTypeId',
-                    v === 'all' ? undefined : (Number(v) as ReserveType)
-                  )
-                }
-                options={RESERVE_TYPE_FILTER_OPTIONS.map((o) => ({
-                  id: o.value,
-                  value: o.value,
-                  label: o.label,
-                }))}
-                placeholder="Todos los tipos"
-              />
-              <ApiSelect
-                className="w-full sm:w-[160px]"
-                value={draft.status !== undefined ? String(draft.status) : 'all'}
-                onValueChange={(v) =>
-                  setDraftField(
-                    'status',
-                    v === 'all' ? undefined : (Number(v) as EntityStatus)
-                  )
-                }
-                options={STATUS_FILTER_OPTIONS.map((o) => ({
-                  id: o.value,
-                  value: o.value,
-                  label: o.label,
-                }))}
-                placeholder="Activas"
-              />
-            </FilterBar>
+            <div className="grid gap-4 lg:grid-cols-[220px_220px_140px_140px_auto] lg:items-end">
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Cliente</span>
+                <ApiSelect
+                  searchable
+                  searchPlaceholder="Buscar cliente..."
+                  className="w-full"
+                  value={draft.customerId !== undefined ? String(draft.customerId) : 'all'}
+                  onValueChange={(v) =>
+                    setDraftField('customerId', v === 'all' ? undefined : Number(v))
+                  }
+                  options={customerFilterOptions}
+                  placeholder="Todos los clientes"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Servicio</span>
+                <ApiSelect
+                  className="w-full"
+                  value={
+                    draft.outboundServiceId !== undefined
+                      ? String(draft.outboundServiceId)
+                      : 'all'
+                  }
+                  onValueChange={(v) =>
+                    setDraftField('outboundServiceId', v === 'all' ? undefined : Number(v))
+                  }
+                  options={serviceFilterOptions}
+                  placeholder="Todos los servicios"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Tipo</span>
+                <ApiSelect
+                  className="w-full"
+                  value={
+                    draft.reserveTypeId !== undefined ? String(draft.reserveTypeId) : 'all'
+                  }
+                  onValueChange={(v) =>
+                    setDraftField(
+                      'reserveTypeId',
+                      v === 'all' ? undefined : (Number(v) as ReserveType)
+                    )
+                  }
+                  options={RESERVE_TYPE_FILTER_OPTIONS.map((o) => ({
+                    id: o.value,
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  placeholder="Todos"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Estado</span>
+                <ApiSelect
+                  className="w-full"
+                  value={draft.status !== undefined ? String(draft.status) : 'all'}
+                  onValueChange={(v) =>
+                    setDraftField(
+                      'status',
+                      v === 'all' ? undefined : (Number(v) as EntityStatus)
+                    )
+                  }
+                  options={STATUS_FILTER_OPTIONS.map((o) => ({
+                    id: o.value,
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  placeholder="Todas"
+                />
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <Button onClick={apply}>Aplicar</Button>
+                <Button variant="outline" onClick={reset}>
+                  Restablecer
+                </Button>
+              </div>
+            </div>
 
             <div className="hidden md:block w-full">
               <DashboardTable

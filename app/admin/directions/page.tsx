@@ -232,7 +232,7 @@ export default function DirectionManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={reset} onApply={apply}>
+            <FilterBar onReset={reset} onApply={apply} labels={['Nombre', 'Ciudad']}>
               <Input
                 placeholder="Nombre"
                 value={draft.directionName ?? ''}

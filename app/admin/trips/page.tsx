@@ -300,7 +300,7 @@ export default function TripManagement() {
       <Card className="w-full">
         <CardContent className="pt-6 w-full">
           <div className="space-y-4 w-full">
-            <FilterBar onReset={reset} onApply={apply}>
+            <FilterBar onReset={reset} onApply={apply} labels={['Origen', 'Destino', 'Estado']}>
               <Select
                 value={draft.originCityId != null ? String(draft.originCityId) : ''}
                 onValueChange={(v) =>
