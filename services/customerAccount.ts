@@ -31,3 +31,18 @@ export const settleCustomerDebt = async (request: CustomerDebtSettleRequest) => 
         '/customer-debt-settle', request
     );
 };
+
+/**
+ * Devolución de caja: devuelve en efectivo el dinero de un pago de reserva ya
+ * cobrado. Operación independiente de la cancelación del pasajero — primero se
+ * cancela el pasajero y DESPUÉS, si corresponde, se devuelve la plata desde acá.
+ *
+ * Path param: el `reservePaymentId` de la fila de la cuenta corriente. Sin body.
+ * Roles: Admin / Operator. OK: Result<bool> (true). Idempotente del lado back:
+ * una vez devuelto el pago queda Refunded y reintentar falla con NotRefundable.
+ */
+export const refundPaymentCash = async (reservePaymentId: number) => {
+    return postWithResponse<undefined, { isSuccess: boolean; value: boolean }>(
+        `/payment-cash-refund/${reservePaymentId}`
+    );
+};
