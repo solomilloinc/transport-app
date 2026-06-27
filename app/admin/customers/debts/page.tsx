@@ -12,7 +12,9 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
-  DollarSign
+  DollarSign,
+  Undo2,
+  Loader2
 } from 'lucide-react';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -25,7 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { useApi } from '@/hooks/use-api';
 import { getPassengers } from '@/services/passenger';
-import { getCustomerAccountSummary } from '@/services/customerAccount';
+import { getCustomerAccountSummary, refundPaymentCash } from '@/services/customerAccount';
 import { Passenger } from '@/interfaces/passengers';
 import { CustomerAccountSummary, Transaction, TransactionTypeLabels, TransactionTypeOptions } from '@/interfaces/customerAccount';
 import { PaginationParams } from '@/services/types';
@@ -34,6 +36,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DebtSettlementDialog } from '@/components/admin/reserves/DebtSettlementDialog';
 import { PaymentMethod } from '@/interfaces/payment';
 import { SelectOption } from '@/components/dashboard/select';
+import { useToast } from '@/hooks/use-toast';
+import { getApiErrorMessage } from '@/lib/apiErrors';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function DebtsPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Passenger | null>(null);
@@ -47,6 +61,11 @@ export default function DebtsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [isDebtSettlementOpen, setIsDebtSettlementOpen] = useState(false);
+
+  const { toast } = useToast();
+  // Fila (movimiento de pago) pendiente de confirmar la devolución de caja.
+  const [refundTarget, setRefundTarget] = useState<Transaction | null>(null);
+  const [isRefunding, setIsRefunding] = useState(false);
 
   const paymentMethodOptions: SelectOption[] = Object.entries(PaymentMethod)
     .filter(([, value]) => typeof value === 'number')
@@ -96,6 +115,9 @@ export default function DebtsPage() {
           transactionType: t.transactionType ?? '',
           amount: t.amount ?? 0,
           date: t.date ?? '',
+          reservePaymentId: t.reservePaymentId ?? null,
+          reservePaymentStatus: t.reservePaymentStatus ?? null,
+          relatedReserveId: t.relatedReserveId ?? null,
         })),
         pageNumber: txns.pageNumber ?? 1,
         pageSize: txns.pageSize ?? 10,
@@ -154,6 +176,26 @@ export default function DebtsPage() {
     }
   };
 
+  const handleConfirmRefund = async () => {
+    if (!refundTarget?.reservePaymentId) return;
+    setIsRefunding(true);
+    try {
+      await refundPaymentCash(refundTarget.reservePaymentId);
+      toast({
+        title: 'Dinero devuelto',
+        description: 'La devolución de caja se registró correctamente.',
+        variant: 'success',
+      });
+      setRefundTarget(null);
+      // Refrescar la grilla: el pago queda "Refunded" y deja de ofrecer el botón.
+      if (selectedCustomer) fetchSummary(params);
+    } catch (error) {
+      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
+    } finally {
+      setIsRefunding(false);
+    }
+  };
+
   const columns = [
     {
       header: 'Fecha',
@@ -182,6 +224,23 @@ export default function DebtsPage() {
           $ {Math.abs(t.amount).toLocaleString()}
         </span>
       )
+    },
+    {
+      header: '',
+      accessor: 'actions',
+      className: 'text-right',
+      width: '10%',
+      cell: (t: Transaction) =>
+        t.transactionType === 'Payment' && t.reservePaymentStatus === 'Paid' && t.reservePaymentId != null ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setRefundTarget(t)}
+          >
+            <Undo2 className="mr-1 h-3.5 w-3.5" />
+            Devolver
+          </Button>
+        ) : null,
     },
   ];
 
@@ -399,6 +458,29 @@ export default function DebtsPage() {
           if (selectedCustomer) fetchSummary(params);
         }}
       />
+
+      <AlertDialog open={refundTarget != null} onOpenChange={(open) => { if (!open && !isRefunding) setRefundTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Devolver dinero</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se devolverá en efectivo, desde la caja, el monto de este pago
+              {refundTarget ? ` ($ ${Math.abs(refundTarget.amount).toLocaleString()})` : ''}.
+              {' '}El pasajero debe estar cancelado previamente. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRefunding}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleConfirmRefund(); }}
+              disabled={isRefunding}
+            >
+              {isRefunding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Devolver dinero
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

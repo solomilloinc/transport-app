@@ -29,6 +29,19 @@ export interface Transaction {
   transactionType: string;
   amount: number;
   date: string;
+  /**
+   * Sólo viene poblado en movimientos de tipo `Payment`. Es el id del pago de
+   * reserva, necesario para la devolución de caja (POST /payment-cash-refund/{id}).
+   */
+  reservePaymentId: number | null;
+  /**
+   * Estado del pago de reserva (sólo en movimientos `Payment`):
+   * "Paid" | "Refunded" | "Pending" | ... Se usa para mostrar el botón
+   * "Devolver" sólo cuando está "Paid".
+   */
+  reservePaymentStatus: string | null;
+  /** Reserva asociada al movimiento (cuando aplica). */
+  relatedReserveId: number | null;
 }
 
 export interface CustomerAccountSummary {

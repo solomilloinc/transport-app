@@ -165,6 +165,20 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
     message: 'No se puede repetir el mismo método de pago. Combiná los montos en uno solo.',
   },
 
+  // ── ReservePayment (devolución de caja) ───────────────────────────────────
+  'ReservePayment.PassengersNotCancelled': {
+    message: 'Primero cancelá el/los pasajeros del pago para poder devolver el dinero.',
+  },
+  'ReservePayment.NotRefundable': {
+    message: 'Este pago no se puede devolver: ya fue devuelto o no está pago.',
+  },
+  'ReservePayment.NoPassengers': {
+    message: 'El pago no tiene pasajeros asociados.',
+  },
+  'ReservePayment.NotFound': {
+    message: 'No se encontró el pago a devolver.',
+  },
+
   // ── Passenger ─────────────────────────────────────────────────────────────
   'Passenger.NotFound': { message: 'El pasajero no fue encontrado.' },
   'Passenger.NotActive': {
