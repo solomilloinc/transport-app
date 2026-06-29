@@ -19,8 +19,8 @@
 
 | Archivo | Qué cambió |
 |---|---|
-| `components/admin/reserves/PassengerListTable.tsx` | Botón **Cancelar** (🚫) por fila, inline. Gating por fila: habilitado solo si `status ∈ {PendingPayment, Confirmed}` y `!reserveHasDeparted`. Botón **Eliminar** relegado al menú kebab `⋮`. |
-| `app/admin/reserves/page.tsx` | Estado + handlers de Cancelar; prop `reserveHasDeparted` a la grilla; render de `CancelPassengerDialog`. |
+| `components/admin/reserves/PassengerListTable.tsx` | Botón **Cancelar** (🚫) por fila, inline. Gating por fila: habilitado solo si `status ∈ {PendingPayment, Confirmed}`. Botón **Eliminar** relegado al menú kebab `⋮`. |
+| `app/admin/reserves/page.tsx` | Estado + handlers de Cancelar; render de `CancelPassengerDialog`. |
 | `interfaces/passengerReserve.ts` | Comentario de `reserveRelatedId` actualizado (gatea el aviso IdaVuelta en el dialog). |
 | `lib/apiErrors.ts` | Tres códigos nuevos: `Passenger.NotFound` (ya existía), `Passenger.NotActive`, `Passenger.ReserveDeparted`. |
 | `CONTEXT.md` | Sección "Dar de baja un Pasajero: `Cancelar` vs `Eliminar`" y "Cancelar es un término sobrecargado". |
@@ -54,10 +54,12 @@ en el kebab `⋮`**.
 const status = passenger.status ?? passenger.statusPaymentId;
 const isActive = status === PaymentStatusEnum.PendingPayment   // 1
               || status === PaymentStatusEnum.Confirmed;         // 2
-const canCancel = isActive && !reserveHasDeparted;
+const canCancel = isActive;
 ```
 
-`reserveHasDeparted` viene de `selectedTrip.hasDeparted` — es uniforme para toda la grilla.
+Que el viaje ya haya partido (`hasDeparted`) **no** deshabilita Cancelar: ese campo sólo marca el
+viaje en color en la grilla de viajes (ver `TripSelectionPanel`). El backend puede seguir rechazando
+con `Passenger.ReserveDeparted` si esa regla sigue activa del lado de la API.
 
 ---
 
@@ -74,7 +76,7 @@ const canCancel = isActive && !reserveHasDeparted;
 ## Checklist (del charter del backend)
 
 - [x] Grilla: acción **Cancelar** por fila (solo Admin).
-- [x] Habilitada solo si `status ∈ {1, 2}` y la reserva no partió; deshabilitada en el resto.
+- [x] Habilitada solo si `status ∈ {1, 2}`; deshabilitada en el resto. Que el viaje haya partido no la bloquea (solo marca color).
 - [x] Confirmación antes de cancelar. Aviso especial para IdaVuelta ("se cancelan ambos tramos").
 - [x] Refrescar la grilla al volver (`fetchPassengerReserves`). El `currentBalance` puede quedar negativo (saldo a favor).
 - [x] Códigos `Passenger.NotActive` y `Passenger.ReserveDeparted` mapeados en el catálogo (`lib/apiErrors.ts`).

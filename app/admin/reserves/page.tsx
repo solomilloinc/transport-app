@@ -450,16 +450,16 @@ export default function ReservationsPage() {
     ? currentReservedQuantity >= selectedTrip.availableQuantity
     : false;
 
-  const isAddPassengerDisabled =
-    !selectedTrip || selectedTrip.hasDeparted || isSelectedTripFull;
+  // `hasDeparted` solo marca el viaje en color (ver TripSelectionPanel); no
+  // deshabilita acciones. Agregar pasajeros sigue habilitado aunque el viaje
+  // ya haya salido.
+  const isAddPassengerDisabled = !selectedTrip || isSelectedTripFull;
 
   const addPassengerButtonTitle = !selectedTrip
     ? 'Seleccioná un viaje para agregar pasajeros'
-    : selectedTrip.hasDeparted
-      ? 'No podés agregar pasajeros a un viaje que ya salió'
-      : isSelectedTripFull
-        ? 'El vehículo está completo'
-        : 'Agregar pasajero';
+    : isSelectedTripFull
+      ? 'El vehículo está completo'
+      : 'Agregar pasajero';
 
   return (
     <div className="space-y-6">
@@ -532,7 +532,6 @@ export default function ReservationsPage() {
                 onAddPayment={handleAddPaymentPassengerReserve}
                 getClientBalance={() => null} // Placeholder, implement if needed
                 disabledPassengers={disabledPassengers}
-                reserveHasDeparted={selectedTrip?.hasDeparted ?? false}
               />
             </div>
           </CardContent>

@@ -84,6 +84,8 @@ Identificada por `reserveId`, referencia su Ruta (`tripId`) y su salida (`reserv
 Una Reserve está **partida** cuando su datetime de salida ya pasó: `reserveDate + departureHour <
 ahora` (el corte usa **UTC**). Definición única compartida por los dos reportes: pinta de amarillo
 la fila del reporte del día (`hasDeparted`) y acota la deuda vencida (`overdueBalance`).
+`hasDeparted` es **sólo una señal visual/financiera**: no deshabilita acciones de la UI (agregar o
+cancelar pasajeros sigue habilitado en un viaje partido; el backend es quien valida lo que no se permite).
 
 ### Dirección — `Direction`
 Punto físico de pickup o dropoff (`Terminal A`, `Retiro`, etc.). El Servicio define qué Direcciones

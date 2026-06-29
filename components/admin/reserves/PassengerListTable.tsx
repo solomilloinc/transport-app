@@ -39,8 +39,6 @@ interface PassengerListTableProps {
   onAddPayment: (passenger: PassengerReserveReport) => void;
   getClientBalance: (dni: string) => number | null;
   disabledPassengers?: number[];
-  /** La Reserve seleccionada ya partió: gatea Mover/Cancelar de todas las filas. */
-  reserveHasDeparted?: boolean;
 }
 
 export function PassengerListTable({
@@ -56,7 +54,6 @@ export function PassengerListTable({
   onAddPayment,
   getClientBalance,
   disabledPassengers = [],
-  reserveHasDeparted = false,
 }: PassengerListTableProps) {
   const renderSortIndicator = (column: PassengerSortColumn) => {
     const isActive = sortColumn === column;
@@ -280,18 +277,19 @@ export function PassengerListTable({
                     </Button>
                   {(() => {
                     // Gating (ver charter §2 + CONTEXT.md): sólo pasajeros activos
-                    // (PendingPayment/Confirmed) y con la Reserve sin partir.
+                    // (PendingPayment/Confirmed). Que el viaje ya haya partido NO
+                    // bloquea la acción: `hasDeparted` sólo marca el viaje en color.
                     // Además se bloquea si está en stand-by de pago externo.
                     const status = passenger.status ?? passenger.statusPaymentId;
                     const isActive =
                       status === PaymentStatusEnum.PendingPayment ||
                       status === PaymentStatusEnum.Confirmed;
-                    const canCancel = isActive && !reserveHasDeparted && !isAwaitingExternalPayment;
+                    const canCancel = isActive && !isAwaitingExternalPayment;
                     const cancelTitle = isAwaitingExternalPayment
                       ? AWAITING_EXTERNAL_PAYMENT_TITLE
                       : canCancel
                         ? 'Cancelar pasajero'
-                        : 'No se puede cancelar: el viaje partió o el pasajero no está activo';
+                        : 'No se puede cancelar: el pasajero no está activo';
                     return (
                       <Button
                         variant="ghost"
