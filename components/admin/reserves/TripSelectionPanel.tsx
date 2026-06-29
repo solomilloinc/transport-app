@@ -57,12 +57,12 @@ export function TripSelectionPanel({
   };
 
   return (
-    <Card>
-      <CardContent className="p-2 sm:p-4">
-        <div className="space-y-2">
-          <div className="w-full max-w-full sm:max-w-[300px] mx-auto">
+    <Card className="w-full min-w-0">
+      <CardContent className="p-3 sm:p-4">
+        <div className="space-y-3">
+          <div className="mx-auto w-full max-w-[320px]">
             <Calendar
-              className="text-xs sm:text-sm"
+              className="w-full"
               mode="single"
               selected={selectedDate}
               onSelect={onDateChange}
@@ -70,14 +70,9 @@ export function TripSelectionPanel({
               onMonthChange={setMonth}
               locale={es}
               fromMonth={subMonths(new Date(), 1)}
-              classNames={{
-                cell: 'h-6 w-6 sm:h-7 sm:w-7 text-center text-[10px] sm:text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
-                day: 'h-6 w-6 sm:h-7 sm:w-7 p-0 font-normal text-[10px] sm:text-xs aria-selected:opacity-100',
-                head_cell: 'text-muted-foreground rounded-md w-6 sm:w-7 font-normal text-[10px] sm:text-xs',
-              }}
             />
           </div>
-          <div className="space-y-2 p-3">
+          <div className="space-y-2 px-1 sm:px-3">
             <div className="text-lg font-medium text-blue-500">Viajes {selectedDate ? format(selectedDate, 'd MMM', { locale: es }) : ''}</div>
             {availableTrips && availableTrips.length > 0 && (
               <ApiSelect

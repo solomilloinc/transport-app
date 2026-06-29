@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
+import { MobileCard } from '@/components/dashboard/mobile-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 
@@ -240,7 +241,60 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, currentBala
         ) : (
           <div className="space-y-6 py-4">
             {/* Reserves table */}
-            <div className="rounded-lg border overflow-hidden">
+            <div className="md:hidden space-y-3">
+              {pendingReserves.map((reserve) => (
+                <MobileCard
+                  key={reserve.reserveId}
+                  title={`${reserve.originName} -> ${reserve.destinationName}`}
+                  subtitle={`${format(new Date(reserve.reserveDate), 'dd/MM/yyyy', { locale: es })} - ${reserve.departureHour}`}
+                  badge={
+                    <Checkbox
+                      checked={selectedReserveIds.includes(reserve.reserveId)}
+                      onCheckedChange={() => toggleReserveSelection(reserve.reserveId)}
+                      aria-label={`Seleccionar reserva ${reserve.reserveId}`}
+                    />
+                  }
+                  fields={[
+                    { label: 'Total', value: `$${reserve.totalPrice.toLocaleString()}` },
+                    { label: 'Pagado', value: `$${reserve.totalPaid.toLocaleString()}` },
+                    {
+                      label: 'Deuda',
+                      value: <span className="text-red-600">${reserve.pendingDebt.toLocaleString()}</span>,
+                    },
+                    { label: 'Pasajeros', value: reserve.passengers?.length ?? 0 },
+                  ]}
+                  actions={
+                    reserve.passengers?.length > 0 ? (
+                      <div className="w-full space-y-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-0"
+                          onClick={() => toggleExpanded(reserve.reserveId)}
+                        >
+                          {expandedReserves.includes(reserve.reserveId) ? 'Ocultar pasajeros' : 'Ver pasajeros'}
+                          {expandedReserves.includes(reserve.reserveId)
+                            ? <ChevronUp className="ml-1 h-4 w-4" />
+                            : <ChevronDown className="ml-1 h-4 w-4" />}
+                        </Button>
+                        {expandedReserves.includes(reserve.reserveId) && (
+                          <div className="space-y-1 rounded-md bg-gray-50 p-2">
+                            {reserve.passengers.map((p) => (
+                              <div key={`${reserve.reserveId}-${p.passengerId}`} className="flex items-center justify-between gap-2 text-xs">
+                                <span className="min-w-0 truncate">{p.fullName}</span>
+                                <span className="font-medium">${p.price.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : undefined
+                  }
+                />
+              ))}
+            </div>
+
+            <div className="hidden md:block rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

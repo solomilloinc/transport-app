@@ -20,6 +20,8 @@ import {
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
+import { MobileCard } from '@/components/dashboard/mobile-card';
+import { MobileCardList } from '@/components/dashboard/mobile-card-list';
 
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { useReportSummary } from '@/hooks/use-report-summary';
@@ -244,16 +246,61 @@ export function PaymentsReportTab({ initialCashBoxId }: { initialCashBoxId?: num
                   disabled={loading}
                 />
               </div>
-              <DashboardTable
-                columns={columns}
-                data={data?.items ?? []}
-                emptyMessage="No se encontraron pagos para estos filtros."
+              <div className="md:hidden">
+                <Select value={sortBy ?? 'date'} onValueChange={handleSort}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Fecha</SelectItem>
+                    <SelectItem value="method">Metodo</SelectItem>
+                    <SelectItem value="status">Estado</SelectItem>
+                    <SelectItem value="amount">Monto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="hidden md:block">
+                <DashboardTable
+                  columns={columns}
+                  data={data?.items ?? []}
+                  emptyMessage="No se encontraron pagos para estos filtros."
+                  isLoading={loading}
+                  skeletonRows={10}
+                  sortBy={sortBy}
+                  sortDescending={sortDescending}
+                  onSort={handleSort}
+                />
+              </div>
+              <MobileCardList
+                items={data?.items ?? []}
                 isLoading={loading}
-                skeletonRows={10}
-                sortBy={sortBy}
-                sortDescending={sortDescending}
-                onSort={handleSort}
-              />
+                emptyMessage="No se encontraron pagos para estos filtros."
+              >
+                {(p) => (
+                  <MobileCard
+                    key={p.paymentId}
+                    title={p.payerName || 'Sin pagador'}
+                    subtitle={p.payerDocumentNumber ? `DNI ${p.payerDocumentNumber}` : p.payerEmail}
+                    badge={<Badge variant="outline">{PAYMENT_STATUS_LABELS[p.status] ?? p.status}</Badge>}
+                    fields={[
+                      {
+                        label: 'Fecha',
+                        value: (() => {
+                          try {
+                            return format(new Date(p.date), 'dd/MM/yyyy HH:mm', { locale: es });
+                          } catch {
+                            return p.date;
+                          }
+                        })(),
+                      },
+                      { label: 'Metodo', value: COBRANZA_METHOD_LABELS[p.method] ?? p.method },
+                      { label: 'Caja', value: `#${p.cashBoxId}` },
+                      { label: 'Reserva', value: p.reserveId ? `#${p.reserveId}` : '-' },
+                      { label: 'Monto', value: money(p.amount) },
+                    ]}
+                  />
+                )}
+              </MobileCardList>
               {(data?.items?.length ?? 0) > 0 && (
                 <TablePagination
                   currentPage={pageNumber}

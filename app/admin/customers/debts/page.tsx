@@ -22,6 +22,8 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
+import { MobileCard } from '@/components/dashboard/mobile-card';
+import { MobileCardList } from '@/components/dashboard/mobile-card-list';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -496,13 +498,59 @@ export default function DebtsPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <DashboardTable
-                columns={columns}
-                data={summary?.transactions?.items ?? []}
-                emptyMessage="No se encontraron transacciones para este periodo."
+              <div className="hidden md:block">
+                <DashboardTable
+                  columns={columns}
+                  data={summary?.transactions?.items ?? []}
+                  emptyMessage="No se encontraron transacciones para este periodo."
+                  isLoading={loading}
+                  skeletonRows={pageSize}
+                />
+              </div>
+              <MobileCardList
+                items={summary?.transactions?.items ?? []}
                 isLoading={loading}
-                skeletonRows={pageSize}
-              />
+                emptyMessage="No se encontraron transacciones para este periodo."
+                skeletonRows={pageSize > 3 ? 3 : pageSize}
+              >
+                {(t) => (
+                  <MobileCard
+                    key={t.id}
+                    title={TransactionTypeLabels[t.transactionType] || t.transactionType}
+                    subtitle={format(new Date(t.date), 'dd/MM/yyyy HH:mm', { locale: es })}
+                    badge={
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTransactionTypeStyle(t.transactionType)}`}>
+                        {TransactionTypeLabels[t.transactionType] || t.transactionType}
+                      </span>
+                    }
+                    fields={[
+                      { label: 'Descripcion', value: t.description || '-' },
+                      { label: 'Reserva', value: t.relatedReserveId ? `#${t.relatedReserveId}` : '-' },
+                      {
+                        label: 'Monto',
+                        value: (
+                          <span className={t.amount < 0 ? 'text-green-600' : 'text-red-600'}>
+                            $ {Math.abs(t.amount).toLocaleString()}
+                          </span>
+                        ),
+                      },
+                    ]}
+                    actions={
+                      t.transactionType === 'Payment' && t.reservePaymentStatus === 'Paid' && t.reservePaymentId != null ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8"
+                          onClick={() => setRefundTarget(t)}
+                        >
+                          <Undo2 className="mr-1 h-3.5 w-3.5" />
+                          Devolver dinero
+                        </Button>
+                      ) : undefined
+                    }
+                  />
+                )}
+              </MobileCardList>
               
               {(summary?.transactions?.totalRecords ?? 0) > 0 && (
                 <div className="mt-4">

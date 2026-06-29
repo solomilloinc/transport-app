@@ -3,7 +3,8 @@
 import { ArrowUpDown, DollarSign, Edit2, TrashIcon, UserCheck, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MobileCard } from '@/components/dashboard/mobile-card';
 import { PassengerReserveReport, PaymentStatusEnum, PaymentStatusLabels } from '@/interfaces/passengerReserve';
 
 export type PassengerSortColumn = 'name' | 'pickup' | 'paid' | 'paymentMethod' | 'paidAmount';
@@ -82,7 +83,110 @@ export function PassengerListTable({
   }
 
   return (
-    <div className="overflow-x-auto w-full">
+    <>
+      <div className="md:hidden space-y-3">
+        <SelectSortControl sortColumn={sortColumn} onSort={onSort} />
+        {passengers.map((passenger) => {
+          const status = passenger.status ?? passenger.statusPaymentId;
+          const label = PaymentStatusLabels[status] || 'Desconocido';
+          const badgeClass = paymentStatusBadgeClasses[status] || 'bg-gray-100 text-gray-700';
+          const isAwaitingExternalPayment = passenger.isAwaitingExternalPayment === true;
+          const isActive =
+            status === PaymentStatusEnum.PendingPayment ||
+            status === PaymentStatusEnum.Confirmed;
+          const canCancel = isActive && !reserveHasDeparted && !isAwaitingExternalPayment;
+
+          return (
+            <MobileCard
+              key={passenger.passengerId}
+              title={passenger.fullName}
+              subtitle={`DNI: ${passenger.documentNumber}`}
+              badge={
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    isAwaitingExternalPayment ? 'bg-violet-100 text-violet-700' : badgeClass
+                  }`}
+                  title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : undefined}
+                >
+                  {isAwaitingExternalPayment ? 'Esperando pago' : label}
+                </span>
+              }
+              fields={[
+                { label: 'Subida', value: passenger.pickupLocationName || '-' },
+                { label: 'Medio', value: passenger.paymentMethods || '-' },
+                {
+                  label: 'Monto',
+                  value: `$${(passenger.totalAmount || 0).toLocaleString('es-AR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`,
+                },
+                {
+                  label: 'Estado de subida',
+                  value: passenger.hasTraveled ? 'Subio' : 'No subio',
+                },
+              ]}
+              actions={
+                <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <Checkbox
+                      checked={passenger.hasTraveled}
+                      onCheckedChange={(checked) => onCheckPassenger(passenger, checked as boolean)}
+                      disabled={
+                        disabledPassengers.includes(passenger.passengerId) ||
+                        isAwaitingExternalPayment
+                      }
+                      title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : undefined}
+                    />
+                    Subio
+                  </label>
+                  <div className="flex items-center gap-1">
+                    {status === PaymentStatusEnum.PendingPayment && !isAwaitingExternalPayment && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                        onClick={() => onAddPayment(passenger)}
+                        title="Agregar pago"
+                      >
+                        <DollarSign className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40"
+                      onClick={() => onEdit(passenger)}
+                      disabled={isAwaitingExternalPayment}
+                      title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : 'Editar Reserva'}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-orange-500 hover:bg-orange-50 hover:text-orange-600 disabled:opacity-40"
+                      onClick={() => onCancel(passenger)}
+                      disabled={!canCancel}
+                      title={
+                        isAwaitingExternalPayment
+                          ? AWAITING_EXTERNAL_PAYMENT_TITLE
+                          : canCancel
+                            ? 'Cancelar pasajero'
+                            : 'No se puede cancelar: el viaje partio o el pasajero no esta activo'
+                      }
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              }
+            />
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto w-full">
       <table className="w-full border-collapse table-fixed">
         <thead>
           <tr className="border-b text-left text-sm font-medium text-gray-500">
@@ -312,6 +416,35 @@ export function PassengerListTable({
           })}
         </tbody>
       </table>
+      </div>
+    </>
+  );
+}
+
+function SelectSortControl({
+  sortColumn,
+  onSort,
+}: {
+  sortColumn: PassengerSortColumn;
+  onSort: (column: PassengerSortColumn) => void;
+}) {
+  return (
+    <div className="mb-2">
+      <Select
+        value={sortColumn}
+        onValueChange={(value) => onSort(value as PassengerSortColumn)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Ordenar por" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="name">Pasajero</SelectItem>
+          <SelectItem value="pickup">Subida</SelectItem>
+          <SelectItem value="paid">Pago</SelectItem>
+          <SelectItem value="paymentMethod">Medio de pago</SelectItem>
+          <SelectItem value="paidAmount">Monto</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
