@@ -7,6 +7,7 @@ export interface Passenger {
   phone2: string;
   documentNumber: string;
   status: string;
+  currentBalance?: number;
 }
 
 export const emptyPassenger: Omit<Passenger, 'customerId'> = {

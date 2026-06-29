@@ -13,7 +13,7 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
         <h2 className="text-3xl font-bold tracking-tight text-blue-500">{title}</h2>
         <p className="text-muted-foreground">{description}</p>
       </div>
-      {action && <div className="flex items-center gap-2">{action}</div>}
+      {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
   );
 }

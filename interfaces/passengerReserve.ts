@@ -139,6 +139,7 @@ export interface PassengerReserveCreateRequestWrapper {
   returnReserveId: number | null;
   payments: PaymentItem[];
   passengers: PassengerBooking[];
+  creditAmount?: number;
 }
 
 export interface ExternalPayment {

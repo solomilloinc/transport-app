@@ -14,18 +14,31 @@ interface MobileCardProps {
   subtitle?: string;
   fields: MobileCardField[];
   badge?: ReactNode;
+  actions?: ReactNode;
   onEdit?: () => void;
   onDelete?: () => void;
   editLabel?: string;
   deleteLabel?: string;
 }
 
-export function MobileCard({ title, subtitle, fields, badge, onEdit, onDelete, editLabel = 'Editar', deleteLabel = 'Eliminar' }: MobileCardProps) {
+export function MobileCard({
+  title,
+  subtitle,
+  fields,
+  badge,
+  actions,
+  onEdit,
+  onDelete,
+  editLabel = 'Editar',
+  deleteLabel = 'Eliminar',
+}: MobileCardProps) {
+  const hasFooter = actions || onEdit || onDelete;
+
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
+        <div className="flex justify-between items-start gap-3">
+          <div className="min-w-0">
             <CardTitle className="text-base">{title}</CardTitle>
             {subtitle && <CardDescription>{subtitle}</CardDescription>}
           </div>
@@ -35,25 +48,31 @@ export function MobileCard({ title, subtitle, fields, badge, onEdit, onDelete, e
       <CardContent className="pb-2">
         <div className="grid grid-cols-2 gap-2 text-sm">
           {fields.map((field, index) => (
-            <div key={index}>
+            <div key={index} className="min-w-0">
               <p className="text-gray-700 font-medium">{field.label}:</p>
-              <p className="font-medium">{field.value}</p>
+              <div className="font-medium break-words">{field.value}</div>
             </div>
           ))}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between pt-2">
-        {onEdit && (
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            {editLabel}
-          </Button>
-        )}
-        {onDelete && (
-          <Button variant="outline" size="sm" className="text-red-600" onClick={onDelete}>
-            {deleteLabel}
-          </Button>
-        )}
-      </CardFooter>
+      {hasFooter && (
+        <CardFooter className="flex flex-wrap justify-between gap-2 pt-2">
+          {actions || (
+            <>
+              {onEdit && (
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  {editLabel}
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="outline" size="sm" className="text-red-600" onClick={onDelete}>
+                  {deleteLabel}
+                </Button>
+              )}
+            </>
+          )}
+        </CardFooter>
+      )}
     </Card>
   );
 }

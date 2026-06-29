@@ -18,6 +18,8 @@ import {
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
+import { MobileCard } from '@/components/dashboard/mobile-card';
+import { MobileCardList } from '@/components/dashboard/mobile-card-list';
 
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { useReportSummary } from '@/hooks/use-report-summary';
@@ -386,16 +388,53 @@ export function ReservesReportTab({ entityOptions }: { entityOptions: ReportingE
                   disabled={loading}
                 />
               </div>
-              <DashboardTable
-                columns={columns}
-                data={data?.items ?? []}
-                emptyMessage="No se encontraron reservas para estos filtros."
+              <div className="md:hidden">
+                <Select value={sortBy ?? 'reservedate'} onValueChange={handleSort}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reservedate">Fecha</SelectItem>
+                    <SelectItem value="route">Ruta</SelectItem>
+                    <SelectItem value="status">Estado</SelectItem>
+                    <SelectItem value="occupancy">Ocupacion</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="hidden md:block">
+                <DashboardTable
+                  columns={columns}
+                  data={data?.items ?? []}
+                  emptyMessage="No se encontraron reservas para estos filtros."
+                  isLoading={loading}
+                  skeletonRows={10}
+                  sortBy={sortBy}
+                  sortDescending={sortDescending}
+                  onSort={handleSort}
+                />
+              </div>
+              <MobileCardList
+                items={data?.items ?? []}
                 isLoading={loading}
-                skeletonRows={10}
-                sortBy={sortBy}
-                sortDescending={sortDescending}
-                onSort={handleSort}
-              />
+                emptyMessage="No se encontraron reservas para estos filtros."
+              >
+                {(r) => (
+                  <MobileCard
+                    key={r.reserveId}
+                    title={r.tripName}
+                    subtitle={`${r.originName} -> ${r.destinationName}`}
+                    badge={<Badge variant="outline">{RESERVE_STATUS_LABELS[r.status] ?? r.status}</Badge>}
+                    fields={[
+                      { label: 'Fecha', value: `${safeDate(r.reserveDate)} ${r.departureHour}` },
+                      { label: 'Coche', value: r.internalNumber || '-' },
+                      { label: 'Ocupacion', value: `${r.reservedCount}/${r.capacity}` },
+                      { label: 'Libres', value: r.availableCount },
+                      { label: 'Vendido', value: money(r.soldAmount) },
+                      { label: 'Cobrado', value: money(r.collectedAmount) },
+                    ]}
+                  />
+                )}
+              </MobileCardList>
               {(data?.items?.length ?? 0) > 0 && (
                 <TablePagination
                   currentPage={pageNumber}

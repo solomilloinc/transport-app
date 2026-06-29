@@ -13,9 +13,15 @@ export enum PaymentMethod {
   Online = 2,
   Tarjeta = 3,
   Transferencia = 4,
+  AccountCredit = 5,
 }
 
 export interface PassengerPaymentCreate {
   transactionAmount: number;
   paymentMethod: number;
+}
+
+export interface ReservePaymentsCreateRequest {
+  payments: PassengerPaymentCreate[];
+  creditAmount: number;
 }

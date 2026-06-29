@@ -38,6 +38,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -161,13 +162,15 @@ function MenuItem({
   pathname, 
   userRole, 
   isExpanded, 
-  onToggle 
+  onToggle,
+  onNavigate,
 }: { 
   item: MenuItemType; 
   pathname: string; 
   userRole: string;
   isExpanded: boolean;
   onToggle: () => void;
+  onNavigate: () => void;
 }) {
   const isActive = item.submenu 
     ? pathname.startsWith(item.path) 
@@ -208,7 +211,7 @@ function MenuItem({
                     isActive={pathname === subItem.path}
                     className="transition-colors duration-200 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950"
                   >
-                    <Link href={subItem.path}>{subItem.name}</Link>
+                    <Link href={subItem.path} onClick={onNavigate}>{subItem.name}</Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               ))}
@@ -226,7 +229,7 @@ function MenuItem({
         tooltip={item.name}
         className="transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950"
       >
-        <Link href={item.path}>
+        <Link href={item.path} onClick={onNavigate}>
           <item.icon className="h-4 w-4" />
           <span className="font-medium">{item.name}</span>
         </Link>
@@ -235,13 +238,14 @@ function MenuItem({
   );
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { data: session } = useSession();
   const { identity } = useTenant();
+  const { isMobile, setOpenMobile } = useSidebar();
   
   const userRole = normalizeRole(session?.user?.role) ?? 'user';
 
@@ -259,6 +263,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ...prev,
       [menuKey]: !prev[menuKey],
     }));
+  };
+
+  const closeMobileSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -295,8 +305,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isCustomerView = false;
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full">
         <SidebarComponent className="border-r border-sidebar-border bg-slate-50 dark:bg-slate-900">
           {/* Header mejorado */}
           <SidebarHeader className="border-b border-sidebar-border">
@@ -336,6 +345,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         userRole={userRole}
                         isExpanded={item.key ? expandedMenus[item.key] || false : false}
                         onToggle={() => item.key && toggleMenu(item.key)}
+                        onNavigate={closeMobileSidebar}
                       />
                     ))}
                   </SidebarMenu>
@@ -359,6 +369,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         userRole={userRole}
                         isExpanded={item.key ? expandedMenus[item.key] || false : false}
                         onToggle={() => item.key && toggleMenu(item.key)}
+                        onNavigate={closeMobileSidebar}
                       />
                     ))}
                   </SidebarMenu>
@@ -441,7 +452,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Suspense>{children}</Suspense>
           </main>
         </div>
-      </div>
+    </div>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
     </SidebarProvider>
   );
 }
