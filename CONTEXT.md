@@ -87,6 +87,20 @@ la fila del reporte del día (`hasDeparted`) y acota la deuda vencida (`overdueB
 `hasDeparted` es **sólo una señal visual/financiera**: no deshabilita acciones de la UI (agregar o
 cancelar pasajeros sigue habilitado en un viaje partido; el backend es quien valida lo que no se permite).
 
+### Cliente abonado — `hasAbono` / `isAbono`
+Un **Cliente abonado** (`Customer.hasAbono = true`) viaja bajo un acuerdo especial: cuando se le crea
+una Reserve **desde el admin**, **no se le cobra** — no se registran pagos, ni movimientos de cuenta
+corriente, ni caja. Es un modo excepcional (stopgap) hasta modelar un abono más completo.
+- En el alta admin (`AddReservationFlow`), si el pagador es abonado, la UI **oculta el paso de pagos**
+  (muestra "Cliente abonado — sin cobro") y manda `payments: []`. El front **no** zera el `price` de
+  las patas: el backend ignora `payments` y deja `price: 0`.
+- Tras crear, los Passengers vuelven con `price: 0`, `isAbono: true` y estado **Confirmed** (no
+  quedan "pendientes de pago").
+- En el reporte de pasajeros, una fila con `isAbono = true` muestra un tag **"Abonado"** (puede
+  convivir con **"Frecuente"**) y **no** ofrece acciones de cobro ni deuda pendiente.
+- `hasAbono` (Customer) e `isAbono` (fila del reporte) los agrega el backend; el front los lee
+  defensivamente (`=== true`), así que mientras lleguen `undefined` la UI se comporta como antes.
+
 ### Dirección — `Direction`
 Punto físico de pickup o dropoff (`Terminal A`, `Retiro`, etc.). El Servicio define qué Direcciones
 están habilitadas; usar una fuera de `allowedDirections` retorna

@@ -91,6 +91,14 @@ export interface PassengerReserveReport extends PassengerReserve {
    * cancelar arrastra las dos piernas → la UI avisa "se cancelan ambos tramos".
    */
   reserveRelatedId: number | null;
+  /**
+   * `true` ⇒ el Passenger es de un Cliente abonado: viajó sin cobro (acuerdo
+   * especial). Su `price`/importe es 0 y no tiene pago asociado por diseño, así
+   * que la grilla muestra un tag "Abonado" y NO ofrece acciones de cobro ni deuda
+   * pendiente. Ver CONTEXT.md. El backend lo agrega en `passenger-reserve-report`;
+   * mientras no esté live puede venir `undefined` (se lee con `=== true`).
+   */
+  isAbono?: boolean;
 }
 
 export interface PassengerReserveUpdate {

@@ -16,6 +16,11 @@ export interface ReportingPassengersFilters {
   customerId?: number;
   hasTraveled?: boolean;
   onlyFrequent?: boolean;
+  /**
+   * Cliente abonado (ver CONTEXT.md). `true` ⇒ solo abonados, `false` ⇒ solo
+   * no-abonados, `undefined`/ausente ⇒ todos. El backend lo agrega en paralelo.
+   */
+  isAbono?: boolean;
   search?: string;
   paymentMethod?: number;
 }
@@ -31,6 +36,7 @@ export const emptyReportingPassengersFilters: ReportingPassengersFilters = {
   customerId: undefined,
   hasTraveled: undefined,
   onlyFrequent: undefined,
+  isAbono: undefined,
   search: '',
   paymentMethod: undefined,
 };

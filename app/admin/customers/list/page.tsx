@@ -7,6 +7,8 @@ import { Building, Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } fro
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { deleteLogic, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
@@ -62,6 +64,18 @@ import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
 function withOptionalEmail<T extends { email?: string | null }>(data: T) {
   const email = data.email?.trim();
   return { ...data, email: email ? email : null };
+}
+
+// Badge de "Cliente abonado": viaja sin cobro desde el alta admin (ver CONTEXT.md).
+function AbonoBadge() {
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700"
+      title="Cliente abonado — viaja sin cobro"
+    >
+      Abonado
+    </span>
+  );
 }
 
 export default function CustomersManagement() {
@@ -159,6 +173,9 @@ export default function CustomersManagement() {
     Object.entries(fields).forEach(([key, value]) => {
       editForm.setField(key, value || '');
     });
+    // `hasAbono` se setea aparte: el loop de arriba hace `value || ''`, que
+    // convertiría el booleano `false` en string vacío.
+    editForm.setField('hasAbono', passenger.hasAbono ?? false);
 
     setIsEditModalOpen(true);
   };
@@ -186,7 +203,17 @@ export default function CustomersManagement() {
   };
 
   const columns = [
-    { header: 'Apellido', accessor: 'lastName', width: '20%' },
+    {
+      header: 'Apellido',
+      accessor: 'lastName',
+      width: '20%',
+      cell: (passenger: Passenger) => (
+        <div className="flex items-center gap-2">
+          <span>{passenger.lastName}</span>
+          {passenger.hasAbono === true && <AbonoBadge />}
+        </div>
+      ),
+    },
     { header: 'Nombre', accessor: 'firstName', width: '20%' },
     { header: 'Documento', accessor: 'documentNumber', width: '15%' },
     { header: 'Teléfono', accessor: 'phone1', width: '15%' },
@@ -307,7 +334,12 @@ export default function CustomersManagement() {
             <MobileCard
               key={passenger.customerId}
               title={`${passenger.firstName} ${passenger.lastName}`}
-              badge={<StatusBadge status={passenger.status ? 'Activo' : 'Inactivo'} />}
+              badge={
+                <div className="flex items-center gap-1.5">
+                  {passenger.hasAbono === true && <AbonoBadge />}
+                  <StatusBadge status={passenger.status ? 'Activo' : 'Inactivo'} />
+                </div>
+              }
               fields={[
                 { label: 'Documento', value: passenger.documentNumber },
                 { label: 'Email', value: passenger.email },
@@ -369,6 +401,16 @@ export default function CustomersManagement() {
         <FormField label="Teléfono 2">
           <Input id="phone2" value={addForm.data.phone2} onChange={(e) => addForm.setField('phone2', e.target.value)} />
         </FormField>
+        <div className="flex items-center gap-2 pt-2">
+          <Checkbox
+            id="add-has-abono"
+            checked={addForm.data.hasAbono === true}
+            onCheckedChange={(checked) => addForm.setField('hasAbono', checked === true)}
+          />
+          <Label htmlFor="add-has-abono" className="text-sm font-normal">
+            Cliente abonado (viaja sin cobro)
+          </Label>
+        </div>
       </FormDialog>
 
       {/* Edit Customer Modal */}
@@ -427,6 +469,16 @@ export default function CustomersManagement() {
             onChange={(e) => editForm.setField('phone2', e.target.value)}
           />
         </FormField>
+        <div className="flex items-center gap-2 pt-2">
+          <Checkbox
+            id="edit-has-abono"
+            checked={editForm.data.hasAbono === true}
+            onCheckedChange={(checked) => editForm.setField('hasAbono', checked === true)}
+          />
+          <Label htmlFor="edit-has-abono" className="text-sm font-normal">
+            Cliente abonado (viaja sin cobro)
+          </Label>
+        </div>
       </FormDialog>
 
       {/* Delete Confirmation Modal */}

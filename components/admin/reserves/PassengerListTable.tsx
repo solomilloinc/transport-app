@@ -88,10 +88,11 @@ export function PassengerListTable({
           const label = PaymentStatusLabels[status] || 'Desconocido';
           const badgeClass = paymentStatusBadgeClasses[status] || 'bg-gray-100 text-gray-700';
           const isAwaitingExternalPayment = passenger.isAwaitingExternalPayment === true;
+          const isAbono = passenger.isAbono === true;
           const isActive =
             status === PaymentStatusEnum.PendingPayment ||
             status === PaymentStatusEnum.Confirmed;
-          const canCancel = isActive && !reserveHasDeparted && !isAwaitingExternalPayment;
+          const canCancel = isActive && !isAwaitingExternalPayment;
 
           return (
             <MobileCard
@@ -99,14 +100,24 @@ export function PassengerListTable({
               title={passenger.fullName}
               subtitle={`DNI: ${passenger.documentNumber}`}
               badge={
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                    isAwaitingExternalPayment ? 'bg-violet-100 text-violet-700' : badgeClass
-                  }`}
-                  title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : undefined}
-                >
-                  {isAwaitingExternalPayment ? 'Esperando pago' : label}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {isAbono && (
+                    <span
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700"
+                      title="Cliente abonado — viajó sin cobro"
+                    >
+                      Abonado
+                    </span>
+                  )}
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      isAwaitingExternalPayment ? 'bg-violet-100 text-violet-700' : badgeClass
+                    }`}
+                    title={isAwaitingExternalPayment ? AWAITING_EXTERNAL_PAYMENT_TITLE : undefined}
+                  >
+                    {isAwaitingExternalPayment ? 'Esperando pago' : label}
+                  </span>
+                </div>
               }
               fields={[
                 { label: 'Subida', value: passenger.pickupLocationName || '-' },
@@ -138,7 +149,7 @@ export function PassengerListTable({
                     Subio
                   </label>
                   <div className="flex items-center gap-1">
-                    {status === PaymentStatusEnum.PendingPayment && !isAwaitingExternalPayment && (
+                    {status === PaymentStatusEnum.PendingPayment && !isAwaitingExternalPayment && !isAbono && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -170,7 +181,7 @@ export function PassengerListTable({
                           ? AWAITING_EXTERNAL_PAYMENT_TITLE
                           : canCancel
                             ? 'Cancelar pasajero'
-                            : 'No se puede cancelar: el viaje partio o el pasajero no esta activo'
+                            : 'No se puede cancelar: el pasajero no esta activo'
                       }
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -276,6 +287,16 @@ export function PassengerListTable({
                           Frecuente
                         </span>
                       )}
+                      {passenger.isAbono === true && (
+                        // Badge: Cliente abonado — viajó sin cobro (puede convivir
+                        // con "Frecuente"). Ver CONTEXT.md.
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700"
+                          title="Cliente abonado — viajó sin cobro"
+                        >
+                          Abonado
+                        </span>
+                      )}
                       {false && passenger.reserveRelatedId != null &&
                         (passenger.totalAmount ?? 0) === 0 && (
                           // Badge: este Passenger es la pata del package IdaVuelta.
@@ -295,11 +316,13 @@ export function PassengerListTable({
                           sin riesgo (ver CONTEXT.md). `null` = sin cliente; `0` = sin deuda;
                           en ambos casos no se muestra nada. No se renderiza saldo "a favor"
                           acá: el crédito es del total de cuenta corriente, no de la deuda vencida. */}
-                      {passenger.overdueBalance != null && passenger.overdueBalance > 0 && (
-                        <span className="text-red-500 font-medium">
-                          Debe ${passenger.overdueBalance.toLocaleString()}
-                        </span>
-                      )}
+                      {passenger.isAbono !== true &&
+                        passenger.overdueBalance != null &&
+                        passenger.overdueBalance > 0 && (
+                          <span className="text-red-500 font-medium">
+                            Debe ${passenger.overdueBalance.toLocaleString()}
+                          </span>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -333,7 +356,7 @@ export function PassengerListTable({
                       <span className={`mx-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}`}>
                         {label}
                       </span>
-                      {status === PaymentStatusEnum.PendingPayment ? (
+                      {status === PaymentStatusEnum.PendingPayment && passenger.isAbono !== true ? (
                         <Button
                           variant="ghost"
                           size="icon"

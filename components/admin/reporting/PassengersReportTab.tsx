@@ -74,6 +74,7 @@ const parsers = {
   customerId: numberParser,
   hasTraveled: boolParser,
   onlyFrequent: boolParser,
+  isAbono: boolParser,
   search: piiStringParser, // PII
   paymentMethod: numberParser,
 };
@@ -225,7 +226,7 @@ export function PassengersReportTab({ entityOptions }: { entityOptions: Reportin
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
-          <FilterBar onReset={reset} onApply={apply} labels={['Fechas', 'Campo fecha', 'Estados', 'Ruta', 'Vehículo', 'Chofer', 'Búsqueda', 'Medio de pago', 'Viajó', 'Frecuencia']}>
+          <FilterBar onReset={reset} onApply={apply} labels={['Fechas', 'Campo fecha', 'Estados', 'Ruta', 'Vehículo', 'Chofer', 'Búsqueda', 'Medio de pago', 'Viajó', 'Frecuencia', 'Abono']}>
             <ReportingDateRangePicker
               value={{ dateFrom: draft.dateFrom ?? '', dateTo: draft.dateTo ?? '' }}
               onChange={(r) => {
@@ -320,6 +321,19 @@ export function PassengersReportTab({ entityOptions }: { entityOptions: Reportin
               <SelectContent>
                 <SelectItem value="all">Todos los pasajeros</SelectItem>
                 <SelectItem value="true">Sólo frecuentes</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={triState(draft.isAbono)}
+              onValueChange={(v) => setDraftField('isAbono', fromTriState(v))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Abono" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Abono: todos</SelectItem>
+                <SelectItem value="true">Sólo abonados</SelectItem>
+                <SelectItem value="false">Sólo no abonados</SelectItem>
               </SelectContent>
             </Select>
           </FilterBar>

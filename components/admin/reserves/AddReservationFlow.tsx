@@ -121,6 +121,11 @@ export function AddReservationFlow({
 
   const isRoundTrip = reserveForm.data.reserveTypeId === RESERVE_TYPE.ROUND_TRIP;
 
+  // Pagador abonado: el cliente del (único) pasajero del flujo viaja sin cobro.
+  // Cuando es true ocultamos todo el paso/UI de pagos y mandamos payments: []
+  // (el backend ignora payments y deja price 0). Ver CONTEXT.md.
+  const isAbonoPayer = selectedPassenger?.hasAbono === true;
+
   // Decides which dropoff price table to display, accounting for the tenant's
   // same-day rule. Until a return trip is picked, we treat the booking as
   // not-yet-IdaVuelta and fall back to Ida pricing so the user doesn't see a
@@ -649,11 +654,16 @@ export function AddReservationFlow({
             outboundReserveId,
             returnReserveId,
             passengers: bookingPassengers,
-            payments: paymentsToSend.map((p) => ({
-              transactionAmount: p.transactionAmount,
-              paymentMethod: p.paymentMethod,
-            })),
-            creditAmount: getAppliedCreditAmount(),
+            // Abonado: sin cobro. Mandamos payments vacío y sin crédito; el backend
+            // ignora payments y deja price 0 (ver CONTEXT.md). No tocamos el price
+            // de las patas: lo zera el backend.
+            payments: isAbonoPayer
+              ? []
+              : paymentsToSend.map((p) => ({
+                  transactionAmount: p.transactionAmount,
+                  paymentMethod: p.paymentMethod,
+                })),
+            creditAmount: isAbonoPayer ? 0 : getAppliedCreditAmount(),
           }),
         refetchTrip,
       );
@@ -773,9 +783,15 @@ export function AddReservationFlow({
         )}
 
         {reserveForm.data.reserveTypeId === RESERVE_TYPE.IDA && (
-          <div className="text-right text-sm font-medium text-blue-600">
-            Precio: ${getSelectedDropoffPrice().toLocaleString()}
-          </div>
+          isAbonoPayer ? (
+            <div className="text-right text-sm font-medium text-emerald-700">
+              Sin cobro (cliente abonado)
+            </div>
+          ) : (
+            <div className="text-right text-sm font-medium text-blue-600">
+              Precio: ${getSelectedDropoffPrice().toLocaleString()}
+            </div>
+          )
         )}
 
         <FormField label="Ida y Vuelta">
@@ -880,11 +896,17 @@ export function AddReservationFlow({
                 </p>
               </div>
             )}
-            <div className="text-right text-lg font-bold text-blue-600 pt-2 border-t">
-              {useIdaVueltaTariff
-                ? `Total Ida y Vuelta (paquete con descuento): $${getRoundTripDisplayTotal().toLocaleString()}`
-                : `Total Ida y Vuelta (días distintos, sin descuento): $${getRoundTripDisplayTotal().toLocaleString()}`}
-            </div>
+            {isAbonoPayer ? (
+              <div className="text-right text-lg font-bold text-emerald-700 pt-2 border-t">
+                Sin cobro (cliente abonado)
+              </div>
+            ) : (
+              <div className="text-right text-lg font-bold text-blue-600 pt-2 border-t">
+                {useIdaVueltaTariff
+                  ? `Total Ida y Vuelta (paquete con descuento): $${getRoundTripDisplayTotal().toLocaleString()}`
+                  : `Total Ida y Vuelta (días distintos, sin descuento): $${getRoundTripDisplayTotal().toLocaleString()}`}
+              </div>
+            )}
           </div>
         )}
       </FormDialog>
@@ -898,7 +920,7 @@ export function AddReservationFlow({
         onSubmit={finalizeReservation}
         submitText="Confirmar Reserva"
         isLoading={reserveForm.isSubmitting}
-        disabled={(getTotalPaymentAmount() + getAppliedCreditAmount()) > getTotalReserveAmount()}
+        disabled={!isAbonoPayer && (getTotalPaymentAmount() + getAppliedCreditAmount()) > getTotalReserveAmount()}
       >
         <div className="space-y-6 py-4">
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
@@ -921,9 +943,11 @@ export function AddReservationFlow({
                     <strong>Bajada:</strong>{' '}
                     {dropoffCityOptions.find((opt) => opt.id === String(selectedDropoffCityId))?.label?.split(' - ')[0] || 'No especificada'}
                   </p>
-                  <p>
-                    <strong>Precio:</strong> ${bookingPassengers[0].outbound.price.toLocaleString()}
-                  </p>
+                  {!isAbonoPayer && (
+                    <p>
+                      <strong>Precio:</strong> ${bookingPassengers[0].outbound.price.toLocaleString()}
+                    </p>
+                  )}
                 </div>
                 {bookingPassengers[0].return && (
                   <div className="text-sm pt-2 mt-2 border-t">
@@ -935,19 +959,29 @@ export function AddReservationFlow({
                       <strong>Subida:</strong>{' '}
                       {returnPickupOptions.find((opt) => opt.id === String(bookingPassengers[0].return?.pickupLocationId))?.label || 'No especificada'}
                     </p>
-                    <p>
-                      <strong>Precio:</strong>{' '}
-                      {bookingPassengers[0].return.price === 0
-                        ? // Convención IdaVuelta package: el outbound se lleva el total,
-                          // la vuelta va a 0. Evitamos mostrar "$0" sin contexto.
-                          <span className="text-muted-foreground">Incluido en el paquete IdaVuelta</span>
-                        : `$${bookingPassengers[0].return.price.toLocaleString()}`}
-                    </p>
+                    {!isAbonoPayer && (
+                      <p>
+                        <strong>Precio:</strong>{' '}
+                        {bookingPassengers[0].return.price === 0
+                          ? // Convención IdaVuelta package: el outbound se lleva el total,
+                            // la vuelta va a 0. Evitamos mostrar "$0" sin contexto.
+                            <span className="text-muted-foreground">Incluido en el paquete IdaVuelta</span>
+                          : `$${bookingPassengers[0].return.price.toLocaleString()}`}
+                      </p>
+                    )}
                   </div>
                 )}
               </>
             )}
           </div>
+          {isAbonoPayer ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <h3 className="font-semibold text-emerald-900">Cliente abonado — sin cobro</h3>
+              <p className="mt-1 text-sm text-emerald-800">
+                Este cliente viaja bajo abono: la reserva se crea sin pagos ni deuda. El viaje queda en $0.
+              </p>
+            </div>
+          ) : (
           <div className="rounded-lg border p-4 space-y-4">
             <h3 className="font-semibold">Pagos</h3>
             {getAvailableCreditAmount() > 0 && (
@@ -1054,6 +1088,7 @@ export function AddReservationFlow({
               );
             })()}
           </div>
+          )}
         </div>
       </FormDialog>
     </>
