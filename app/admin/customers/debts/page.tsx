@@ -76,7 +76,7 @@ export default function DebtsPage() {
   const [isRefunding, setIsRefunding] = useState(false);
 
   const paymentMethodOptions: SelectOption[] = Object.entries(PaymentMethod)
-    .filter(([, value]) => typeof value === 'number')
+    .filter(([, value]) => typeof value === 'number' && value !== PaymentMethod.Online && value !== PaymentMethod.AccountCredit)
     .map(([key, value]) => ({
       id: value as number,
       value: (value as number).toString(),
@@ -533,6 +533,7 @@ export default function DebtsPage() {
         open={isDebtSettlementOpen}
         onOpenChange={setIsDebtSettlementOpen}
         customer={selectedCustomer}
+        currentBalance={summary?.currentBalance}
         paymentMethodOptions={paymentMethodOptions}
         onSuccess={() => {
           if (selectedCustomer) fetchSummary(params);

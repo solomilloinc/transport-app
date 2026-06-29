@@ -63,6 +63,7 @@ export interface CustomerDebtSettleRequest {
   customerId: number;
   reserveIds: number[];
   payments: { transactionAmount: number; paymentMethod: number }[];
+  creditAmount?: number;
 }
 
 export type CustomerAccountAdjustmentKind = 'Credit' | 'Debt';

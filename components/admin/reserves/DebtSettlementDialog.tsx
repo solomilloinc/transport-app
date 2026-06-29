@@ -27,15 +27,17 @@ interface DebtSettlementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customer: Passenger | null;
+  currentBalance?: number | null;
   paymentMethodOptions: SelectOption[];
   onSuccess: () => void;
 }
 
-export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMethodOptions, onSuccess }: DebtSettlementDialogProps) {
+export function DebtSettlementDialog({ open, onOpenChange, customer, currentBalance, paymentMethodOptions, onSuccess }: DebtSettlementDialogProps) {
   const { toast } = useToast();
   const [pendingReserves, setPendingReserves] = useState<PendingReserve[]>([]);
   const [selectedReserveIds, setSelectedReserveIds] = useState<number[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [creditAmount, setCreditAmount] = useState<string>('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -50,6 +52,7 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
       setPendingReserves([]);
       setSelectedReserveIds([]);
       setPayments([]);
+      setCreditAmount('');
       setPaymentAmount('');
       setExpandedReserves([]);
     }
@@ -96,8 +99,31 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
     return payments.reduce((sum, p) => sum + p.transactionAmount, 0);
   };
 
+  const getAppliedCreditAmount = () => {
+    return Number(creditAmount) || 0;
+  };
+
+  const getAvailableCreditAmount = () => {
+    const selectedDebt = getSelectedDebt();
+    const balance = currentBalance ?? customer?.currentBalance ?? 0;
+    return Math.min(selectedDebt, Math.max(0, selectedDebt - Math.max(0, balance)));
+  };
+
   const getRemainingBalance = () => {
-    return Math.max(0, getSelectedDebt() - getTotalPaymentAmount());
+    return Math.max(0, getSelectedDebt() - getAppliedCreditAmount() - getTotalPaymentAmount());
+  };
+
+  const handleCreditAmountChange = (value: string) => {
+    const numericValue = Number(value);
+    if (value !== '' && numericValue < 0) return;
+
+    const maxCredit = Math.min(getAvailableCreditAmount(), getSelectedDebt() - getTotalPaymentAmount());
+    if (numericValue > maxCredit) {
+      setCreditAmount(maxCredit.toString());
+      return;
+    }
+
+    setCreditAmount(value);
   };
 
   const handleAddPayment = () => {
@@ -142,12 +168,23 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
       return;
     }
 
-    if (payments.length === 0) {
-      toast({ title: 'Sin pagos', description: 'Agrega al menos un pago para continuar.', variant: 'destructive' });
+    const appliedCredit = getAppliedCreditAmount();
+
+    if (payments.length === 0 && appliedCredit <= 0) {
+      toast({ title: 'Sin pagos', description: 'Agrega un pago o saldo a favor para continuar.', variant: 'destructive' });
       return;
     }
 
-    const totalPayment = getTotalPaymentAmount();
+    if (appliedCredit > getAvailableCreditAmount()) {
+      toast({
+        title: 'Saldo excedido',
+        description: 'El saldo a favor supera el disponible para esta deuda.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const totalPayment = getTotalPaymentAmount() + appliedCredit;
     const totalDebt = getSelectedDebt();
     if (totalPayment > totalDebt) {
       toast({
@@ -164,10 +201,12 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
         customerId: customer.customerId,
         reserveIds: selectedReserveIds,
         payments: payments.map((p) => ({ transactionAmount: p.transactionAmount, paymentMethod: p.paymentMethod })),
+        creditAmount: appliedCredit,
       });
 
       toast({ title: 'Deuda saldada', description: 'Los pagos han sido registrados exitosamente.', variant: 'success' });
       setPayments([]);
+      setCreditAmount('');
       setPaymentAmount('');
       onSuccess();
 
@@ -279,6 +318,24 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
             {/* Payments section */}
             <div className="rounded-lg border p-4 space-y-4">
               <h3 className="font-semibold">Pagos</h3>
+              {getAvailableCreditAmount() > 0 && (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <span className="font-medium text-emerald-900">Saldo a favor disponible</span>
+                    <span className="font-semibold text-emerald-800">${getAvailableCreditAmount().toLocaleString()}</span>
+                  </div>
+                  <FormField label="Saldo a aplicar">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={getAvailableCreditAmount()}
+                      placeholder="0"
+                      value={creditAmount}
+                      onChange={(e) => handleCreditAmountChange(e.target.value)}
+                    />
+                  </FormField>
+                </div>
+              )}
               <div className="flex gap-2 items-end">
                 <FormField label="Método de Pago" className="flex-1">
                   <ApiSelect
@@ -326,12 +383,20 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
                   <span className="font-medium">${getSelectedDebt().toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Saldo a favor aplicado:</span>
+                  <span className="font-medium text-emerald-700">${getAppliedCreditAmount().toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Pagos a registrar:</span>
+                  <span className="font-medium">${getTotalPaymentAmount().toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-500">Restante:</span>
                   <span className="font-medium">${getRemainingBalance().toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
-                  <span className="font-bold text-lg">Total a pagar:</span>
-                  <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
+                  <span className="font-bold text-lg">Total cubierto:</span>
+                  <span className="font-bold text-xl">${(getTotalPaymentAmount() + getAppliedCreditAmount()).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -342,10 +407,10 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, paymentMeth
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || payments.length === 0 || selectedReserveIds.length === 0}
+            disabled={isSubmitting || (payments.length === 0 && getAppliedCreditAmount() <= 0) || selectedReserveIds.length === 0}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {payments.length > 0 && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}
+            {(payments.length > 0 || getAppliedCreditAmount() > 0) && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}
           </Button>
         </DialogFooter>
       </DialogContent>

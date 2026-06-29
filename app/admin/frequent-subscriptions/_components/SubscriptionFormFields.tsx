@@ -472,7 +472,7 @@ export function SubscriptionFormFields({
         <FormField
           label="Fecha hasta"
           error={form.errors.endDate}
-          description="Opcional. Dejar vacío para vigencia indefinida."
+          description=" Opcional"
         >
           <Input
             type="date"

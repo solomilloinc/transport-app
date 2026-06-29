@@ -243,7 +243,7 @@ export default function ReservationsPage() {
 
   const loadPaymentMethod = async () => {
     const formatedDirections: SelectOption[] = Object.entries(PaymentMethod)
-      .filter(([key, value]) => typeof value === 'number' && value !== PaymentMethod.Online)
+      .filter(([, value]) => typeof value === 'number' && value !== PaymentMethod.Online && value !== PaymentMethod.AccountCredit)
       .map(([key, value]) => ({
         id: value as number,
         value: value.toString(),

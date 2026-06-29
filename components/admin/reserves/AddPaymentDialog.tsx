@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { PlusCircleIcon, TrashIcon } from 'lucide-react';
-import { emptyPaymentCreate, PassengerPaymentCreate, Payment } from '@/interfaces/payment';
+import { emptyPaymentCreate, Payment, ReservePaymentsCreateRequest } from '@/interfaces/payment';
 import { validationConfigPayment } from '@/validations/paymentSchema';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
 import { getApiErrorMessage } from '@/lib/apiErrors';
@@ -28,12 +28,14 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
   const { toast } = useToast();
   const form = useFormValidation(emptyPaymentCreate, validationConfigPayment);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [creditAmount, setCreditAmount] = useState<string>('');
 
   // Reset state when the dialog is closed or the passenger changes
   useEffect(() => {
     if (!open) {
       form.resetForm();
       setPayments([]);
+      setCreditAmount('');
     } else if (passengerReserve) {
       // Preload remaining amount
       const remaining = getRemainingBalance();
@@ -55,9 +57,22 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     return payments.reduce((total, payment) => total + payment.transactionAmount, 0);
   };
 
+  const getAppliedCreditAmount = () => {
+    return Number(creditAmount) || 0;
+  };
+
+  const getPendingDebt = () => {
+    return passengerReserve?.pendingDebt ?? Math.max(0, getTotalReserveAmount() - getAlreadyPaidAmount());
+  };
+
+  const getAvailableCreditAmount = () => {
+    const pendingDebt = getPendingDebt();
+    const currentBalance = passengerReserve?.currentBalance ?? 0;
+    return Math.min(pendingDebt, Math.max(0, pendingDebt - Math.max(0, currentBalance)));
+  };
+
   const getRemainingBalance = () => {
-    const pendingDebt = passengerReserve?.pendingDebt ?? Math.max(0, getTotalReserveAmount() - getAlreadyPaidAmount());
-    return Math.max(0, pendingDebt - getCurrentAddedAmount());
+    return Math.max(0, getPendingDebt() - getAppliedCreditAmount() - getCurrentAddedAmount());
   };
 
   const handleAddPaymentToList = () => {
@@ -90,18 +105,42 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
     setPayments(payments.filter((_, i) => i !== index));
   };
 
+  const handleCreditAmountChange = (value: string) => {
+    const numericValue = Number(value);
+    if (value !== '' && numericValue < 0) return;
+
+    const maxCredit = Math.min(getAvailableCreditAmount(), getPendingDebt() - getCurrentAddedAmount());
+    if (numericValue > maxCredit) {
+      setCreditAmount(maxCredit.toString());
+      return;
+    }
+
+    setCreditAmount(value);
+  };
+
   const getTotalPaymentAmount = () => {
     return payments.reduce((total, payment) => total + payment.transactionAmount, 0);
   };
 
   const handleSubmit = async () => {
-    if (payments.length === 0) {
-      toast({ title: 'Sin pagos', description: 'Agrega al menos un pago para continuar.', variant: 'destructive' });
+    const appliedCredit = getAppliedCreditAmount();
+
+    if (payments.length === 0 && appliedCredit <= 0) {
+      toast({ title: 'Sin pagos', description: 'Agrega un pago o saldo a favor para continuar.', variant: 'destructive' });
       return;
     }
 
-    const totalNew = getCurrentAddedAmount();
-    const maxAllowed = passengerReserve?.pendingDebt ?? Math.max(0, getTotalReserveAmount() - getAlreadyPaidAmount());
+    if (appliedCredit > getAvailableCreditAmount()) {
+      toast({
+        title: 'Saldo excedido',
+        description: 'El saldo a favor supera el disponible para esta deuda.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const totalNew = getCurrentAddedAmount() + appliedCredit;
+    const maxAllowed = getPendingDebt();
     if (totalNew > maxAllowed) {
       toast({
         title: 'Monto excedido',
@@ -113,10 +152,13 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
 
     form.setIsSubmitting(true);
     try {
-      const payload: PassengerPaymentCreate[] = payments.map((p) => ({
-        transactionAmount: p.transactionAmount,
-        paymentMethod: p.paymentMethod,
-      }));
+      const payload: ReservePaymentsCreateRequest = {
+        payments: payments.map((p) => ({
+          transactionAmount: p.transactionAmount,
+          paymentMethod: p.paymentMethod,
+        })),
+        creditAmount: appliedCredit,
+      };
 
       const response = await post(`/reserve-payments-create/${passengerReserve?.reserveId}/${passengerReserve?.customerId}?passengerId=${passengerReserve?.passengerId}`, payload);
       if (response) {
@@ -138,9 +180,9 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       title="Agregar pago"
       description={`Agrega pago de la reserva de ${passengerReserve?.fullName}`}
       onSubmit={handleSubmit}
-      submitText={payments.length > 0 && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}
+      submitText={(payments.length > 0 || getAppliedCreditAmount() > 0) && getRemainingBalance() === 0 ? 'Saldar Deuda' : 'Registrar Pago Parcial'}
       isLoading={form.isSubmitting}
-      disabled={payments.length === 0}
+      disabled={payments.length === 0 && getAppliedCreditAmount() <= 0}
     >
       <div className="flex-1 overflow-y-auto py-4">
         <div className="space-y-6">
@@ -158,6 +200,24 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
 
           <div className="rounded-lg border p-4">
             <h3 className="font-semibold text-lg mb-3">Gestión de Pagos</h3>
+            {getAvailableCreditAmount() > 0 && (
+              <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-emerald-900">Saldo a favor disponible</span>
+                  <span className="font-semibold text-emerald-800">${getAvailableCreditAmount().toLocaleString()}</span>
+                </div>
+                <FormField label="Saldo a aplicar">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={getAvailableCreditAmount()}
+                    placeholder="0"
+                    value={creditAmount}
+                    onChange={(e) => handleCreditAmountChange(e.target.value)}
+                  />
+                </FormField>
+              </div>
+            )}
             <div className="flex gap-2 mb-4 items-end">
               <FormField label="Medio de pago" required error={form.errors.paymentMethod} className="flex-1">
                 <ApiSelect value={String(form.data.paymentMethod)} onValueChange={(value) => form.setField('paymentMethod', Number(value))} placeholder="Seleccionar medio" options={paymentMethodOptions} loading={false} error={null} />
@@ -207,9 +267,21 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
                 <span className="text-gray-500">Pagado anteriormente:</span>
                 <span className="font-medium">${getAlreadyPaidAmount().toLocaleString()}</span>
               </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Saldo a favor aplicado:</span>
+                <span className="font-medium text-emerald-700">${getAppliedCreditAmount().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Pagos a registrar:</span>
+                <span className="font-medium">${getTotalPaymentAmount().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Restante:</span>
+                <span className="font-medium">${getRemainingBalance().toLocaleString()}</span>
+              </div>
               <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
-                <span className="font-bold text-lg">Total a pagar ahora:</span>
-                <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
+                <span className="font-bold text-lg">Total cubierto ahora:</span>
+                <span className="font-bold text-xl">${(getTotalPaymentAmount() + getAppliedCreditAmount()).toLocaleString()}</span>
               </div>
             </div>
           </div>
