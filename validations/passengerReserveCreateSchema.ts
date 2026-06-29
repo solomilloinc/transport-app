@@ -110,6 +110,7 @@ export const passengerReserveCreateRequestSchema = z
     returnReserveId: z.number().int().positive().nullable(),
     payments: z.array(paymentItemSchema),
     passengers: z.array(passengerBookingSchema).min(1, 'at least one passenger required'),
+    creditAmount: z.number().nonnegative().optional(),
   })
   .superRefine(sharedWrapperRefine);
 

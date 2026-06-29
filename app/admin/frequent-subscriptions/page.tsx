@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Edit, Repeat, UserPlusIcon, XCircle } from 'lucide-react';
+import { Edit, Repeat, Search, User as UserIcon, UserPlusIcon, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,8 +12,10 @@ import { MobileCard } from '@/components/dashboard/mobile-card';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { ApiSelect } from '@/components/dashboard/select';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { useFormValidation } from '@/hooks/use-form-validation';
+import { useApi } from '@/hooks/use-api';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { enumParser, numberParser } from '@/hooks/url-parsers';
 import { EntityStatus } from '@/interfaces/filters/common';
@@ -41,9 +43,10 @@ import {
   updateFrequentSubscription,
 } from '@/services/frequentSubscription';
 import { bindApiErrorToForm, getApiErrorMessage } from '@/lib/apiErrors';
-import { getCustomerReport } from '@/services/passenger';
+import { getCustomerReport, getPassengers } from '@/services/passenger';
 import { getServicesList } from '@/services/serviceList';
 import { getDirectionReport } from '@/services/direction';
+import { PaginationParams } from '@/services/types';
 import { Passenger } from '@/interfaces/passengers';
 import { ServiceListItem } from '@/interfaces/serviceList';
 import { Direction } from '@/interfaces/direction';
@@ -74,7 +77,6 @@ const RESERVE_TYPE_FILTER_OPTIONS = [
   ...RESERVE_TYPE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label })),
 ];
 
-const CUSTOMERS_PAGE_SIZE = 500;
 const DIRECTIONS_PAGE_SIZE = 500;
 // Búsqueda server-side de clientes en el alta: traemos pocos resultados para
 // empujar al admin a escribir más letras y afinar, en vez de listar todo.
@@ -100,11 +102,6 @@ export default function FrequentSubscriptionsPage() {
   // (tripDescription, dayOfWeek, departureHour, origin/destinationCityId, allowedDirectionIds).
   // Más liviano que service-report y purpose-built para este caso.
   const [services, setServices] = useState<ServiceListItem[]>([]);
-  // `customers` = lista completa (todos los estados) para el FilterBar de la grilla,
-  // que necesita ver Customers Inactive/Suspended para filtrar suscripciones viejas.
-  // El combo del ALTA ya no usa esta lista: busca server-side (ver más abajo) para
-  // no precargar todo el catálogo de clientes.
-  const [customers, setCustomers] = useState<Passenger[]>([]);
   // Directions globales: se cruzan con service.allowedDirectionIds para
   // renderear los dropdowns de pickup/dropoff con sus nombres.
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -112,13 +109,11 @@ export default function FrequentSubscriptionsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [svcRes, custRes, dirRes] = await Promise.all([
+        const [svcRes, dirRes] = await Promise.all([
           getServicesList(),
-          getCustomerReport({ pageSize: CUSTOMERS_PAGE_SIZE }),
           getDirectionReport({ pageSize: DIRECTIONS_PAGE_SIZE }),
         ]);
         setServices(svcRes ?? []);
-        setCustomers(custRes.items ?? []);
         setDirections(dirRes.items ?? []);
       } catch (err) {
         toast({
@@ -136,6 +131,10 @@ export default function FrequentSubscriptionsPage() {
   // CUSTOMER_SEARCH_MIN_CHARS letras, trayendo CUSTOMER_SEARCH_PAGE_SIZE results.
   const [customerSearchResults, setCustomerSearchResults] = useState<Passenger[]>([]);
   const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
+  const [customerFilterSearch, setCustomerFilterSearch] = useState('');
+  const [isCustomerFilterPopoverOpen, setIsCustomerFilterPopoverOpen] = useState(false);
+  const { data: customerFilterResults, loading: customerFilterSearching, fetch: fetchCustomerFilter } =
+    useApi<Passenger, PaginationParams>(getPassengers, { autoFetch: false });
 
   const searchActiveCustomers = useCallback(async (query: string) => {
     if (query.length < CUSTOMER_SEARCH_MIN_CHARS) {
@@ -160,6 +159,27 @@ export default function FrequentSubscriptionsPage() {
       setCustomerSearchLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (customerFilterSearch.length >= CUSTOMER_SEARCH_MIN_CHARS) {
+        fetchCustomerFilter({ filters: { search: customerFilterSearch.trim() } } as any);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [customerFilterSearch, fetchCustomerFilter]);
+
+  const handleSelectCustomerFilter = (customer: Passenger) => {
+    setCustomerFilterSearch(`${customer.lastName} ${customer.firstName}`);
+    setDraftField('customerId', customer.customerId);
+    setIsCustomerFilterPopoverOpen(false);
+  };
+
+  const resetCustomerFilter = () => {
+    setCustomerFilterSearch('');
+    setIsCustomerFilterPopoverOpen(false);
+    setDraftField('customerId', undefined);
+  };
 
   // ----- modales -----
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -403,6 +423,25 @@ export default function FrequentSubscriptionsPage() {
     return currentSubscription.startDate.slice(0, 10) <= todayIso();
   }, [currentSubscription]);
 
+  const currentSubscriptionCustomerOptions = useMemo<Passenger[]>(
+    () =>
+      currentSubscription
+        ? [
+            {
+              customerId: currentSubscription.customerId,
+              firstName: currentSubscription.customerFullName,
+              lastName: '',
+              email: '',
+              phone1: '',
+              phone2: '',
+              documentNumber: '',
+              status: '',
+            },
+          ]
+        : [],
+    [currentSubscription]
+  );
+
   // ----- columnas grid -----
   const columns = [
     { header: 'Cliente', accessor: 'customerFullName', width: '15%' },
@@ -420,8 +459,8 @@ export default function FrequentSubscriptionsPage() {
       width: '14%',
       cell: (s: FrequentSubscriptionResponseDto) => s.inboundServiceName ?? '—',
     },
-    { header: 'Pickup Ida', accessor: 'outboundPickupLocationName', width: '10%' },
-    { header: 'Dropoff Ida', accessor: 'outboundDropoffLocationName', width: '10%' },
+    { header: 'Subida Ida', accessor: 'outboundPickupLocationName', width: '10%' },
+    { header: 'Bajada Ida', accessor: 'outboundDropoffLocationName', width: '10%' },
     {
       header: 'Vigencia',
       accessor: 'startDate',
@@ -471,18 +510,6 @@ export default function FrequentSubscriptionsPage() {
   ];
 
   // ----- options para filtros -----
-  const customerFilterOptions = useMemo(
-    () => [
-      { id: 'all', value: 'all', label: 'Todos los clientes' },
-      ...customers.map((c) => ({
-        id: c.customerId,
-        value: String(c.customerId),
-        label: `${c.firstName} ${c.lastName}`.trim(),
-      })),
-    ],
-    [customers]
-  );
-
   const serviceFilterOptions = useMemo(
     () => [
       { id: 'all', value: 'all', label: 'Todos los servicios' },
@@ -514,17 +541,62 @@ export default function FrequentSubscriptionsPage() {
             <div className="grid gap-4 lg:grid-cols-[220px_220px_140px_140px_auto] lg:items-end">
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-muted-foreground">Cliente</span>
-                <ApiSelect
-                  searchable
-                  searchPlaceholder="Buscar cliente..."
-                  className="w-full"
-                  value={draft.customerId !== undefined ? String(draft.customerId) : 'all'}
-                  onValueChange={(v) =>
-                    setDraftField('customerId', v === 'all' ? undefined : Number(v))
-                  }
-                  options={customerFilterOptions}
-                  placeholder="Todos los clientes"
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="frequent-subscription-customer-search"
+                    placeholder="Buscar por nombre..."
+                    className="pl-10"
+                    value={customerFilterSearch}
+                    autoComplete="off"
+                    onFocus={() => setIsCustomerFilterPopoverOpen(true)}
+                    onBlur={() => {
+                      setTimeout(() => setIsCustomerFilterPopoverOpen(false), 150);
+                    }}
+                    onChange={(e) => {
+                      setCustomerFilterSearch(e.target.value);
+                      setDraftField('customerId', undefined);
+                      setIsCustomerFilterPopoverOpen(true);
+                    }}
+                  />
+                  {isCustomerFilterPopoverOpen && (
+                    <div className="absolute z-50 mt-1 w-[300px] rounded-md border bg-white shadow-md">
+                      <div className="max-h-60 overflow-y-auto">
+                        {customerFilterSearching ? (
+                          <div className="p-4 space-y-2">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                          </div>
+                        ) : (customerFilterResults?.items?.length ?? 0) > 0 ? (
+                          customerFilterResults.items.map((p) => (
+                            <div
+                              key={p.customerId}
+                              className="flex items-center p-3 hover:bg-blue-50 cursor-pointer transition-colors border-b last:border-0"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleSelectCustomerFilter(p)}
+                            >
+                              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <UserIcon className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {p.lastName} {p.firstName}
+                                </p>
+                                <p className="text-xs text-gray-500">DNI: {p.documentNumber}</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-sm text-gray-500">
+                            {customerFilterSearch.length < CUSTOMER_SEARCH_MIN_CHARS
+                              ? 'Escriba al menos 3 letras'
+                              : 'No se encontraron pasajeros'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-muted-foreground">Servicio</span>
@@ -584,7 +656,13 @@ export default function FrequentSubscriptionsPage() {
               </div>
               <div className="flex flex-col gap-4 sm:flex-row">
                 <Button onClick={apply}>Aplicar</Button>
-                <Button variant="outline" onClick={reset}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetCustomerFilter();
+                    reset();
+                  }}
+                >
                   Restablecer
                 </Button>
               </div>
@@ -692,7 +770,7 @@ export default function FrequentSubscriptionsPage() {
         <SubscriptionFormFields
           form={editForm}
           services={services}
-          customers={customers}
+          customers={currentSubscriptionCustomerOptions}
           directions={directions}
           mode="edit"
           alreadyStarted={editAlreadyStarted}

@@ -72,6 +72,7 @@ export function buildAdminReservePayloadWithPayments(args: {
   returnReserveId: number | null;
   passengers: PassengerBooking[];
   payments: PaymentItem[];
+  creditAmount?: number;
 }): PassengerReserveCreateRequestWrapper {
   const payload: PassengerReserveCreateRequestWrapper = {
     reserveTypeId: args.reserveTypeId,
@@ -80,6 +81,7 @@ export function buildAdminReservePayloadWithPayments(args: {
       args.reserveTypeId === RESERVE_TYPE.ROUND_TRIP ? args.returnReserveId : null,
     payments: args.payments,
     passengers: args.passengers,
+    ...(args.creditAmount ? { creditAmount: args.creditAmount } : {}),
   };
   return passengerReserveCreateRequestSchema.parse(payload);
 }

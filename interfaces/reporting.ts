@@ -62,6 +62,7 @@ export const PAYMENT_METHOD_LABELS: Record<number, string> = {
   [PaymentMethod.Online]: 'Online',
   [PaymentMethod.Tarjeta]: 'Tarjeta',
   [PaymentMethod.Transferencia]: 'Transferencia',
+  [PaymentMethod.AccountCredit]: 'Saldo a favor',
 };
 
 // ─── Grilla: items ───────────────────────────────────────────────────────────

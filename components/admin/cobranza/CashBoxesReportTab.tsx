@@ -19,6 +19,8 @@ import {
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
+import { MobileCard } from '@/components/dashboard/mobile-card';
+import { MobileCardList } from '@/components/dashboard/mobile-card-list';
 
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { useReportSummary } from '@/hooks/use-report-summary';
@@ -190,13 +192,51 @@ export function CashBoxesReportTab({
                   disabled={loading}
                 />
               </div>
-              <DashboardTable
-                columns={columns}
-                data={data?.items ?? []}
-                emptyMessage="No se encontraron cajas para estos filtros."
+              <div className="hidden md:block">
+                <DashboardTable
+                  columns={columns}
+                  data={data?.items ?? []}
+                  emptyMessage="No se encontraron cajas para estos filtros."
+                  isLoading={loading}
+                  skeletonRows={10}
+                />
+              </div>
+              <MobileCardList
+                items={data?.items ?? []}
                 isLoading={loading}
-                skeletonRows={10}
-              />
+                emptyMessage="No se encontraron cajas para estos filtros."
+              >
+                {(c) => (
+                  <MobileCard
+                    key={c.cashBoxId}
+                    title={`Caja #${c.cashBoxId}`}
+                    badge={
+                      <Badge variant={c.status === 'Open' ? 'default' : 'outline'}>
+                        {CASHBOX_STATUS_LABELS[c.status as 'Open' | 'Closed'] ?? c.status}
+                      </Badge>
+                    }
+                    fields={[
+                      { label: 'Apertura', value: safeDateTime(c.openedAt) },
+                      { label: 'Cierre', value: safeDateTime(c.closedAt) },
+                      { label: 'Abrio', value: c.openedByUserEmail || '-' },
+                      { label: 'Cerro', value: c.closedByUserEmail || '-' },
+                      { label: 'Pagos', value: (c.totalPayments ?? 0).toLocaleString('es-AR') },
+                      { label: 'Total', value: money(c.totalAmount) },
+                    ]}
+                    actions={
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8"
+                        onClick={() => onDrillToPayments(c.cashBoxId)}
+                      >
+                        <ReceiptText className="mr-1 h-3.5 w-3.5" />
+                        Ver pagos
+                      </Button>
+                    }
+                  />
+                )}
+              </MobileCardList>
               {(data?.items?.length ?? 0) > 0 && (
                 <TablePagination
                   currentPage={pageNumber}

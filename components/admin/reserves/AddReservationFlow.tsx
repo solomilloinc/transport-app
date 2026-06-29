@@ -324,6 +324,7 @@ export function AddReservationFlow({
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
+  const [creditAmount, setCreditAmount] = useState<string>('');
 
   const {
     data: dataPassenger,
@@ -414,7 +415,7 @@ export function AddReservationFlow({
     if (step === FlowStep.CONFIRM_PAYMENT && reservationPayments.length === 0) {
       setPaymentAmount(getRemainingBalance().toString());
     }
-  }, [step, bookingPassengers, reservationPayments]);
+  }, [step, bookingPassengers, reservationPayments, creditAmount]);
 
   const resetFlow = () => {
     setStep(null);
@@ -428,6 +429,7 @@ export function AddReservationFlow({
     setReservationPayments([]);
     setSelectedPaymentMethod('1');
     setPaymentAmount('');
+    setCreditAmount('');
     // tripData/returnTripData ya no son estado local: los maneja React Query y
     // se vuelven a evaluar (staleTime:0) al reabrir el diálogo.
     setSelectedDropoffCityId(null);
@@ -536,6 +538,7 @@ export function AddReservationFlow({
       setReservationPayments([]);
       setSelectedPaymentMethod('1');
       setPaymentAmount('');
+      setCreditAmount('');
       setStep(FlowStep.CONFIRM_PAYMENT);
     });
   };
@@ -577,6 +580,8 @@ export function AddReservationFlow({
   const getTotalPaymentAmount = () =>
     reservationPayments.reduce((total, payment) => total + payment.transactionAmount, 0);
 
+  const getAppliedCreditAmount = () => Number(creditAmount) || 0;
+
   // Total of all legs of all passengers. With the new wire shape the discount
   // (when active) is already baked into each leg's `price`, so a straight sum
   // matches what the server expects.
@@ -587,7 +592,26 @@ export function AddReservationFlow({
     );
 
   const getRemainingBalance = () =>
-    Math.max(0, getTotalReserveAmount() - getTotalPaymentAmount());
+    Math.max(0, getTotalReserveAmount() - getAppliedCreditAmount() - getTotalPaymentAmount());
+
+  const getAvailableCreditAmount = () => {
+    const total = getTotalReserveAmount();
+    const currentBalance = selectedPassenger?.currentBalance ?? 0;
+    return currentBalance < 0 ? Math.min(total, Math.abs(currentBalance)) : 0;
+  };
+
+  const handleCreditAmountChange = (value: string) => {
+    const numericValue = Number(value);
+    if (value !== '' && numericValue < 0) return;
+
+    const maxCredit = Math.min(getAvailableCreditAmount(), getTotalReserveAmount() - getTotalPaymentAmount());
+    if (numericValue > maxCredit) {
+      setCreditAmount(maxCredit.toString());
+      return;
+    }
+
+    setCreditAmount(value);
+  };
 
   const finalizeReservation = async () => {
     reserveForm.setIsSubmitting(true);
@@ -595,7 +619,7 @@ export function AddReservationFlow({
     let paymentsToSend: Payment[] = [];
 
     if (reservationPayments.length > 0) {
-      const totalPaymentAmount = getTotalPaymentAmount();
+      const totalPaymentAmount = getTotalPaymentAmount() + getAppliedCreditAmount();
       const totalReserveAmount = getTotalReserveAmount();
 
       if (totalPaymentAmount > totalReserveAmount) {
@@ -629,6 +653,7 @@ export function AddReservationFlow({
               transactionAmount: p.transactionAmount,
               paymentMethod: p.paymentMethod,
             })),
+            creditAmount: getAppliedCreditAmount(),
           }),
         refetchTrip,
       );
@@ -873,7 +898,7 @@ export function AddReservationFlow({
         onSubmit={finalizeReservation}
         submitText="Confirmar Reserva"
         isLoading={reserveForm.isSubmitting}
-        disabled={getTotalPaymentAmount() > getTotalReserveAmount()}
+        disabled={(getTotalPaymentAmount() + getAppliedCreditAmount()) > getTotalReserveAmount()}
       >
         <div className="space-y-6 py-4">
           <div className="rounded-lg border p-4 bg-gray-50 space-y-4">
@@ -925,6 +950,24 @@ export function AddReservationFlow({
           </div>
           <div className="rounded-lg border p-4 space-y-4">
             <h3 className="font-semibold">Pagos</h3>
+            {getAvailableCreditAmount() > 0 && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-emerald-900">Saldo a favor disponible</span>
+                  <span className="font-semibold text-emerald-800">${getAvailableCreditAmount().toLocaleString()}</span>
+                </div>
+                <FormField label="Saldo a aplicar">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={getAvailableCreditAmount()}
+                    placeholder="0"
+                    value={creditAmount}
+                    onChange={(e) => handleCreditAmountChange(e.target.value)}
+                  />
+                </FormField>
+              </div>
+            )}
             <div className="flex gap-2 items-end">
               <FormField label="Método de Pago" className="flex-1">
                 <ApiSelect
@@ -968,14 +1011,28 @@ export function AddReservationFlow({
                 <span className="text-gray-500">Monto total de reserva:</span>
                 <span className="font-medium">${getTotalReserveAmount().toLocaleString()}</span>
               </div>
+              {getAppliedCreditAmount() > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Saldo a favor aplicado:</span>
+                  <span className="font-medium text-emerald-700">${getAppliedCreditAmount().toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Pagos a registrar:</span>
+                <span className="font-medium">${getTotalPaymentAmount().toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Restante:</span>
+                <span className="font-medium">${getRemainingBalance().toLocaleString()}</span>
+              </div>
               <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-blue-100 text-blue-900">
-                <span className="font-bold text-lg">Total a pagar:</span>
-                <span className="font-bold text-xl">${getTotalPaymentAmount().toLocaleString()}</span>
+                <span className="font-bold text-lg">Total cubierto:</span>
+                <span className="font-bold text-xl">${(getTotalPaymentAmount() + getAppliedCreditAmount()).toLocaleString()}</span>
               </div>
             </div>
             {(() => {
               const total = getTotalReserveAmount();
-              const paid = getTotalPaymentAmount();
+              const paid = getTotalPaymentAmount() + getAppliedCreditAmount();
               if (paid === 0) {
                 return (
                   <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm font-medium text-yellow-800">

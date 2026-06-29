@@ -18,6 +18,7 @@ export const COBRANZA_METHOD_LABELS: Record<number, string> = {
   [PaymentMethod.Online]: 'Online (incl. QR)',
   [PaymentMethod.Tarjeta]: 'Tarjeta',
   [PaymentMethod.Transferencia]: 'Transferencia',
+  [PaymentMethod.AccountCredit]: 'Saldo a favor',
 };
 
 // ─── Estado de pago ──────────────────────────────────────────────────────────

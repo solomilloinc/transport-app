@@ -243,7 +243,7 @@ export default function ReservationsPage() {
 
   const loadPaymentMethod = async () => {
     const formatedDirections: SelectOption[] = Object.entries(PaymentMethod)
-      .filter(([key, value]) => typeof value === 'number' && value !== PaymentMethod.Online)
+      .filter(([, value]) => typeof value === 'number' && value !== PaymentMethod.Online && value !== PaymentMethod.AccountCredit)
       .map(([key, value]) => ({
         id: value as number,
         value: value.toString(),
@@ -467,7 +467,7 @@ export default function ReservationsPage() {
         title="Reservas"
         description="Gestiona y visualiza todas las reservas de clientes"
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="icon" title="Imprimir">
               <PrinterIcon className="h-4 w-4" />
             </Button>
@@ -491,7 +491,7 @@ export default function ReservationsPage() {
           </div>
         }
       />
-      <div className="grid gap-2 md:grid-cols-[minmax(200px,250px)_1fr] w-full">
+      <div className="grid w-full gap-4 md:grid-cols-[minmax(300px,340px)_minmax(0,1fr)]">
         <TripSelectionPanel
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
@@ -506,9 +506,9 @@ export default function ReservationsPage() {
         />
 
         {/* Passengers Card */}
-        <Card className="w-full">
+        <Card className="w-full min-w-0">
           <CardContent className="p-6 w-full">
-            <div className="space-y-4">
+            <div className="min-w-0 space-y-4">
               <div className="flex items-center text-xl font-semibold text-blue-500">
                 <UserPlusIcon className="mr-2 h-5 w-5" />
                 {selectedTrip

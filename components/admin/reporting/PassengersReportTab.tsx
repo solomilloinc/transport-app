@@ -18,6 +18,8 @@ import {
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { TablePagination } from '@/components/dashboard/table-pagination';
+import { MobileCard } from '@/components/dashboard/mobile-card';
+import { MobileCardList } from '@/components/dashboard/mobile-card-list';
 
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { useReportSummary } from '@/hooks/use-report-summary';
@@ -365,16 +367,65 @@ export function PassengersReportTab({ entityOptions }: { entityOptions: Reportin
                   disabled={loading}
                 />
               </div>
-              <DashboardTable
-                columns={columns}
-                data={data?.items ?? []}
-                emptyMessage="No se encontraron pasajeros para estos filtros."
+              <div className="md:hidden">
+                <Select value={sortBy ?? 'reservedate'} onValueChange={handleSort}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reservedate">Fecha</SelectItem>
+                    <SelectItem value="route">Ruta</SelectItem>
+                    <SelectItem value="lastname">Pasajero</SelectItem>
+                    <SelectItem value="status">Estado</SelectItem>
+                    <SelectItem value="price">Precio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="hidden md:block">
+                <DashboardTable
+                  columns={columns}
+                  data={data?.items ?? []}
+                  emptyMessage="No se encontraron pasajeros para estos filtros."
+                  isLoading={loading}
+                  skeletonRows={10}
+                  sortBy={sortBy}
+                  sortDescending={sortDescending}
+                  onSort={handleSort}
+                />
+              </div>
+              <MobileCardList
+                items={data?.items ?? []}
                 isLoading={loading}
-                skeletonRows={10}
-                sortBy={sortBy}
-                sortDescending={sortDescending}
-                onSort={handleSort}
-              />
+                emptyMessage="No se encontraron pasajeros para estos filtros."
+              >
+                {(r) => (
+                  <MobileCard
+                    key={`${r.reserveId}-${r.passengerId}`}
+                    title={r.fullName}
+                    subtitle={`DNI ${r.documentNumber}`}
+                    badge={
+                      <Badge
+                        variant="outline"
+                        className={
+                          r.status === PassengerStatus.PendingPayment
+                            ? 'border-red-200 text-red-500'
+                            : undefined
+                        }
+                      >
+                        {PASSENGER_STATUS_LABELS[r.status] ?? r.status}
+                      </Badge>
+                    }
+                    fields={[
+                      { label: 'Fecha', value: `${safeDate(r.reserveDate)} ${r.departureHour}` },
+                      { label: 'Ruta', value: `${r.originName} -> ${r.destinationName}` },
+                      { label: 'Viaje', value: r.tripName },
+                      { label: 'Metodo', value: r.paymentMethod ?? '-' },
+                      { label: 'Precio', value: money(r.price) },
+                      { label: 'Deuda vencida', value: money(r.overdueBalance) },
+                    ]}
+                  />
+                )}
+              </MobileCardList>
               {(data?.items?.length ?? 0) > 0 && (
                 <TablePagination
                   currentPage={pageNumber}
