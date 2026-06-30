@@ -157,6 +157,9 @@ export default function ServiceManagement() {
   const [tripFormAvailableDirections, setTripFormAvailableDirections] = useState<DirectionOption[]>([]);
   const [isLoadingDirections, setIsLoadingDirections] = useState(false);
   const [isLoadingTripFormDirections, setIsLoadingTripFormDirections] = useState(false);
+  const [addDirectionError, setAddDirectionError] = useState<string | null>(null);
+  const [editDirectionError, setEditDirectionError] = useState<string | null>(null);
+  const [tripDirectionError, setTripDirectionError] = useState<string | null>(null);
 
   const {
     draft,
@@ -316,8 +319,34 @@ export default function ServiceManagement() {
     }
   };
 
+  const validateDirectionSelection = (
+    selectedIds: number[],
+    directions: DirectionOption[],
+  ): string | null => {
+    if (directions.length === 0) {
+      return 'La ruta debe tener direcciones de subida y bajada configuradas.';
+    }
+
+    const selectedDirections = directions.filter((direction) => selectedIds.includes(direction.id));
+    const hasPickup = selectedDirections.some((direction) => direction.type === 'pickup');
+    const hasDropoff = selectedDirections.some((direction) => direction.type === 'dropoff');
+
+    if (!hasPickup || !hasDropoff) {
+      return 'Selecciona al menos una subida y una bajada.';
+    }
+
+    return null;
+  };
+
   const submitAddService = async () => {
     addForm.handleSubmit(async (data) => {
+      const directionError = validateDirectionSelection(selectedDirectionIds, availableDirections);
+      if (directionError) {
+        setAddDirectionError(directionError);
+        toast({ title: 'Direcciones requeridas', description: directionError, variant: 'destructive' });
+        return;
+      }
+
       try {
         // Contrato ServiceCreateRequestDto: un slot único (dayOfWeek + departureHour).
         const transformedData = {
@@ -328,7 +357,7 @@ export default function ServiceManagement() {
           departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
           estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
           isHoliday: false,
-          allowedDirectionIds: selectedDirectionIds.length > 0 ? selectedDirectionIds : null,
+          allowedDirectionIds: selectedDirectionIds,
         };
         const response = await post('/service-create', transformedData);
         if (response) {
@@ -355,6 +384,13 @@ export default function ServiceManagement() {
 
   const submitEditService = async () => {
     editForm.handleSubmit(async (data) => {
+      const directionError = validateDirectionSelection(editSelectedDirectionIds, availableDirections);
+      if (directionError) {
+        setEditDirectionError(directionError);
+        toast({ title: 'Direcciones requeridas', description: directionError, variant: 'destructive' });
+        return;
+      }
+
       try {
         // Contrato ServiceUpdateRequestDto: un slot único (dayOfWeek + departureHour).
         const transformedData = {
@@ -365,7 +401,7 @@ export default function ServiceManagement() {
           departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
           estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
           isHoliday: false,
-          allowedDirectionIds: editSelectedDirectionIds.length > 0 ? editSelectedDirectionIds : null,
+          allowedDirectionIds: editSelectedDirectionIds,
         };
         const response = await put(`/service-update/${currentServiceId}`, transformedData);
         if (response) {
@@ -393,6 +429,13 @@ export default function ServiceManagement() {
 
   const submitAddTrip = async () => {
     tripForm.handleSubmit(async (data) => {
+      const directionError = validateDirectionSelection(tripFormDirectionIds, tripFormAvailableDirections);
+      if (directionError) {
+        setTripDirectionError(directionError);
+        toast({ title: 'Direcciones requeridas', description: directionError, variant: 'destructive' });
+        return;
+      }
+
       try {
         const transformedData = {
           tripId: data.tripId,
@@ -401,7 +444,7 @@ export default function ServiceManagement() {
           departureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
           estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
           isHoliday: false,
-          allowedDirectionIds: tripFormDirectionIds.length > 0 ? tripFormDirectionIds : null,
+          allowedDirectionIds: tripFormDirectionIds,
         };
         const response = await post('/reserve-create', transformedData);
         if (response) {
@@ -431,6 +474,7 @@ export default function ServiceManagement() {
     addForm.resetForm();
     setSelectedDirectionIds([]);
     setAvailableDirections([]);
+    setAddDirectionError(null);
     setIsAddModalOpen(true);
     loadAllOptions();
   };
@@ -455,6 +499,7 @@ export default function ServiceManagement() {
     // Load directions for editing - extract IDs from AllowedDirections
     const existingDirectionIds = (service.allowedDirections || []).map(d => d.directionId);
     setEditSelectedDirectionIds(existingDirectionIds);
+    setEditDirectionError(null);
     loadTripDirections(service.tripId);
 
     setIsEditModalOpen(true);
@@ -556,6 +601,7 @@ export default function ServiceManagement() {
               tripForm.resetForm();
               setTripFormDirectionIds([]);
               setTripFormAvailableDirections([]);
+              setTripDirectionError(null);
               setIsAddTripModalOpen(true);
               loadAllOptions();
             }}>
@@ -683,6 +729,7 @@ export default function ServiceManagement() {
                     addForm.setField('tripId', tripId);
                     // Load available directions for this trip
                     setSelectedDirectionIds([]);
+                    setAddDirectionError(null);
                     loadTripDirections(tripId);
                   }}
                   placeholder="Seleccionar ruta comercial"
@@ -752,7 +799,7 @@ export default function ServiceManagement() {
               <div className="space-y-4">
                 <Label className="text-base font-medium">Direcciones Permitidas</Label>
                 <p className="text-sm text-muted-foreground">
-                  Selecciona las direcciones habilitadas para este servicio. Si no seleccionas ninguna, todas estarán disponibles.
+                  Selecciona al menos una dirección de subida y una de bajada para este servicio.
                 </p>
                 {isLoadingDirections ? (
                   <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
@@ -764,6 +811,7 @@ export default function ServiceManagement() {
                           id={`dir-add-${dir.id}`}
                           checked={selectedDirectionIds.includes(dir.id)}
                           onCheckedChange={(checked) => {
+                            setAddDirectionError(null);
                             if (checked) {
                               setSelectedDirectionIds([...selectedDirectionIds, dir.id]);
                             } else {
@@ -786,6 +834,9 @@ export default function ServiceManagement() {
                   <div className="text-sm text-blue-600">
                     {selectedDirectionIds.length} dirección(es) seleccionada(s)
                   </div>
+                )}
+                {addDirectionError && (
+                  <div className="text-sm text-red-600">{addDirectionError}</div>
                 )}
               </div>
             )}
@@ -821,6 +872,7 @@ export default function ServiceManagement() {
                     editForm.setField('tripId', tripId);
                     // Load available directions for this trip
                     setEditSelectedDirectionIds([]);
+                    setEditDirectionError(null);
                     loadTripDirections(tripId);
                   }}
                   placeholder="Seleccionar ruta comercial"
@@ -889,7 +941,7 @@ export default function ServiceManagement() {
               <div className="space-y-4">
                 <Label className="text-base font-medium">Direcciones Permitidas</Label>
                 <p className="text-sm text-muted-foreground">
-                  Selecciona las direcciones habilitadas para este servicio. Si no seleccionas ninguna, todas estarán disponibles.
+                  Selecciona al menos una dirección de subida y una de bajada para este servicio.
                 </p>
                 {isLoadingDirections ? (
                   <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
@@ -901,6 +953,7 @@ export default function ServiceManagement() {
                           id={`dir-edit-${dir.id}`}
                           checked={editSelectedDirectionIds.includes(dir.id)}
                           onCheckedChange={(checked) => {
+                            setEditDirectionError(null);
                             if (checked) {
                               setEditSelectedDirectionIds([...editSelectedDirectionIds, dir.id]);
                             } else {
@@ -923,6 +976,9 @@ export default function ServiceManagement() {
                   <div className="text-sm text-blue-600">
                     {editSelectedDirectionIds.length} dirección(es) seleccionada(s)
                   </div>
+                )}
+                {editDirectionError && (
+                  <div className="text-sm text-red-600">{editDirectionError}</div>
                 )}
               </div>
             )}
@@ -949,6 +1005,7 @@ export default function ServiceManagement() {
                   tripForm.setField('tripId', tripId);
                   // Load available directions for this trip
                   setTripFormDirectionIds([]);
+                  setTripDirectionError(null);
                   loadTripFormDirections(tripId);
                 }}
                 placeholder="Seleccionar ruta comercial"
@@ -1005,7 +1062,7 @@ export default function ServiceManagement() {
             <div className="space-y-4">
               <Label className="text-base font-medium">Direcciones Permitidas</Label>
               <p className="text-sm text-muted-foreground">
-                Selecciona las direcciones habilitadas para este viaje. Si no seleccionas ninguna, todas estarán disponibles.
+                Selecciona al menos una dirección de subida y una de bajada para este viaje.
               </p>
               {isLoadingTripFormDirections ? (
                 <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
@@ -1017,6 +1074,7 @@ export default function ServiceManagement() {
                         id={`dir-trip-${dir.id}`}
                         checked={tripFormDirectionIds.includes(dir.id)}
                         onCheckedChange={(checked) => {
+                          setTripDirectionError(null);
                           if (checked) {
                             setTripFormDirectionIds([...tripFormDirectionIds, dir.id]);
                           } else {
@@ -1039,6 +1097,9 @@ export default function ServiceManagement() {
                 <div className="text-sm text-blue-600">
                   {tripFormDirectionIds.length} dirección(es) seleccionada(s)
                 </div>
+              )}
+              {tripDirectionError && (
+                <div className="text-sm text-red-600">{tripDirectionError}</div>
               )}
             </div>
           )}
