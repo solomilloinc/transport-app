@@ -37,6 +37,7 @@ import { useTableSort } from '@/hooks/use-table-sort';
 import { PagedResponse } from '@/services/types';
 import { getCurrentCashBox } from '@/services/cash-box';
 import CashBox from '@/interfaces/cash-box';
+import { RESERVE_TYPE } from '@/constants/reserveType';
 
 // Funciones de ordenamiento para la tabla de pasajeros.
 // Al no poner un tipo explícito, TypeScript infiere el tipo más específico,
@@ -126,6 +127,39 @@ export default function ReservationsPage() {
   const currentReservedQuantity = selectedTrip
     ? Math.max(selectedTrip.reservedQuantity, visiblePassengers.length)
     : 0;
+
+  const getSelectedLegSinglePrice = (passenger: PassengerReserveReport | null) => {
+    if (!passenger || !selectedTrip || !passenger.dropoffLocationId) {
+      return null;
+    }
+
+    const idaPrices = (selectedTrip.prices ?? []).filter(
+      (price) => price.reserveTypeId === RESERVE_TYPE.IDA,
+    );
+    const directionPrice = idaPrices.find(
+      (price) => price.directionId === passenger.dropoffLocationId,
+    );
+
+    if (directionPrice) {
+      return directionPrice.price;
+    }
+
+    const dropoffOption = (selectedTrip.dropoffOptionsIda ?? []).find(
+      (option) =>
+        option.cityId === passenger.dropoffLocationId ||
+        option.directions?.some((direction) => direction.directionId === passenger.dropoffLocationId),
+    );
+
+    if (dropoffOption) {
+      return dropoffOption.price;
+    }
+
+    const cityPrice = idaPrices.find(
+      (price) => price.cityId === passenger.dropoffLocationId && price.directionId == null,
+    );
+
+    return cityPrice?.price ?? null;
+  };
 
   // Fetch vehicles when search changes or on initial load
   useEffect(() => {
@@ -491,7 +525,7 @@ export default function ReservationsPage() {
           </div>
         }
       />
-      <div className="grid w-full gap-4 md:grid-cols-[minmax(300px,340px)_minmax(0,1fr)]">
+      <div className="grid w-full gap-4 md:grid-cols-[292px_minmax(0,1fr)]">
         <TripSelectionPanel
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
@@ -606,6 +640,7 @@ export default function ReservationsPage() {
         open={isCancelPassengerOpen}
         onOpenChange={setIsCancelPassengerOpen}
         passenger={passengerToCancel}
+        selectedLegSinglePrice={getSelectedLegSinglePrice(passengerToCancel)}
         onConfirm={handleConfirmCancelPassenger}
         isConfirming={isCancellingPassenger}
       />

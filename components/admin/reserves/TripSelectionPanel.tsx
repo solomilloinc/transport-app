@@ -57,12 +57,12 @@ export function TripSelectionPanel({
   };
 
   return (
-    <Card className="w-full min-w-0">
-      <CardContent className="p-3 sm:p-4">
+    <Card className="w-full min-w-0 md:w-[292px]">
+      <CardContent className="p-2">
         <div className="space-y-3">
-          <div className="mx-auto w-full max-w-[320px]">
+          <div className="mx-auto flex w-[276px] justify-center">
             <Calendar
-              className="w-full"
+              className="w-[276px] p-1.5"
               mode="single"
               selected={selectedDate}
               onSelect={onDateChange}
@@ -70,9 +70,25 @@ export function TripSelectionPanel({
               onMonthChange={setMonth}
               locale={es}
               fromMonth={subMonths(new Date(), 1)}
+              classNames={{
+                months: 'flex justify-center',
+                month: 'w-[264px] space-y-3',
+                caption: 'relative flex h-8 items-center justify-center',
+                caption_label: 'text-sm font-medium',
+                nav: 'flex items-center',
+                nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
+                nav_button_previous: 'absolute left-1',
+                nav_button_next: 'absolute right-1',
+                table: 'w-[264px] border-collapse',
+                head_row: 'flex',
+                head_cell: 'w-[37.714px] rounded-md text-[0.75rem] font-normal text-muted-foreground',
+                row: 'mt-1 flex w-full',
+                cell: 'relative h-8 w-[37.714px] p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md',
+                day: 'inline-flex h-8 w-8 items-center justify-center rounded-md p-0 text-sm font-normal transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-selected:opacity-100',
+              }}
             />
           </div>
-          <div className="space-y-2 px-1 sm:px-3">
+          <div className="space-y-2 px-1">
             <div className="text-lg font-medium text-blue-500">Viajes {selectedDate ? format(selectedDate, 'd MMM', { locale: es }) : ''}</div>
             {availableTrips && availableTrips.length > 0 && (
               <ApiSelect
