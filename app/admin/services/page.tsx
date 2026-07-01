@@ -8,7 +8,7 @@ import { Edit, Trash, TruckIcon, Wrench } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
@@ -53,7 +53,13 @@ const serviceFilterParsers = {
 import { getTripsForSelect, getTripById } from '@/services/trip';
 import { Trip } from '@/interfaces/trip';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import {
+  createServiceAction,
+  updateServiceAction,
+  deleteServiceAction,
+  createTripReserveAction,
+} from '@/app/admin/services/actions';
 
 // Modelo actual (ADR 0003): un Service = UN slot único → dayOfWeek + departureHour.
 // `dayOfWeek` se guarda como string en el form ('' = sin elegir, '0'..'6' = día);
@@ -347,38 +353,32 @@ export default function ServiceManagement() {
         return;
       }
 
-      try {
-        // Contrato ServiceCreateRequestDto: un slot único (dayOfWeek + departureHour).
-        const transformedData = {
-          name: data.name,
-          tripId: data.tripId,
-          vehicleId: data.vehicleId,
-          dayOfWeek: Number(data.dayOfWeek),
-          departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
-          estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
-          isHoliday: false,
-          allowedDirectionIds: selectedDirectionIds,
-        };
-        const response = await post('/service-create', transformedData);
-        if (response) {
-          toast({
-            title: 'Servicio creado',
-            description: 'El servicio ha sido creado exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          refetch(); // Refresh the vehicle list
-        }
-      } catch (error) {
+      // Contrato ServiceCreateRequestDto: un slot único (dayOfWeek + departureHour).
+      const transformedData = {
+        name: data.name,
+        tripId: data.tripId,
+        vehicleId: data.vehicleId,
+        dayOfWeek: Number(data.dayOfWeek),
+        departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+        estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+        isHoliday: false,
+        allowedDirectionIds: selectedDirectionIds,
+      };
+      const result = await createServiceAction(transformedData);
+      if (!result.ok) {
         // Surface backend error codes (validación de campos, conflictos de slot)
         // vía catálogo en español. Service.HasActiveSubscriptions etc también caen acá.
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Servicio creado',
+        description: 'El servicio ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch(); // Refresh the vehicle list
     });
   };
 
@@ -391,39 +391,34 @@ export default function ServiceManagement() {
         return;
       }
 
-      try {
-        // Contrato ServiceUpdateRequestDto: un slot único (dayOfWeek + departureHour).
-        const transformedData = {
-          name: data.name,
-          tripId: data.tripId,
-          vehicleId: data.vehicleId,
-          dayOfWeek: Number(data.dayOfWeek),
-          departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
-          estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
-          isHoliday: false,
-          allowedDirectionIds: editSelectedDirectionIds,
-        };
-        const response = await put(`/service-update/${currentServiceId}`, transformedData);
-        if (response) {
-          toast({
-            title: 'Servicio actualizado',
-            description: 'El servicio ha sido actualizado exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          refetch(); // Refresh the vehicle list
-        }
-      } catch (error) {
+      if (currentServiceId == null) return;
+      // Contrato ServiceUpdateRequestDto: un slot único (dayOfWeek + departureHour).
+      const transformedData = {
+        name: data.name,
+        tripId: data.tripId,
+        vehicleId: data.vehicleId,
+        dayOfWeek: Number(data.dayOfWeek),
+        departureHour: data.departureHour + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+        estimatedDuration: data.estimatedDuration + ':00', // HH:MM → HH:MM:SS (TimeSpan)
+        isHoliday: false,
+        allowedDirectionIds: editSelectedDirectionIds,
+      };
+      const result = await updateServiceAction(currentServiceId, transformedData);
+      if (!result.ok) {
         // Especialmente importante acá: Service.VehicleCapacityBelowSubscriptions
         // (cuando cambian a un Vehicle más chico con subs activas) y
         // Service.HasActiveSubscriptions (cuando intentan desactivar).
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Servicio actualizado',
+        description: 'El servicio ha sido actualizado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch(); // Refresh the vehicle list
     });
   };
 
@@ -436,36 +431,30 @@ export default function ServiceManagement() {
         return;
       }
 
-      try {
-        const transformedData = {
-          tripId: data.tripId,
-          reserveDate: data.reserveDate,
-          vehicleId: data.vehicleId,
-          departureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
-          estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
-          isHoliday: false,
-          allowedDirectionIds: tripFormDirectionIds,
-        };
-        const response = await post('/reserve-create', transformedData);
-        if (response) {
-          toast({
-            title: 'Viaje creado',
-            description: 'El viaje ha sido creado exitosamente',
-            variant: 'success',
-          });
-          setIsAddTripModalOpen(false);
-          // Opcionalmente refrescar si hay algo que refrescar
-        }
-      } catch (error) {
+      const transformedData = {
+        tripId: data.tripId,
+        reserveDate: data.reserveDate,
+        vehicleId: data.vehicleId,
+        departureHour: data.departureHour + ':00', // Convert HH:MM to HH:MM:SS
+        estimatedDuration: data.estimatedDuration + ':00', // Convert HH:MM to HH:MM:SS
+        isHoliday: false,
+        allowedDirectionIds: tripFormDirectionIds,
+      };
+      const result = await createTripReserveAction(transformedData);
+      if (!result.ok) {
         // Subraya el campo culpable si el backend mandó errors[]/details
         // (e.g. Validation.VehicleId, Reserve.* con detalle de dirección).
-        bindApiErrorToForm(error, tripForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+        bindErrorInfoToForm(result, tripForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Viaje creado',
+        description: 'El viaje ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddTripModalOpen(false);
+      // Opcionalmente refrescar si hay algo que refrescar
     });
   };
 
@@ -512,21 +501,18 @@ export default function ServiceManagement() {
   };
 
   const confirmDelete = async () => {
-    try {
-      await deleteLogic(`/service-delete/${currentServiceId}`);
-      setIsDeleteModalOpen(false);
-      setCurrentServiceId(null);
-      refetch();
-    } catch (error) {
+    if (currentServiceId == null) return;
+    const result = await deleteServiceAction(currentServiceId);
+    if (!result.ok) {
       // Si el Service tiene subs activas, el backend bloquea con
       // Service.HasActiveSubscriptions (409). Mostrar mensaje canónico
       // y dejar el modal abierto para que el admin pueda volver.
-      toast({
-        title: 'No se pudo eliminar',
-        description: getApiErrorMessage(error).message,
-        variant: 'destructive',
-      });
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
     }
+    setIsDeleteModalOpen(false);
+    setCurrentServiceId(null);
+    refetch();
   };
 
 

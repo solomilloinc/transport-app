@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { put, get } from '@/services/api';
+import { get } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { FormDialog } from '@/components/dashboard/form-dialog';
@@ -13,7 +13,8 @@ import { validationConfigEditReserve } from '@/validations/reserveSchema';
 import { Vehicle } from '@/interfaces/vehicle';
 import { PagedResponse } from '@/services/types';
 import { EntityStatus } from '@/interfaces/filters/common';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { updateReserveTripAction } from '@/app/admin/reserves/actions';
 
 interface EditTripDialogProps {
   open: boolean;
@@ -74,40 +75,40 @@ export function EditTripDialog({ open, onOpenChange, trip, onSuccess }: EditTrip
   const handleSubmit = () => {
     form.handleSubmit(async (data) => {
       if (!trip) return;
-      try {
-        const selectedVehicle = vehicles.find((vehicle) => Number(vehicle.value) === data.vehicleId);
-        const selectedVehicleCapacity = Number(selectedVehicle?.availableQuantity ?? 0);
+      const selectedVehicle = vehicles.find((vehicle) => Number(vehicle.value) === data.vehicleId);
+      const selectedVehicleCapacity = Number(selectedVehicle?.availableQuantity ?? 0);
 
-        if (selectedVehicle && selectedVehicleCapacity < trip.reservedQuantity) {
-          form.setError(
-            'vehicleId',
-            `El vehículo seleccionado tiene ${selectedVehicleCapacity} asientos y el viaje ya tiene ${trip.reservedQuantity} pasajero(s).`,
-          );
-          toast({
-            title: 'Capacidad insuficiente',
-            description: 'No podés asignar un vehículo con menos capacidad que los pasajeros ya reservados.',
-            variant: 'destructive',
-          });
-          return;
-        }
+      if (selectedVehicle && selectedVehicleCapacity < trip.reservedQuantity) {
+        form.setError(
+          'vehicleId',
+          `El vehículo seleccionado tiene ${selectedVehicleCapacity} asientos y el viaje ya tiene ${trip.reservedQuantity} pasajero(s).`,
+        );
+        toast({
+          title: 'Capacidad insuficiente',
+          description: 'No podés asignar un vehículo con menos capacidad que los pasajeros ya reservados.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-        const updatePayload: ReserveUpdate = {
-          vehicleId: data.vehicleId,
-          departureHour: data.departureHour ? `${data.departureHour}:00` : data.departureHour,
-          status: trip.status,
-        };
-        const response = await put(`/reserve-update/${trip.reserveId}`, updatePayload);
+      const updatePayload: ReserveUpdate = {
+        vehicleId: data.vehicleId,
+        departureHour: data.departureHour ? `${data.departureHour}:00` : data.departureHour,
+        status: trip.status,
+      };
+      const result = await updateReserveTripAction(trip.reserveId, updatePayload);
 
-        if (response) {
-          toast({ title: 'Viaje actualizado', description: 'El viaje ha sido actualizado exitosamente.', variant: 'success' });
-          onSuccess();
-          onOpenChange(false);
-        } else {
-          toast({ title: 'Error', description: 'Error al actualizar el viaje.', variant: 'destructive' });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, form.setError);
-        toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
+      if (!result.ok) {
+        bindErrorInfoToForm(result, form.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
+      }
+      if (result.data) {
+        toast({ title: 'Viaje actualizado', description: 'El viaje ha sido actualizado exitosamente.', variant: 'success' });
+        onSuccess();
+        onOpenChange(false);
+      } else {
+        toast({ title: 'Error', description: 'Error al actualizar el viaje.', variant: 'destructive' });
       }
     });
   };

@@ -5,7 +5,6 @@ import { Edit, Trash, UserPlus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { StatusFilter } from '@/components/dashboard/status-filter';
@@ -22,10 +21,14 @@ import {
   validationConfigOperativeUserCreate,
   validationConfigOperativeUserEdit,
 } from '@/validations/operativeUserSchema';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { getOperativeUserReport, OperativeUserItem } from '@/services/user-management';
-import { createOperativeUserAction, updateOperativeUserAction } from '@/app/admin/users/actions';
+import {
+  createOperativeUserAction,
+  updateOperativeUserAction,
+  deleteOperativeUserAction,
+} from '@/app/admin/users/actions';
 import {
   OperativeUserReportFilters,
   emptyOperativeUserReportFilters,
@@ -73,54 +76,46 @@ export default function OperativeUsersManagement() {
 
   const submitAddUser = async () => {
     addForm.handleSubmit(async (formData) => {
-      try {
-        await createOperativeUserAction({
-          email: formData.email,
-          password: formData.password,
-        });
-        toast({
-          title: 'Usuario creado',
-          description: 'El usuario operativo ha sido creado exitosamente',
-          variant: 'success',
-        });
-        setIsAddModalOpen(false);
-        addForm.resetForm();
-        refetch();
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createOperativeUserAction({
+        email: formData.email,
+        password: formData.password,
+      });
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Usuario creado',
+        description: 'El usuario operativo ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      addForm.resetForm();
+      refetch();
     });
   };
 
   const submitEditUser = async () => {
     editForm.handleSubmit(async (formData) => {
       if (currentUserId == null) return;
-      try {
-        await updateOperativeUserAction({
-          userId: currentUserId,
-          email: formData.email,
-          status: EntityStatus.Active,
-        });
-        toast({
-          title: 'Usuario actualizado',
-          description: 'El usuario operativo ha sido actualizado exitosamente',
-          variant: 'success',
-        });
-        setIsEditModalOpen(false);
-        refetch();
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await updateOperativeUserAction({
+        userId: currentUserId,
+        email: formData.email,
+        status: EntityStatus.Active,
+      });
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Usuario actualizado',
+        description: 'El usuario operativo ha sido actualizado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch();
     });
   };
 
@@ -136,7 +131,12 @@ export default function OperativeUsersManagement() {
   };
 
   const confirmDelete = async () => {
-    await deleteLogic(`/operative-user-delete/${currentUserId}`);
+    if (currentUserId == null) return;
+    const result = await deleteOperativeUserAction(currentUserId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentUserId(null);
     refetch();

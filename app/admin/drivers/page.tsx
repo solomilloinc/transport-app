@@ -7,7 +7,6 @@ import { Edit, Trash, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusFilter } from '@/components/dashboard/status-filter';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
@@ -23,7 +22,8 @@ import { Driver, emptyDriver } from '@/interfaces/driver';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { validationConfigDriver } from '@/validations/driverSchema';
 import { getDriverReport } from '@/services/driver';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { createDriverAction, updateDriverAction, deleteDriverAction } from '@/app/admin/drivers/actions';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   DriverReportFilters,
@@ -77,49 +77,38 @@ export default function DriversManagement() {
 
   const submitAddDriver = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const response = await post('/driver-create', data);
-        if (response) {
-          toast({
-            title: 'Chofer creado',
-            description: 'El chofer ha sido creado exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          refetch();
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createDriverAction(data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Chofer creado',
+        description: 'El chofer ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch();
     });
   };
 
   const submitEditDriver = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const response = await put(`/driver-update/${currentDriverId}`, data);
-        if (response) {
-          toast({
-            title: 'Chofer actualizado',
-            description: 'El chofer ha sido actualizado exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          refetch();
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentDriverId == null) return;
+      const result = await updateDriverAction(currentDriverId, data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Chofer actualizado',
+        description: 'El chofer ha sido actualizado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch();
     });
   };
 
@@ -137,7 +126,12 @@ export default function DriversManagement() {
   };
 
   const confirmDelete = async () => {
-    await deleteLogic(`/driver-delete/${currentDriverId}`);
+    if (currentDriverId == null) return;
+    const result = await deleteDriverAction(currentDriverId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentDriverId(null);
     refetch();

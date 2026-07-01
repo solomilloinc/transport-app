@@ -7,11 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getApiErrorMessage } from '@/lib/apiErrors';
+import { bulkUpdateTripPricesAction } from './actions';
 
 export default function BulkUpdatePrices() {
   const router = useRouter();
@@ -31,47 +30,43 @@ export default function BulkUpdatePrices() {
     }
 
     setIsSubmitting(true);
-    try {
-      const priceUpdates = [];
+    const priceUpdates = [];
 
-      if (idaPercentage) {
-        priceUpdates.push({
-          reserveTypeId: 1,
-          percentage: Number(idaPercentage),
-        });
-      }
+    if (idaPercentage) {
+      priceUpdates.push({
+        reserveTypeId: 1,
+        percentage: Number(idaPercentage),
+      });
+    }
 
-      if (idaVueltaPercentage) {
-        priceUpdates.push({
-          reserveTypeId: 2,
-          percentage: Number(idaVueltaPercentage),
-        });
-      }
+    if (idaVueltaPercentage) {
+      priceUpdates.push({
+        reserveTypeId: 2,
+        percentage: Number(idaVueltaPercentage),
+      });
+    }
 
-      const response = await put('/trip-prices-update-percentage', { priceUpdates });
-      if (response) {
-        toast({
-          title: 'Precios actualizados',
-          description: 'Los precios han sido actualizados exitosamente.',
-          variant: 'success',
-        });
-        router.push('/admin/trips');
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Error al actualizar los precios.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+    const result = await bulkUpdateTripPricesAction({ priceUpdates });
+    if (!result.ok) {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
+      setIsSubmitting(false);
+      return;
+    }
+    if (result.data) {
+      toast({
+        title: 'Precios actualizados',
+        description: 'Los precios han sido actualizados exitosamente.',
+        variant: 'success',
+      });
+      router.push('/admin/trips');
+    } else {
       toast({
         title: 'Error',
-        description: getApiErrorMessage(error).message,
+        description: 'Error al actualizar los precios.',
         variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   };
 
   const calculateExample = (basePrice: number, percentage: string) => {

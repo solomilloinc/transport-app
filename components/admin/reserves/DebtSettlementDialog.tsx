@@ -21,8 +21,10 @@ import { Passenger } from '@/interfaces/passengers';
 import { PendingReserve } from '@/interfaces/customerAccount';
 import { PaymentStatusLabels } from '@/interfaces/passengerReserve';
 import { Payment } from '@/interfaces/payment';
-import { getCustomerPendingReserves, settleCustomerDebt } from '@/services/customerAccount';
-import { getApiErrorMessage } from '@/lib/apiErrors';
+import {
+  getCustomerPendingReservesAction,
+  settleCustomerDebtAction,
+} from '@/app/admin/customers/actions';
 
 interface DebtSettlementDialogProps {
   open: boolean;
@@ -62,20 +64,21 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, currentBala
   const fetchPendingReserves = async () => {
     if (!customer) return;
     setIsLoading(true);
-    try {
-      const data = await getCustomerPendingReserves(customer.customerId);
-      if (Array.isArray(data) && data.length > 0) {
-        setPendingReserves(data);
-        setSelectedReserveIds(data.map((r) => r.reserveId));
-      } else {
-        setPendingReserves([]);
-        setSelectedReserveIds([]);
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
-    } finally {
+    const result = await getCustomerPendingReservesAction(customer.customerId);
+    if (!result.ok) {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
       setIsLoading(false);
+      return;
     }
+    const data = result.data;
+    if (Array.isArray(data) && data.length > 0) {
+      setPendingReserves(data);
+      setSelectedReserveIds(data.map((r) => r.reserveId));
+    } else {
+      setPendingReserves([]);
+      setSelectedReserveIds([]);
+    }
+    setIsLoading(false);
   };
 
   const toggleReserveSelection = (reserveId: number) => {
@@ -197,27 +200,27 @@ export function DebtSettlementDialog({ open, onOpenChange, customer, currentBala
     }
 
     setIsSubmitting(true);
-    try {
-      await settleCustomerDebt({
-        customerId: customer.customerId,
-        reserveIds: selectedReserveIds,
-        payments: payments.map((p) => ({ transactionAmount: p.transactionAmount, paymentMethod: p.paymentMethod })),
-        creditAmount: appliedCredit,
-      });
-
-      toast({ title: 'Deuda saldada', description: 'Los pagos han sido registrados exitosamente.', variant: 'success' });
-      setPayments([]);
-      setCreditAmount('');
-      setPaymentAmount('');
-      onSuccess();
-
-      // Re-fetch to update the view
-      await fetchPendingReserves();
-    } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
-    } finally {
+    const result = await settleCustomerDebtAction({
+      customerId: customer.customerId,
+      reserveIds: selectedReserveIds,
+      payments: payments.map((p) => ({ transactionAmount: p.transactionAmount, paymentMethod: p.paymentMethod })),
+      creditAmount: appliedCredit,
+    });
+    if (!result.ok) {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
       setIsSubmitting(false);
+      return;
     }
+
+    toast({ title: 'Deuda saldada', description: 'Los pagos han sido registrados exitosamente.', variant: 'success' });
+    setPayments([]);
+    setCreditAmount('');
+    setPaymentAmount('');
+    onSuccess();
+
+    // Re-fetch to update the view
+    await fetchPendingReserves();
+    setIsSubmitting(false);
   };
 
   return (

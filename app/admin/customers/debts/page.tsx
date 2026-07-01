@@ -30,7 +30,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { useApi } from '@/hooks/use-api';
 import { getPassengers } from '@/services/passenger';
-import { createCustomerAccountAdjustment, getCustomerAccountSummary, refundPaymentCash } from '@/services/customerAccount';
+import { getCustomerAccountSummary } from '@/services/customerAccount';
+import {
+  createCustomerAccountAdjustmentAction,
+  refundPaymentCashAction,
+} from '@/app/admin/customers/actions';
 import { Passenger } from '@/interfaces/passengers';
 import { CustomerAccountAdjustmentKind, CustomerAccountSummary, Transaction, TransactionTypeLabels, TransactionTypeOptions } from '@/interfaces/customerAccount';
 import { PaginationParams } from '@/services/types';
@@ -215,51 +219,51 @@ export default function DebtsPage() {
     }
 
     setIsSavingAdjustment(true);
-    try {
-      await createCustomerAccountAdjustment(selectedCustomer.customerId, {
-        adjustmentKind,
-        amount,
-        date: adjustmentDate,
-        description,
-      });
-
-      toast({
-        title: 'Ajuste registrado',
-        description: adjustmentKind === 'Credit'
-          ? 'Se registró un ajuste a favor del pasajero.'
-          : 'Se registró un ajuste adeudado.',
-        variant: 'success',
-      });
-      setIsAdjustmentOpen(false);
-      resetAdjustmentForm();
-      const refreshedParams = { ...params, pageNumber: 1 };
-      setCurrentPage(1);
-      fetchSummary(refreshedParams);
-    } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
-    } finally {
+    const result = await createCustomerAccountAdjustmentAction(selectedCustomer.customerId, {
+      adjustmentKind,
+      amount,
+      date: adjustmentDate,
+      description,
+    });
+    if (!result.ok) {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
       setIsSavingAdjustment(false);
+      return;
     }
+
+    toast({
+      title: 'Ajuste registrado',
+      description: adjustmentKind === 'Credit'
+        ? 'Se registró un ajuste a favor del pasajero.'
+        : 'Se registró un ajuste adeudado.',
+      variant: 'success',
+    });
+    setIsAdjustmentOpen(false);
+    resetAdjustmentForm();
+    const refreshedParams = { ...params, pageNumber: 1 };
+    setCurrentPage(1);
+    fetchSummary(refreshedParams);
+    setIsSavingAdjustment(false);
   };
 
   const handleConfirmRefund = async () => {
     if (!refundTarget?.reservePaymentId) return;
     setIsRefunding(true);
-    try {
-      await refundPaymentCash(refundTarget.reservePaymentId);
-      toast({
-        title: 'Dinero devuelto',
-        description: 'La devolución de caja se registró correctamente.',
-        variant: 'success',
-      });
-      setRefundTarget(null);
-      // Refrescar la grilla: el pago queda "Refunded" y deja de ofrecer el botón.
-      if (selectedCustomer) fetchSummary(params);
-    } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
-    } finally {
+    const result = await refundPaymentCashAction(refundTarget.reservePaymentId);
+    if (!result.ok) {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
       setIsRefunding(false);
+      return;
     }
+    toast({
+      title: 'Dinero devuelto',
+      description: 'La devolución de caja se registró correctamente.',
+      variant: 'success',
+    });
+    setRefundTarget(null);
+    // Refrescar la grilla: el pago queda "Refunded" y deja de ofrecer el botón.
+    if (selectedCustomer) fetchSummary(params);
+    setIsRefunding(false);
   };
 
   const columns = [

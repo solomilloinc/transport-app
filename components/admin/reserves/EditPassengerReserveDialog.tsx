@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { put } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { FormDialog } from '@/components/dashboard/form-dialog';
@@ -10,7 +9,8 @@ import { ApiSelect } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { reserveValidationSchema } from '@/validations/reservePassengerSchema';
 import { CityDirectionsDto, DropoffCityOption, PickupOption } from '@/interfaces/trip';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { updatePassengerReserveAction } from '@/app/admin/reserves/actions';
 
 interface EditPassengerReserveDialogProps {
   open: boolean;
@@ -95,34 +95,27 @@ export function EditPassengerReserveDialog({
     form.handleSubmit(async (data) => {
       if (!passengerReserve) return;
 
-      try {
-        const updatePayload: PassengerReserveUpdate = {
-          pickupLocationId: data.pickupLocationId,
-          dropoffLocationId: data.dropoffLocationId,
-          hasTraveled: passengerReserve.hasTraveled,
-        };
+      const updatePayload: PassengerReserveUpdate = {
+        pickupLocationId: data.pickupLocationId,
+        dropoffLocationId: data.dropoffLocationId,
+        hasTraveled: passengerReserve.hasTraveled,
+      };
 
-        const response = await put(
-          `/passenger-reserve-update/${passengerReserve.passengerId}`,
-          updatePayload,
-        );
+      const result = await updatePassengerReserveAction(passengerReserve.passengerId, updatePayload);
 
-        if (response) {
-          toast({
-            title: 'Reserva actualizada',
-            description: 'La reserva se actualizó correctamente.',
-            variant: 'success',
-          });
-          onSuccess();
-          onOpenChange(false);
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, form.setError);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, form.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
+      }
+      if (result.data) {
         toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
+          title: 'Reserva actualizada',
+          description: 'La reserva se actualizó correctamente.',
+          variant: 'success',
         });
+        onSuccess();
+        onOpenChange(false);
       }
     });
   };

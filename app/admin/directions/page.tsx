@@ -7,7 +7,7 @@ import { Edit, Trash, TruckIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
@@ -26,7 +26,12 @@ import { City } from '@/interfaces/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { getDirectionReport } from '@/services/direction';
 import { validationConfigDirection } from '@/validations/directionSchema';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import {
+  createDirectionAction,
+  updateDirectionAction,
+  deleteDirectionAction,
+} from '@/app/admin/directions/actions';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   DirectionReportFilters,
@@ -107,49 +112,38 @@ export default function DirectionManagement() {
 
   const submitAddDirection = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const response = await post('/direction-create', data);
-        if (response) {
-          toast({
-            title: 'Direccion creada',
-            description: 'La dirección ha sido creada exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          refetch();
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createDirectionAction(data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Direccion creada',
+        description: 'La dirección ha sido creada exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch();
     });
   };
 
   const submitEditDirection = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const response = await put(`/direction-update/${currentDirectionId}`, data);
-        if (response) {
-          toast({
-            title: 'Direccion actualizada',
-            description: 'La dirección ha sido actualizada exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          refetch();
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentDirectionId == null) return;
+      const result = await updateDirectionAction(currentDirectionId, data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Direccion actualizada',
+        description: 'La dirección ha sido actualizada exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch();
     });
   };
 
@@ -178,8 +172,12 @@ export default function DirectionManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/direction-delete/${currentDirectionId}`);
-    // In a real app, you would delete the vehicle from the database
+    if (currentDirectionId == null) return;
+    const result = await deleteDirectionAction(currentDirectionId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentDirectionId(null);
     refetch();
