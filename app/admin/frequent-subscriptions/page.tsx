@@ -85,17 +85,6 @@ const CUSTOMER_SEARCH_MIN_CHARS = 3;
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-/**
- * Devuelve "hoy + 1 mes" en formato ISO yyyy-mm-dd.
- * Si el día no existe en el mes siguiente (e.g. 31 Mar + 1 mes), JS normaliza
- * al día 1 del mes siguiente. Para un default UX eso es aceptable.
- */
-const oneMonthFromTodayIso = () => {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 1);
-  return d.toISOString().slice(0, 10);
-};
-
 export default function FrequentSubscriptionsPage() {
   // ----- lookups cacheados -----
   // services-list trae solo Services Active con la metadata necesaria para el form
@@ -193,13 +182,14 @@ export default function FrequentSubscriptionsPage() {
     useState<FrequentSubscriptionCancelPreview | null>(null);
 
   // ----- forms -----
-  // Defaults del create: startDate = hoy, endDate = hoy + 1 mes (sensata vigencia
-  // por defecto; el admin puede borrarla para dejarla indefinida).
+  // Defaults del create: startDate = hoy, endDate = vacío (vigencia indefinida por
+  // defecto; el admin la completa si quiere acotarla). `endDate` ya viene null en
+  // emptyFrequentSubscriptionCreate — no lo override-eamos para no angostar el tipo
+  // a `null` (rompería el cast `as string` del submit).
   const addForm = useFormValidation(
     {
       ...emptyFrequentSubscriptionCreate,
       startDate: todayIso(),
-      endDate: oneMonthFromTodayIso(),
     },
     validationConfigFrequentSubscription
   );
@@ -236,9 +226,9 @@ export default function FrequentSubscriptionsPage() {
     addForm.resetForm();
     // resetForm rehidrata con initial, pero queremos defaults frescos cada vez
     // que se abre el dialog (cubre el caso de dejar el dialog abierto un día
-    // y volver al siguiente).
+    // y volver al siguiente). endDate arranca vacío: vigencia indefinida.
     addForm.setField('startDate', todayIso());
-    addForm.setField('endDate', oneMonthFromTodayIso());
+    addForm.setField('endDate', null);
     setCustomerSearchResults([]); // combo arranca vacío: se llena al buscar
     setIsAddModalOpen(true);
   };
