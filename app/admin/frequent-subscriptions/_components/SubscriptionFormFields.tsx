@@ -63,8 +63,9 @@ const IMMUTABLE_TOOLTIP = 'Para cambiar, cancelá la suscripción y creá una nu
  * Comportamiento smart (post backend Mayo 2026):
  *  - Service dropdown: etiqueta `{tripDescription} · {dayOfWeekName} {departureHour}`.
  *  - Inbound Service dropdown filtra solo a Services con trip inverso del Outbound
- *    elegido (origenes y destinos swappeados). Si coincide el mismo dayOfWeek, queda
- *    primero (alinea con la promo IdaVuelta cuando RoundTripRequiresSameDay).
+ *    elegido (origenes y destinos swappeados) Y el mismo dayOfWeek — el backend
+ *    rechaza combinaciones IdaVuelta con días distintos
+ *    (`FrequentSubscription.RoundTripRequiresSameDayOfWeek`).
  *  - Pickup/Dropoff cruza service.allowedDirectionIds con la lista global de Directions.
  *    Si allowedDirectionIds está vacío, **todas** las Directions son válidas.
  *  - Cascading reset: cambiar el Service del leg blanquea sus 2 directionIds.
@@ -103,6 +104,12 @@ export function SubscriptionFormFields({
     if (isEdit) return; // edit: el dropdown está disabled, no hace falta
     form.setField('outboundPickupLocationId', 0);
     form.setField('outboundDropoffLocationId', 0);
+    // Cambiar el Service Ida puede invalidar el Service Vuelta ya elegido (el
+    // filtro de mismo dayOfWeek puede excluirlo) — lo blanqueamos junto con sus
+    // direcciones para forzar una nueva selección válida.
+    form.setField('inboundServiceId', null);
+    form.setField('inboundPickupLocationId', null);
+    form.setField('inboundDropoffLocationId', null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.data.outboundServiceId]);
 
@@ -153,22 +160,20 @@ export function SubscriptionFormFields({
 
   /**
    * Smart filter del Inbound: solo Services con trip inverso del Outbound
-   * (origin/destination swappeados). Si coincide el dayOfWeek, ordeno primero
-   * porque alinea con la promo IdaVuelta `RoundTripRequiresSameDay`.
+   * (origin/destination swappeados) Y el mismo dayOfWeek. El backend rechaza
+   * (`FrequentSubscription.RoundTripRequiresSameDayOfWeek`) cualquier combinación
+   * IdaVuelta cuyos dos legs caigan en días distintos — filtramos acá para que
+   * ese error quede como red de seguridad, no como validación primaria.
    */
   const inboundServiceOptions: SelectOption[] = useMemo(() => {
     if (!outboundService) return [];
     const candidates = services.filter(
       (s) =>
         s.originCityId === outboundService.destinationCityId &&
-        s.destinationCityId === outboundService.originCityId
+        s.destinationCityId === outboundService.originCityId &&
+        s.dayOfWeek === outboundService.dayOfWeek
     );
-    const sameDayFirst = [...candidates].sort((a, b) => {
-      const aMatch = a.dayOfWeek === outboundService.dayOfWeek ? 0 : 1;
-      const bMatch = b.dayOfWeek === outboundService.dayOfWeek ? 0 : 1;
-      return aMatch - bMatch;
-    });
-    return sameDayFirst.map((s) => ({
+    return candidates.map((s) => ({
       id: s.serviceId,
       value: String(s.serviceId),
       label: formatServiceLabel(s),
@@ -370,7 +375,7 @@ export function SubscriptionFormFields({
             error={form.errors.inboundServiceId}
             description={
               outboundService
-                ? `Filtrado a servicios con trip inverso (${outboundService.tripDescription} ↔).`
+                ? `Filtrado a servicios con trip inverso (${outboundService.tripDescription} ↔) que caigan en ${outboundService.dayOfWeekName}.`
                 : undefined
             }
           >

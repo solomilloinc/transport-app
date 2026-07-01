@@ -35,14 +35,14 @@ import {
   validationConfigFrequentSubscription,
   validationConfigFrequentSubscriptionEdit,
 } from '@/validations/frequentSubscriptionSchema';
+import { getFrequentSubscriptionReport } from '@/services/frequentSubscription';
+import { bindErrorInfoToForm, getApiErrorMessage } from '@/lib/apiErrors';
 import {
-  cancelFrequentSubscription,
-  createFrequentSubscription,
-  getFrequentSubscriptionCancelPreview,
-  getFrequentSubscriptionReport,
-  updateFrequentSubscription,
-} from '@/services/frequentSubscription';
-import { bindApiErrorToForm, getApiErrorMessage } from '@/lib/apiErrors';
+  cancelFrequentSubscriptionAction,
+  createFrequentSubscriptionAction,
+  getFrequentSubscriptionCancelPreviewAction,
+  updateFrequentSubscriptionAction,
+} from '@/app/admin/frequent-subscriptions/actions';
 import { getCustomerReport, getPassengers } from '@/services/passenger';
 import { getServicesList } from '@/services/serviceList';
 import { getDirectionReport } from '@/services/direction';
@@ -259,25 +259,18 @@ export default function FrequentSubscriptionsPage() {
     setCancelPreview(null);
     setIsCancelModalOpen(true);
 
-    try {
-      const preview = await getFrequentSubscriptionCancelPreview(sub.frequentSubscriptionId);
-      // Solo aplicamos si seguimos viendo la misma sub (el admin pudo
-      // haber cerrado el modal antes de que llegue la respuesta).
-      setCancelPreview((current) =>
-        current === null ? preview : current
-      );
-    } catch (err) {
-      const info = getApiErrorMessage(err);
+    const result = await getFrequentSubscriptionCancelPreviewAction(sub.frequentSubscriptionId);
+    if (!result.ok) {
       // Si la sub ya estaba cancelada / no existe, cerramos modal y refresca grilla.
       if (
-        info.code === 'FrequentSubscription.AlreadyCancelled' ||
-        info.code === 'FrequentSubscription.NotFound'
+        result.code === 'FrequentSubscription.AlreadyCancelled' ||
+        result.code === 'FrequentSubscription.NotFound'
       ) {
         setIsCancelModalOpen(false);
         setCurrentSubscription(null);
         toast({
           title: 'Suscripción no activa',
-          description: info.message,
+          description: result.message,
           variant: 'destructive',
         });
         refetch();
@@ -290,121 +283,115 @@ export default function FrequentSubscriptionsPage() {
         description: 'Continuá con la confirmación o cerrá para reintentar.',
         variant: 'destructive',
       });
+      return;
     }
+    // Solo aplicamos si seguimos viendo la misma sub (el admin pudo
+    // haber cerrado el modal antes de que llegue la respuesta).
+    setCancelPreview((current) => (current === null ? result.data : current));
   };
 
   const submitAdd = async () => {
     addForm.handleSubmit(async (formData) => {
-      try {
-        // Normalizo inbound* a null si es Ida.
-        const isIdaVuelta = Number(formData.reserveTypeId) === ReserveType.IdaVuelta;
-        const payload = {
-          customerId: Number(formData.customerId),
-          reserveTypeId: Number(formData.reserveTypeId) as ReserveType,
-          outboundServiceId: Number(formData.outboundServiceId),
-          outboundPickupLocationId: Number(formData.outboundPickupLocationId),
-          outboundDropoffLocationId: Number(formData.outboundDropoffLocationId),
-          inboundServiceId: isIdaVuelta ? Number(formData.inboundServiceId) : null,
-          inboundPickupLocationId: isIdaVuelta
-            ? Number(formData.inboundPickupLocationId)
-            : null,
-          inboundDropoffLocationId: isIdaVuelta
-            ? Number(formData.inboundDropoffLocationId)
-            : null,
-          startDate: formData.startDate as string,
-          endDate: (formData.endDate as string) || null,
-        };
+      // Normalizo inbound* a null si es Ida.
+      const isIdaVuelta = Number(formData.reserveTypeId) === ReserveType.IdaVuelta;
+      const payload = {
+        customerId: Number(formData.customerId),
+        reserveTypeId: Number(formData.reserveTypeId) as ReserveType,
+        outboundServiceId: Number(formData.outboundServiceId),
+        outboundPickupLocationId: Number(formData.outboundPickupLocationId),
+        outboundDropoffLocationId: Number(formData.outboundDropoffLocationId),
+        inboundServiceId: isIdaVuelta ? Number(formData.inboundServiceId) : null,
+        inboundPickupLocationId: isIdaVuelta
+          ? Number(formData.inboundPickupLocationId)
+          : null,
+        inboundDropoffLocationId: isIdaVuelta
+          ? Number(formData.inboundDropoffLocationId)
+          : null,
+        startDate: formData.startDate as string,
+        endDate: (formData.endDate as string) || null,
+      };
 
-        await createFrequentSubscription(payload);
-        // Desde Mayo 2026 el create aplica la suscripción inmediatamente sobre
-        // las Reserves existentes en la ventana — los Passengers ya quedan
-        // creados al volver de este POST. No hace falta disparar el batch.
-        toast({
-          title: 'Suscripción creada',
-          description: 'Los pasajes ya quedaron generados en las reservas existentes.',
-          variant: 'success',
-        });
-        setIsAddModalOpen(false);
-        refetch();
-      } catch (err) {
-        bindApiErrorToForm(err, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(err).message,
-          variant: 'destructive',
-        });
+      const result = await createFrequentSubscriptionAction(payload);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      // Desde Mayo 2026 el create aplica la suscripción inmediatamente sobre
+      // las Reserves existentes en la ventana — los Passengers ya quedan
+      // creados al volver de este POST. No hace falta disparar el batch.
+      toast({
+        title: 'Suscripción creada',
+        description: 'Los pasajes ya quedaron generados en las reservas existentes.',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch();
     });
   };
 
   const submitEdit = async () => {
     editForm.handleSubmit(async (formData) => {
       if (!currentSubscription) return;
-      try {
-        const isIdaVuelta = currentSubscription.reserveTypeId === ReserveType.IdaVuelta;
-        const payload = {
-          outboundPickupLocationId: Number(formData.outboundPickupLocationId),
-          outboundDropoffLocationId: Number(formData.outboundDropoffLocationId),
-          inboundPickupLocationId: isIdaVuelta
-            ? Number(formData.inboundPickupLocationId)
-            : null,
-          inboundDropoffLocationId: isIdaVuelta
-            ? Number(formData.inboundDropoffLocationId)
-            : null,
-          startDate: formData.startDate as string,
-          endDate: (formData.endDate as string) || null,
-        };
+      const isIdaVuelta = currentSubscription.reserveTypeId === ReserveType.IdaVuelta;
+      const payload = {
+        outboundPickupLocationId: Number(formData.outboundPickupLocationId),
+        outboundDropoffLocationId: Number(formData.outboundDropoffLocationId),
+        inboundPickupLocationId: isIdaVuelta
+          ? Number(formData.inboundPickupLocationId)
+          : null,
+        inboundDropoffLocationId: isIdaVuelta
+          ? Number(formData.inboundDropoffLocationId)
+          : null,
+        startDate: formData.startDate as string,
+        endDate: (formData.endDate as string) || null,
+      };
 
-        await updateFrequentSubscription(currentSubscription.frequentSubscriptionId, payload);
-        toast({
-          title: 'Suscripción actualizada',
-          description: 'Los cambios se aplican a las próximas reservas generadas.',
-          variant: 'success',
-        });
-        setIsEditModalOpen(false);
-        refetch();
-      } catch (err) {
-        bindApiErrorToForm(err, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(err).message,
-          variant: 'destructive',
-        });
+      const result = await updateFrequentSubscriptionAction(
+        currentSubscription.frequentSubscriptionId,
+        payload,
+      );
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Suscripción actualizada',
+        description: 'Los cambios se aplican a las próximas reservas generadas.',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch();
     });
   };
 
   const confirmCancel = async () => {
     if (!currentSubscription) return;
-    try {
-      await cancelFrequentSubscription(currentSubscription.frequentSubscriptionId);
-      toast({
-        title: 'Suscripción cancelada',
-        description: 'Las reservas futuras fueron canceladas y los cargos reembolsados.',
-        variant: 'success',
-      });
-      setIsCancelModalOpen(false);
-      setCurrentSubscription(null);
-      setCancelPreview(null);
-      refetch();
-    } catch (err) {
-      const info = getApiErrorMessage(err);
+    const result = await cancelFrequentSubscriptionAction(currentSubscription.frequentSubscriptionId);
+    if (!result.ok) {
       // Race condition / doble click: si ya estaba cancelada cerramos modal limpio.
       if (
-        info.code === 'FrequentSubscription.AlreadyCancelled' ||
-        info.code === 'FrequentSubscription.NotFound'
+        result.code === 'FrequentSubscription.AlreadyCancelled' ||
+        result.code === 'FrequentSubscription.NotFound'
       ) {
         setIsCancelModalOpen(false);
         setCurrentSubscription(null);
         setCancelPreview(null);
         refetch();
       }
-      toast({
-        title: 'No se pudo cancelar',
-        description: info.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'No se pudo cancelar', description: result.message, variant: 'destructive' });
+      return;
     }
+    toast({
+      title: 'Suscripción cancelada',
+      description: 'Las reservas futuras fueron canceladas y los cargos reembolsados.',
+      variant: 'success',
+    });
+    setIsCancelModalOpen(false);
+    setCurrentSubscription(null);
+    setCancelPreview(null);
+    refetch();
   };
 
   // ----- helpers de presentación -----

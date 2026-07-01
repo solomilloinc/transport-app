@@ -6,7 +6,7 @@ import { ArrowLeft, Edit, Plus, Trash, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
 import { MobileCard } from '@/components/dashboard/mobile-card';
@@ -21,7 +21,12 @@ import { Direction } from '@/interfaces/direction';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { Trip, TripPickupStopReportDto, emptyTripPickupStopForm } from '@/interfaces/trip';
 import { getTripById } from '@/services/trip';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { getApiErrorMessage, bindErrorInfoToForm } from '@/lib/apiErrors';
+import {
+  createTripPickupStopAction,
+  updateTripPickupStopAction,
+  deleteTripPickupStopAction,
+} from './actions';
 
 const tripDirectionValidationSchema = {
   // select de dirección cuyo "sin elegir" es 0, que required no detecta
@@ -132,72 +137,49 @@ export default function TripStopsManagement() {
 
   const submitAddStop = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          tripId: tripId,
-          directionId: data.directionId,
-          Order: data.order,
-          pickupTimeOffset: appendSeconds(data.pickupTimeOffset),
-        };
-        const response = await post('/trip-pickup-stop-create', transformedData);
-        if (response) {
-          toast({
-            title: 'Parada agregada',
-            description: 'La parada ha sido agregada exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          fetchTrip(tripId);
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al agregar la parada',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const transformedData = {
+        tripId: tripId,
+        directionId: data.directionId,
+        Order: data.order,
+        pickupTimeOffset: appendSeconds(data.pickupTimeOffset),
+      };
+      const result = await createTripPickupStopAction(transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Parada agregada',
+        description: 'La parada ha sido agregada exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      fetchTrip(tripId);
     });
   };
 
   const submitEditStop = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          directionId: data.directionId,
-          Order: data.order,
-          pickupTimeOffset: appendSeconds(data.pickupTimeOffset),
-        };
-        const response = await put(`/trip-pickup-stop-update/${currentStopId}`, transformedData);
-        if (response) {
-          toast({
-            title: 'Parada actualizada',
-            description: 'La parada ha sido actualizada exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          fetchTrip(tripId);
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar la parada',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentStopId == null) return;
+      const transformedData = {
+        directionId: data.directionId,
+        Order: data.order,
+        pickupTimeOffset: appendSeconds(data.pickupTimeOffset),
+      };
+      const result = await updateTripPickupStopAction(currentStopId, transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Parada actualizada',
+        description: 'La parada ha sido actualizada exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      fetchTrip(tripId);
     });
   };
 
@@ -222,7 +204,12 @@ export default function TripStopsManagement() {
   };
 
   const confirmDelete = async () => {
-    await deleteLogic(`/trip-pickup-stop-delete/${currentStopId}`);
+    if (currentStopId == null) return;
+    const result = await deleteTripPickupStopAction(currentStopId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentStopId(null);
     fetchTrip(tripId);

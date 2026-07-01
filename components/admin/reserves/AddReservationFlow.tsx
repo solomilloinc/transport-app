@@ -16,12 +16,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { ApiSelect, SelectOption } from '@/components/dashboard/select';
 import { NewClientDialog } from '@/components/admin/reserves/NewClientDialog';
 
-import { post } from '@/services/api';
 import { ReserveReport, ReserveReportResponse } from '@/interfaces/reserve';
 import { Passenger } from '@/interfaces/passengers';
 import { Payment } from '@/interfaces/payment';
 import { withPriceRetry } from '@/utils/api-errors';
-import { getApiErrorMessage, getApiErrorToastMessage } from '@/lib/apiErrors';
+import { getApiErrorMessage, toastMessageFromErrorInfo } from '@/lib/apiErrors';
+import { createPassengerReserveAction } from '@/app/admin/reserves/actions';
 import { RESERVE_TYPE } from '@/constants/reserveType';
 import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
 import { buildAdminReservePayloadWithPayments } from '@/utils/bookingPayload';
@@ -645,42 +645,43 @@ export function AddReservationFlow({
         ? returnTrip?.reserveId ?? null
         : null;
 
-    try {
-      const response = await withPriceRetry(
-        (payload) => post('/passenger-reserves-create', payload),
-        () =>
-          buildAdminReservePayloadWithPayments({
-            reserveTypeId: reserveForm.data.reserveTypeId,
-            outboundReserveId,
-            returnReserveId,
-            passengers: bookingPassengers,
-            // Abonado: sin cobro. Mandamos payments vacío y sin crédito; el backend
-            // ignora payments y deja price 0 (ver CONTEXT.md). No tocamos el price
-            // de las patas: lo zera el backend.
-            payments: isAbonoPayer
-              ? []
-              : paymentsToSend.map((p) => ({
-                  transactionAmount: p.transactionAmount,
-                  paymentMethod: p.paymentMethod,
-                })),
-            creditAmount: isAbonoPayer ? 0 : getAppliedCreditAmount(),
-          }),
-        refetchTrip,
-      );
-      if (response) {
-        toast({ title: 'Reserva creada', description: 'La reserva ha sido creada exitosamente.', variant: 'success' });
-        onSuccess();
-        resetFlow();
-      } else {
-        toast({ title: 'Error', description: 'Error al crear la reserva.', variant: 'destructive' });
-      }
-    } catch (error) {
+    const result = await withPriceRetry(
+      (payload) => createPassengerReserveAction(payload),
+      () =>
+        buildAdminReservePayloadWithPayments({
+          reserveTypeId: reserveForm.data.reserveTypeId,
+          outboundReserveId,
+          returnReserveId,
+          passengers: bookingPassengers,
+          // Abonado: sin cobro. Mandamos payments vacío y sin crédito; el backend
+          // ignora payments y deja price 0 (ver CONTEXT.md). No tocamos el price
+          // de las patas: lo zera el backend.
+          payments: isAbonoPayer
+            ? []
+            : paymentsToSend.map((p) => ({
+                transactionAmount: p.transactionAmount,
+                paymentMethod: p.paymentMethod,
+              })),
+          creditAmount: isAbonoPayer ? 0 : getAppliedCreditAmount(),
+        }),
+      refetchTrip,
+    );
+
+    if (!result.ok) {
       // Wizard multi-step: no hay un form único donde subrayar el campo culpable,
       // así que mostramos los mensajes de validación específicos del backend.
-      toast({ title: 'Error', description: getApiErrorToastMessage(error), variant: 'destructive' });
-    } finally {
+      toast({ title: 'Error', description: toastMessageFromErrorInfo(result), variant: 'destructive' });
       reserveForm.setIsSubmitting(false);
+      return;
     }
+    if (result.data) {
+      toast({ title: 'Reserva creada', description: 'La reserva ha sido creada exitosamente.', variant: 'success' });
+      onSuccess();
+      resetFlow();
+    } else {
+      toast({ title: 'Error', description: 'Error al crear la reserva.', variant: 'destructive' });
+    }
+    reserveForm.setIsSubmitting(false);
   };
 
   if (!open || !initialTrip) return null;

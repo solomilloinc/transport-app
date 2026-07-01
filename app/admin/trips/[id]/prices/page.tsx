@@ -6,7 +6,7 @@ import { ArrowLeft, Edit, Plus, Trash, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { DashboardTable } from '@/components/dashboard/dashboard-table';
@@ -25,7 +25,12 @@ import { EntityStatus } from '@/interfaces/filters/common';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { Trip, TripPrice, emptyTripPriceForm } from '@/interfaces/trip';
 import { getTripById } from '@/services/trip';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { getApiErrorMessage, bindErrorInfoToForm } from '@/lib/apiErrors';
+import {
+  createTripPriceAction,
+  updateTripPriceAction,
+  deleteTripPriceAction,
+} from './actions';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('es-AR', {
@@ -148,76 +153,53 @@ export default function TripPricesManagement() {
 
   const submitAddPrice = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          tripId: tripId,
-          cityId: data.cityId,
-          directionId: data.directionId || null,
-          reserveTypeId: data.reserveTypeId,
-          Price: data.price,
-          Order: data.order,
-        };
-        const response = await post('/trip-price-add', transformedData);
-        if (response) {
-          toast({
-            title: 'Precio agregado',
-            description: 'El precio ha sido agregado exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          fetchTrip(tripId);
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al agregar el precio',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const transformedData = {
+        tripId: tripId,
+        cityId: data.cityId,
+        directionId: data.directionId || null,
+        reserveTypeId: data.reserveTypeId,
+        Price: data.price,
+        Order: data.order,
+      };
+      const result = await createTripPriceAction(transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Precio agregado',
+        description: 'El precio ha sido agregado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      fetchTrip(tripId);
     });
   };
 
   const submitEditPrice = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          cityId: data.cityId,
-          directionId: data.directionId || null,
-          reserveTypeId: data.reserveTypeId,
-          Price: data.price,
-          Order: data.order,
-        };
-        const response = await put(`/trip-price-update/${currentPriceId}`, transformedData);
-        if (response) {
-          toast({
-            title: 'Precio actualizado',
-            description: 'El precio ha sido actualizado exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          fetchTrip(tripId);
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar el precio',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentPriceId == null) return;
+      const transformedData = {
+        cityId: data.cityId,
+        directionId: data.directionId || null,
+        reserveTypeId: data.reserveTypeId,
+        Price: data.price,
+        Order: data.order,
+      };
+      const result = await updateTripPriceAction(currentPriceId, transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Precio actualizado',
+        description: 'El precio ha sido actualizado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      fetchTrip(tripId);
     });
   };
 
@@ -246,7 +228,12 @@ export default function TripPricesManagement() {
   };
 
   const confirmDelete = async () => {
-    await deleteLogic(`/trip-price-delete/${currentPriceId}`);
+    if (currentPriceId == null) return;
+    const result = await deleteTripPriceAction(currentPriceId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentPriceId(null);
     fetchTrip(tripId);

@@ -94,6 +94,11 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
   'FrequentSubscription.OverlapWithExistingSubscription': {
     message: 'El cliente ya tiene una suscripción activa para este servicio.',
   },
+  'FrequentSubscription.RoundTripRequiresSameDayOfWeek': {
+    message:
+      'El servicio de vuelta debe caer el mismo día de la semana que el de ida. Elegí otro servicio de vuelta.',
+    field: 'inboundServiceId',
+  },
 
   // ── Customer ──────────────────────────────────────────────────────────────
   'Customer.NotFound': { message: 'No se encontró el cliente.' },
@@ -123,6 +128,10 @@ export const API_ERROR_CATALOG: Record<string, ApiErrorEntry> = {
   'Service.VehicleCapacityBelowSubscriptions': {
     message:
       'El vehículo elegido tiene capacidad insuficiente para las suscripciones existentes. Cancelá suscripciones o elegí un vehículo más grande.',
+  },
+  'Service.DayOfWeekChangeBreaksSubscriptions': {
+    message:
+      'No se puede cambiar el día del servicio: rompería el mismo día de una o más suscripciones frecuentes Ida y Vuelta. Cancelálas primero o elegí otro día.',
   },
 
   // ── Reserve ───────────────────────────────────────────────────────────────
@@ -386,6 +395,64 @@ export function getApiErrorMessage(err: unknown): ApiErrorInfo {
 }
 
 /**
+ * Resultado normalizado de un Server Action mutador. `!ok` ES un `ApiErrorInfo`
+ * (mismo shape), así que se puede pasar directo a `bindErrorInfoToForm` o leer
+ * `result.message` para un toast sin volver a parsear nada.
+ *
+ * Por qué existe: las funciones de `services/api.ts` (`post`/`put`/`deleteLogic`)
+ * son `'use server'` y ante un error HTTP LANZAN `Error('API_ERROR:<code>')`. Si
+ * ese throw cruza el límite RPC client→server (un Client Component llamando
+ * directo a una de esas funciones, o a un `services/*.ts` que las envuelve sin
+ * capturar), Next.js 15 **enmascara el `message` en producción** (sólo cruza el
+ * `digest`) — funciona en dev, no en prod/Azure. La solución es que el Server
+ * Action capture el error y lo devuelva como VALOR (nunca lo relance), para que
+ * el código cruce intacto. Ver docs/adr/0001 y `nextjs-server-action-error-masking`
+ * en memoria. Patrón implementado en `app/admin/reserves/actions.ts`.
+ */
+export type ActionResult<T = void> =
+  | { ok: true; data: T }
+  | ({ ok: false } & ApiErrorInfo);
+
+/**
+ * Envuelve una llamada mutadora (`post`/`put`/`deleteLogic`/`postWithResponse`,
+ * o un `services/*.ts` que las use) para usar DENTRO de un archivo `'use server'`.
+ * Captura cualquier error del lado server y lo devuelve como `ActionResult`, en
+ * vez de dejar que el throw cruce el límite client→server (ver `ActionResult`).
+ *
+ * Uso típico en un `actions.ts`:
+ *   export async function createXAction(data: X): Promise<ActionResult<number>> {
+ *     return runServerAction(() => post('/x-create', data));
+ *   }
+ */
+export async function runServerAction<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
+  try {
+    const data = await fn();
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, ...getApiErrorMessage(error) };
+  }
+}
+
+/**
+ * Reconstruye `Error('API_ERROR:<code>|<json>')` a partir de un `ActionResult`
+ * fallido, para callers que todavía esperan el contrato de throw histórico
+ * (`catch (err) { getApiErrorToastMessage(err) }` — ver `app/checkout/page.tsx`,
+ * donde el flujo de pago con MercadoPago tiene ramas try/catch ya establecidas
+ * que no vale la pena reestructurar). Es un throw puramente client-side (no
+ * cruza ningún límite RPC), así que no sufre el masking: sólo re-serializa sin
+ * pérdida lo que `runServerAction` ya capturó del lado server.
+ */
+export function throwFromActionResult(info: { ok: false } & ApiErrorInfo): never {
+  const extras: { details?: unknown; errors?: unknown } = {};
+  if (info.details) extras.details = info.details;
+  if (info.fieldErrors?.length) extras.errors = info.fieldErrors;
+  const payload = Object.keys(extras).length
+    ? `${info.code ?? ''}|${JSON.stringify(extras)}`
+    : (info.code ?? '');
+  throw new Error(`API_ERROR:${payload}`);
+}
+
+/**
  * Adapter framework-agnostic para subrayar un campo en cualquier form.
  * - react-hook-form: pasar `(name, msg) => setError(name, { type: 'server', message: msg })`
  * - useFormValidation (este repo): pasar el `setError(field, message)` que expone el hook.
@@ -393,8 +460,9 @@ export function getApiErrorMessage(err: unknown): ApiErrorInfo {
 export type FormFieldErrorSetter = (field: string, message: string) => void;
 
 /**
- * Subraya el/los campo(s) culpable(s) en el form vía `setError`. Devuelve `true`
- * si se hizo al menos un binding. Dos fuentes:
+ * Subraya el/los campo(s) culpable(s) en el form vía `setError`, a partir de un
+ * `ApiErrorInfo` ya extraído (típicamente el lado `!ok` de un `ActionResult`, que
+ * ES un `ApiErrorInfo`). Devuelve `true` si se hizo al menos un binding. Dos fuentes:
  *   1. El `field` del catálogo (códigos de dominio sin `errors[]`).
  *   2. Los sub-errores `Validation.<Campo>` de FluentValidation en `errors[]`,
  *      mapeando `<Campo>` (PascalCase del backend) al input camelCase del form.
@@ -402,8 +470,7 @@ export type FormFieldErrorSetter = (field: string, message: string) => void;
  * En este proyecto la convención es: SIEMPRE mostrar toast + opcionalmente
  * field-level. El caller normalmente ignora el boolean y muestra el toast siempre.
  */
-export function bindApiErrorToForm(err: unknown, setError: FormFieldErrorSetter): boolean {
-  const info = getApiErrorMessage(err);
+export function bindErrorInfoToForm(info: ApiErrorInfo, setError: FormFieldErrorSetter): boolean {
   let bound = false;
 
   if (info.field) {
@@ -426,6 +493,15 @@ export function bindApiErrorToForm(err: unknown, setError: FormFieldErrorSetter)
 }
 
 /**
+ * Adapter para el caso legacy: todavía queda un `err: unknown` crudo (throw) en
+ * vez de un `ActionResult`. Prefiere `bindErrorInfoToForm` cuando el caller ya
+ * tiene un `ActionResult` de `runServerAction` — evita re-parsear.
+ */
+export function bindApiErrorToForm(err: unknown, setError: FormFieldErrorSetter): boolean {
+  return bindErrorInfoToForm(getApiErrorMessage(err), setError);
+}
+
+/**
  * Mensaje para un toast cuando NO hay un form donde subrayar los campos
  * (flujos multi-step como el alta de reservas del admin, o el checkout).
  *
@@ -438,8 +514,7 @@ export function bindApiErrorToForm(err: unknown, setError: FormFieldErrorSetter)
  * En páginas con un único form preferí `bindApiErrorToForm` + `getApiErrorMessage`:
  * ahí los campos se subrayan y el toast queda genérico a propósito.
  */
-export function getApiErrorToastMessage(err: unknown): string {
-  const info = getApiErrorMessage(err);
+export function toastMessageFromErrorInfo(info: ApiErrorInfo): string {
   if (info.fieldErrors.length > 0) {
     const seen = new Set<string>();
     const lines: string[] = [];
@@ -457,6 +532,12 @@ export function getApiErrorToastMessage(err: unknown): string {
     }
   }
   return info.message;
+}
+
+/** Adapter legacy — ver `bindApiErrorToForm`. Preferí `toastMessageFromErrorInfo`
+ * cuando el caller ya tiene un `ActionResult`. */
+export function getApiErrorToastMessage(err: unknown): string {
+  return toastMessageFromErrorInfo(getApiErrorMessage(err));
 }
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import { Edit, Trash, TruckIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { StatusFilter } from '@/components/dashboard/status-filter';
@@ -28,7 +28,8 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 import { getVehicleReport } from '@/services/vehicle';
 import { withDefaultPagination } from '@/utils/pagination';
 import { validationConfigVehicle } from '@/validations/vehicleSchema';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { createVehicleAction, updateVehicleAction, deleteVehicleAction } from '@/app/admin/vehicles/actions';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import { VehicleReportFilters, emptyVehicleReportFilters } from '@/interfaces/filters/vehicle-filters';
 import { ENTITY_STATUS_OPTIONS, EntityStatus } from '@/interfaces/filters/common';
@@ -100,49 +101,38 @@ export default function VehicleManagement() {
 
   const submitAddVehicle = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const response = await post('/vehicle-create', data);
-        if (response) {
-          toast({
-            title: 'Vehículo creado',
-            description: 'El vehículo ha sido creado exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          refetch();
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createVehicleAction(data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Vehículo creado',
+        description: 'El vehículo ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch();
     });
   };
 
   const submitEditVehicle = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const response = await put(`/vehicle-update/${currentVehicleId}`, data);
-        if (response) {
-          toast({
-            title: 'Vehículo actualizado',
-            description: 'El vehículo ha sido actualizado exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          refetch();
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentVehicleId == null) return;
+      const result = await updateVehicleAction(currentVehicleId, data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Vehículo actualizado',
+        description: 'El vehículo ha sido actualizado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch();
     });
   };
 
@@ -174,8 +164,12 @@ export default function VehicleManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/vehicle-delete/${currentVehicleId}`);
-    // In a real app, you would delete the vehicle from the database
+    if (currentVehicleId == null) return;
+    const result = await deleteVehicleAction(currentVehicleId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentVehicleId(null);
     refetch();

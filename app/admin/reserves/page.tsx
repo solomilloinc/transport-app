@@ -16,17 +16,21 @@ import { PassengerListTable, PassengerSortColumn } from '@/components/admin/rese
 import { TripSelectionPanel } from '@/components/admin/reserves/TripSelectionPanel';
 import { CancelTripDialog } from '@/components/admin/reserves/CancelTripDialog';
 import { Label } from '@/components/ui/label';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { ReserveReport, ReserveReportResponse } from '@/interfaces/reserve';
 import { SelectOption } from '@/components/dashboard/select';
 import { PassengerReserveReport, PassengerReserveUpdate } from '@/interfaces/passengerReserve';
 import { PaymentStatusEnum } from '@/interfaces/passengerReserve';
 import { toast } from '@/hooks/use-toast';
-import { getApiErrorMessage } from '@/lib/apiErrors';
 import { Direction } from '@/interfaces/direction';
 import { useApi } from '@/hooks/use-api';
 import { getPassengerReserves, getReserves, GetReservesParams } from '@/services/reserves';
-import { cancelReserveTripAction, cancelPassengerAction } from '@/app/admin/reserves/actions';
+import {
+  cancelReserveTripAction,
+  cancelPassengerAction,
+  updatePassengerReserveAction,
+  deletePassengerReserveAction,
+} from '@/app/admin/reserves/actions';
 import { PaymentMethod } from '@/interfaces/payment';
 import { getTripById } from '@/services/trip';
 import { EditPassengerReserveDialog } from '@/components/admin/reserves/EditPassengerReserveDialog';
@@ -320,30 +324,27 @@ export default function ReservationsPage() {
     // Evitar múltiples clics con cooldown de 10 segundos
     setDisabledPassengers((prev) => [...prev, passenger.passengerId]);
 
-    try {
-      const updatePayload: PassengerReserveUpdate = {
-        pickupLocationId: passenger.pickupLocationId,
-        dropoffLocationId: passenger.dropoffLocationId,
-        hasTraveled: checked,
-      };
-      const response = await put(`/passenger-reserve-update/${passenger.passengerId}`, updatePayload);
+    const updatePayload: PassengerReserveUpdate = {
+      pickupLocationId: passenger.pickupLocationId,
+      dropoffLocationId: passenger.dropoffLocationId,
+      hasTraveled: checked,
+    };
+    const result = await updatePassengerReserveAction(passenger.passengerId, updatePayload);
 
-      if (response) {
-        toast({ title: 'Estado actualizado', description: 'El estado del pasajero ha sido actualizado.', variant: 'success' });
-        if (selectedTrip) {
-          fetchPassengerReserves(selectedTrip.reserveId);
-        }
-      } else {
-        toast({ title: 'Error', description: 'No se pudo actualizar el estado.', variant: 'destructive' });
+    if (!result.ok) {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
+    } else if (result.data) {
+      toast({ title: 'Estado actualizado', description: 'El estado del pasajero ha sido actualizado.', variant: 'success' });
+      if (selectedTrip) {
+        fetchPassengerReserves(selectedTrip.reserveId);
       }
-    } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
-    } finally {
-      // Remover del estado de deshabilitado después de 10 segundos
-      setTimeout(() => {
-        setDisabledPassengers((prev) => prev.filter((id) => id !== passenger.passengerId));
-      }, 10000);
+    } else {
+      toast({ title: 'Error', description: 'No se pudo actualizar el estado.', variant: 'destructive' });
     }
+    // Remover del estado de deshabilitado después de 10 segundos
+    setTimeout(() => {
+      setDisabledPassengers((prev) => prev.filter((id) => id !== passenger.passengerId));
+    }, 10000);
   };
 
   // Handle delete passenger
@@ -358,21 +359,23 @@ export default function ReservationsPage() {
   const handleConfirmDelete = async (action: DeleteAction) => {
     if (selectedPassengerReserve) {
       setIsDeleting(true);
-      try {
-        // You can use the 'action' variable here to call different backend endpoints if needed
-        await deleteLogic(`/customer-reserve-delete/${selectedPassengerReserve.passengerId}`);
-        toast({ title: 'Pasajero eliminado', description: 'El pasajero ha sido eliminado de la reserva.', variant: 'success' });
-        setIsDeleteModalOpen(false);
-        setSelectedPassengerReserve(null);
-        if (selectedTrip) {
-          fetchPassengerReserves(selectedTrip.reserveId);
-          if (selectedDate) {
-            fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
-          }
-        }
-      } finally {
+      // El 'action' variable puede usarse acá para llamar distintos endpoints si hace falta
+      const result = await deletePassengerReserveAction(selectedPassengerReserve.passengerId);
+      if (!result.ok) {
+        toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
         setIsDeleting(false);
+        return;
       }
+      toast({ title: 'Pasajero eliminado', description: 'El pasajero ha sido eliminado de la reserva.', variant: 'success' });
+      setIsDeleteModalOpen(false);
+      setSelectedPassengerReserve(null);
+      if (selectedTrip) {
+        fetchPassengerReserves(selectedTrip.reserveId);
+        if (selectedDate) {
+          fetchReserves({ date: format(selectedDate, 'yyyyMMdd'), tripId: selectedRuta });
+        }
+      }
+      setIsDeleting(false);
     }
   };
 

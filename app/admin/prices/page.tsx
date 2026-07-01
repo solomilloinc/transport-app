@@ -7,7 +7,7 @@ import { Bus, CreditCard, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } f
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { SearchFilter } from '@/components/dashboard/search-filter';
@@ -31,7 +31,12 @@ import { Service } from '@/interfaces/service';
 import { EntityStatus } from '@/interfaces/filters/common';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { maxValueRule } from '@/utils/validation-rules';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import {
+  createReservePriceAction,
+  updateReservePriceAction,
+  deleteReservePriceAction,
+} from '@/app/admin/prices/actions';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('es-AR', {
@@ -144,61 +149,50 @@ export default function PriceManagement() {
 
   const submitAddPrice = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          OriginId: data.originId,
-          DestinationId: data.destinationId,
-          Price: data.price,
-          reserveTypeId: data.reserveTypeId,
-        };
-        const response = await post('/price-add', transformedData);
-        if (response) {
-          toast({
-            title: 'Precio creado',
-            description: 'El precio ha sido creado exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          fetchPrices(); // Refresh the vehicle list
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const transformedData = {
+        OriginId: data.originId,
+        DestinationId: data.destinationId,
+        Price: data.price,
+        reserveTypeId: data.reserveTypeId,
+      };
+      const result = await createReservePriceAction(transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Precio creado',
+        description: 'El precio ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      fetchPrices(); // Refresh the vehicle list
     });
   };
 
   const submitEditPrice = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          OriginId: data.originId,
-          DestinationId: data.destinationId,
-          Price: data.price,
-          reserveTypeId: data.reserveTypeId,
-        };
-        const response = await put(`/price-update/${currentPriceId}`, transformedData);
-        if (response) {
-          toast({
-            title: 'Precio editado',
-            description: 'El precio ha sido editado exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          fetchPrices(); // Refresh the vehicle list
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentPriceId == null) return;
+      const transformedData = {
+        OriginId: data.originId,
+        DestinationId: data.destinationId,
+        Price: data.price,
+        reserveTypeId: data.reserveTypeId,
+      };
+      const result = await updateReservePriceAction(currentPriceId, transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Precio editado',
+        description: 'El precio ha sido editado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      fetchPrices(); // Refresh the vehicle list
     });
   };
 
@@ -225,8 +219,12 @@ export default function PriceManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/price-delete/${currentPriceId}`);
-    // In a real app, you would delete the vehicle from the database
+    if (currentPriceId == null) return;
+    const result = await deleteReservePriceAction(currentPriceId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentPriceId(null);
     fetchPrices();

@@ -7,7 +7,6 @@ import { Building, Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } fro
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { SearchFilter } from '@/components/dashboard/search-filter';
@@ -28,7 +27,8 @@ import { useFormValidation } from '@/hooks/use-form-validation';
 import { usePaginationParams } from '@/utils/pagination';
 import { useApi } from '@/hooks/use-api';
 import { getHolidays } from '@/services/holiday';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { createHolidayAction, updateHolidayAction, deleteHolidayAction } from '@/app/admin/holidays/actions';
 
 const initialHolidaysForm = {
   holidayName: '',
@@ -73,49 +73,38 @@ export default function HolidaysManagement() {
 
   const submitAddHoliday = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const response = await post('/holiday-create', data);
-        if (response) {
-          toast({
-            title: 'Feriado creado',
-            description: 'El feriado ha sido creado exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          fetch({ pageNumber: currentPage }); // Refresh the list
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createHolidayAction(data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Feriado creado',
+        description: 'El feriado ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      fetch({ pageNumber: currentPage }); // Refresh the list
     });
   };
 
   const submitEditHoliday = async () => {
     editForm.handleSubmit(async () => {
-      try {
-        const response = await put(`/holiday-update/${currentHolidaysId}`, editForm.data);
-        if (response) {
-          toast({
-            title: 'Feriado actualizado',
-            description: 'El feriado ha sido actualizado exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          fetch({ pageNumber: currentPage });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentHolidaysId == null) return;
+      const result = await updateHolidayAction(currentHolidaysId, editForm.data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Feriado actualizado',
+        description: 'El feriado ha sido actualizado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      fetch({ pageNumber: currentPage });
     });
   };
 
@@ -146,7 +135,12 @@ export default function HolidaysManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/holiday-delete/${currentHolidaysId}`);
+    if (currentHolidaysId == null) return;
+    const result = await deleteHolidayAction(currentHolidaysId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentHolidaysId(null);
     fetch({ pageNumber: currentPage });

@@ -18,7 +18,6 @@ import { LockTimer } from '@/components/LockTimer';
 import { PassengerForm } from '@/components/passenger-form';
 import CardPaymentForm from '@/components/card-payment-form';
 import WalletPaymentForm from '@/components/wallet-payment-form';
-import { post } from '@/services/api';
 import { CreateReserveExternalResult } from '@/interfaces/reserve';
 import { LocationSelector, LocationSelectionData } from '@/components/checkout/LocationSelector';
 import { useTenant } from '@/contexts/TenantContext';
@@ -27,7 +26,8 @@ import { shouldUseIdaVueltaTariff } from '@/utils/pricing';
 import { buildPublicReservePayload } from '@/utils/bookingPayload';
 import type { PassengerBookingExternal, ExternalPayment } from '@/interfaces/passengerReserve';
 import { withPriceRetry } from '@/utils/api-errors';
-import { getApiErrorToastMessage } from '@/lib/apiErrors';
+import { getApiErrorToastMessage, throwFromActionResult } from '@/lib/apiErrors';
+import { createPublicReserveAction } from '@/app/checkout/actions';
 import { toast } from '@/components/ui/use-toast';
 import { normalizeRole } from '@/lib/auth-role';
 
@@ -346,8 +346,8 @@ export default function CheckoutPage() {
         throw new Error('No hay una reserva válida. Por favor, inicie el proceso nuevamente.');
       }
 
-      const responseRaw = await withPriceRetry(
-        (payload) => post('/passenger-reserves-create-with-lock', payload),
+      const result = await withPriceRetry(
+        (payload) => createPublicReserveAction(payload),
         () =>
           buildPublicReservePayload({
             lockToken: checkout.lockState!.lockToken,
@@ -363,8 +363,15 @@ export default function CheckoutPage() {
         },
       );
 
+      if (!result.ok) {
+        // Preserva el contrato de throw histórico para los callers (handleCardSubmit,
+        // el brick de Wallet) — ver `throwFromActionResult` en lib/apiErrors.ts.
+        throwFromActionResult(result);
+      }
+
+      const responseRaw = result.data;
       const responseData: CreateReserveExternalResult =
-        typeof responseRaw === 'string' ? JSON.parse(responseRaw as unknown as string) : (responseRaw as unknown as CreateReserveExternalResult);
+        typeof responseRaw === 'string' ? JSON.parse(responseRaw) : (responseRaw as CreateReserveExternalResult);
       return responseData;
     },
     [

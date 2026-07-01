@@ -7,7 +7,6 @@ import { Building, Bus, Edit, Plus, Search, Trash, TruckIcon, UserPlusIcon } fro
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { StatusFilter } from '@/components/dashboard/status-filter';
@@ -26,7 +25,8 @@ import { City, emptyCity } from '@/interfaces/city';
 import { getCityReport } from '@/services/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { validationConfigCity } from '@/validations/citySchema';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { createCityAction, updateCityAction, deleteCityAction } from '@/app/admin/cities/actions';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   CityReportFilters,
@@ -76,49 +76,38 @@ export default function CitiesManagement() {
 
   const submitAddCity = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const response = await post('/city-create', data);
-        if (response) {
-          toast({
-            title: 'Ciudad creada',
-            description: 'La ciudad ha sido creada exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          refetch();
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createCityAction(data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Ciudad creada',
+        description: 'La ciudad ha sido creada exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch();
     });
   };
 
   const submitEditCity = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const response = await put(`/city-update/${currentCityId}`, data);
-        if (response) {
-          toast({
-            title: 'Ciudad actualizada',
-            description: 'La ciudad ha sido actualizada exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          refetch(); // Refresh the city list
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentCityId == null) return;
+      const result = await updateCityAction(currentCityId, data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Ciudad actualizada',
+        description: 'La ciudad ha sido actualizada exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch(); // Refresh the city list
     });
   };
 
@@ -135,8 +124,12 @@ export default function CitiesManagement() {
   };
 
   const confirmDelete = async () => {
-    const id = await deleteLogic(`/city-delete/${currentCityId}`);
-    // In a real app, you would delete the vehicle from the database
+    if (currentCityId == null) return;
+    const result = await deleteCityAction(currentCityId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentCityId(null);
     refetch();

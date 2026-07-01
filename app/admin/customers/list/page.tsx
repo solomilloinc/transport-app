@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { deleteLogic, post, put } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { StatusFilter } from '@/components/dashboard/status-filter';
@@ -55,7 +54,12 @@ const customerFilterParsers = {
   ]),
 };
 import { validationConfigPassenger } from '@/validations/passengerSchema';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import {
+  createCustomerAction,
+  updateCustomerAction,
+  deleteCustomerAction,
+} from '@/app/admin/customers/actions';
 
 // El email es opcional. El form arranca con email: '' (emptyPassenger) y el
 // validador de email del backend NO ignora el string vacío: saltea null pero
@@ -106,49 +110,38 @@ export default function CustomersManagement() {
 
   const submitAddPassenger = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const response = await post('/customer-create', withOptionalEmail(data));
-        if (response) {
-          toast({
-            title: 'Cliente creado',
-            description: 'El cliente ha sido creado exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          refetch(); // Refresh the vehicle list
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createCustomerAction(withOptionalEmail(data));
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Cliente creado',
+        description: 'El cliente ha sido creado exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch(); // Refresh the vehicle list
     });
   };
 
   const submitEditPassenger = async () => {
     editForm.handleSubmit(async () => {
-      try {
-        const response = await put(`/customer-update/${currentPassengersId}`, withOptionalEmail(editForm.data));
-        if (response) {
-          toast({
-            title: 'Cliente actualizado',
-            description: 'El cliente ha sido actualizado exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          refetch(); // Refresh the vehicle list
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentPassengersId == null) return;
+      const result = await updateCustomerAction(currentPassengersId, withOptionalEmail(editForm.data));
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Cliente actualizado',
+        description: 'El cliente ha sido actualizado exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch(); // Refresh the vehicle list
     });
   };
 
@@ -186,20 +179,17 @@ export default function CustomersManagement() {
   };
 
   const confirmDelete = async () => {
-    try {
-      await deleteLogic(`/customer-delete/${currentPassengersId}`);
-      setIsDeleteModalOpen(false);
-      setCurrentPassengersId(null);
-      refetch();
-    } catch (error) {
+    if (currentPassengersId == null) return;
+    const result = await deleteCustomerAction(currentPassengersId);
+    if (!result.ok) {
       // Surface backend errors (e.g. Customer.HasActiveSubscriptions) via toast.
       // Mantengo el modal abierto para que el admin pueda confirmar leer y cerrar.
-      toast({
-        title: 'No se pudo eliminar',
-        description: getApiErrorMessage(error).message,
-        variant: 'destructive',
-      });
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
     }
+    setIsDeleteModalOpen(false);
+    setCurrentPassengersId(null);
+    refetch();
   };
 
   const columns = [

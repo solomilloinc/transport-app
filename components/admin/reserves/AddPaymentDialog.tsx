@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { post } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { FormDialog } from '@/components/dashboard/form-dialog';
@@ -14,7 +13,7 @@ import { PlusCircleIcon, TrashIcon } from 'lucide-react';
 import { emptyPaymentCreate, Payment, ReservePaymentsCreateRequest } from '@/interfaces/payment';
 import { validationConfigPayment } from '@/validations/paymentSchema';
 import { PassengerReserveReport } from '@/interfaces/passengerReserve';
-import { getApiErrorMessage } from '@/lib/apiErrors';
+import { addReservePaymentAction } from '@/app/admin/reserves/actions';
 
 interface AddPaymentDialogProps {
   open: boolean;
@@ -150,27 +149,34 @@ export function AddPaymentDialog({ open, onOpenChange, passengerReserve, payment
       return;
     }
 
-    form.setIsSubmitting(true);
-    try {
-      const payload: ReservePaymentsCreateRequest = {
-        payments: payments.map((p) => ({
-          transactionAmount: p.transactionAmount,
-          paymentMethod: p.paymentMethod,
-        })),
-        creditAmount: appliedCredit,
-      };
+    if (!passengerReserve) return;
 
-      const response = await post(`/reserve-payments-create/${passengerReserve?.reserveId}/${passengerReserve?.customerId}?passengerId=${passengerReserve?.passengerId}`, payload);
-      if (response) {
-        toast({ title: 'Pago cargado', description: 'El pago ha sido cargado exitosamente', variant: 'success' });
-        onSuccess();
-        onOpenChange(false);
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: getApiErrorMessage(error).message, variant: 'destructive' });
-    } finally {
+    form.setIsSubmitting(true);
+    const payload: ReservePaymentsCreateRequest = {
+      payments: payments.map((p) => ({
+        transactionAmount: p.transactionAmount,
+        paymentMethod: p.paymentMethod,
+      })),
+      creditAmount: appliedCredit,
+    };
+
+    const result = await addReservePaymentAction(
+      passengerReserve.reserveId,
+      passengerReserve.customerId,
+      passengerReserve.passengerId,
+      payload,
+    );
+    if (!result.ok) {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
       form.setIsSubmitting(false);
+      return;
     }
+    if (result.data) {
+      toast({ title: 'Pago cargado', description: 'El pago ha sido cargado exitosamente', variant: 'success' });
+      onSuccess();
+      onOpenChange(false);
+    }
+    form.setIsSubmitting(false);
   };
 
   return (

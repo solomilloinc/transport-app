@@ -1,6 +1,5 @@
 'use client';
 
-import { post } from '@/services/api';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { useToast } from '@/hooks/use-toast';
 import { emptyPassenger, Passenger } from '@/interfaces/passengers';
@@ -8,7 +7,8 @@ import { validationConfigPassenger } from '@/validations/passengerSchema';
 import { FormDialog } from '@/components/dashboard/form-dialog';
 import { FormField } from '@/components/dashboard/form-field';
 import { Input } from '@/components/ui/input';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { createCustomerAction } from '@/app/admin/customers/actions';
 
 interface NewClientDialogProps {
   open: boolean;
@@ -22,35 +22,23 @@ export function NewClientDialog({ open, onOpenChange, onSuccess }: NewClientDial
 
   const submitAddNewClient = () => {
     addFormPassenger.handleSubmit(async (data) => {
-      try {
-        const response = await post('/customer-create', data);
-        if (response) {
-          toast({
-            title: 'Pasajero creado',
-            description: 'El pasajero ha sido creado exitosamente',
-            variant: 'success',
-          });
-          // Call the success callback with the new passenger data
-          onSuccess({
-            ...data,
-            customerId: response,
-          });
-          onOpenChange(false); // Close the dialog on success
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear el pasajero',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addFormPassenger.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const result = await createCustomerAction(data);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addFormPassenger.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Pasajero creado',
+        description: 'El pasajero ha sido creado exitosamente',
+        variant: 'success',
+      });
+      // Call the success callback with the new passenger data
+      onSuccess({
+        ...data,
+        customerId: result.data,
+      });
+      onOpenChange(false); // Close the dialog on success
     });
   };
 

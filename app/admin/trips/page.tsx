@@ -6,7 +6,7 @@ import { Edit, Trash, Route, DollarSign, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { deleteLogic, get, post, put } from '@/services/api';
+import { get } from '@/services/api';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { FilterBar } from '@/components/dashboard/filter-bar';
 import { StatusFilter } from '@/components/dashboard/status-filter';
@@ -25,7 +25,8 @@ import { City } from '@/interfaces/city';
 import { useFormValidation } from '@/hooks/use-form-validation';
 import { getTrips } from '@/services/trip';
 import { Trip, emptyTripForm } from '@/interfaces/trip';
-import { getApiErrorMessage, bindApiErrorToForm } from '@/lib/apiErrors';
+import { bindErrorInfoToForm } from '@/lib/apiErrors';
+import { createTripAction, updateTripAction, deleteTripAction } from '@/app/admin/trips/actions';
 import { useReportFilters } from '@/hooks/use-report-filters';
 import {
   TripReportFilters,
@@ -124,71 +125,48 @@ export default function TripManagement() {
 
   const submitAddTrip = async () => {
     addForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          Description: data.description,
-          originCityId: data.originCityId,
-          destinationCityId: data.destinationCityId,
-        };
-        const response = await post('/trip-create', transformedData);
-        if (response) {
-          toast({
-            title: 'Ruta creada',
-            description: 'La ruta ha sido creada exitosamente',
-            variant: 'success',
-          });
-          setIsAddModalOpen(false);
-          refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al crear la ruta',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, addForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      const transformedData = {
+        Description: data.description,
+        originCityId: data.originCityId,
+        destinationCityId: data.destinationCityId,
+      };
+      const result = await createTripAction(transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, addForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Ruta creada',
+        description: 'La ruta ha sido creada exitosamente',
+        variant: 'success',
+      });
+      setIsAddModalOpen(false);
+      refetch();
     });
   };
 
   const submitEditTrip = async () => {
     editForm.handleSubmit(async (data) => {
-      try {
-        const transformedData = {
-          Description: data.description,
-          originCityId: data.originCityId,
-          destinationCityId: data.destinationCityId,
-        };
-        const response = await put(`/trip-update/${currentTripId}`, transformedData);
-        if (response) {
-          toast({
-            title: 'Ruta actualizada',
-            description: 'La ruta ha sido actualizada exitosamente',
-            variant: 'success',
-          });
-          setIsEditModalOpen(false);
-          refetch();
-        } else {
-          toast({
-            title: 'Error',
-            description: 'Error al actualizar la ruta',
-            variant: 'destructive',
-          });
-        }
-      } catch (error) {
-        bindApiErrorToForm(error, editForm.setError);
-        toast({
-          title: 'Error',
-          description: getApiErrorMessage(error).message,
-          variant: 'destructive',
-        });
+      if (currentTripId == null) return;
+      const transformedData = {
+        Description: data.description,
+        originCityId: data.originCityId,
+        destinationCityId: data.destinationCityId,
+      };
+      const result = await updateTripAction(currentTripId, transformedData);
+      if (!result.ok) {
+        bindErrorInfoToForm(result, editForm.setError);
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        return;
       }
+      toast({
+        title: 'Ruta actualizada',
+        description: 'La ruta ha sido actualizada exitosamente',
+        variant: 'success',
+      });
+      setIsEditModalOpen(false);
+      refetch();
     });
   };
 
@@ -222,7 +200,12 @@ export default function TripManagement() {
   };
 
   const confirmDelete = async () => {
-    await deleteLogic(`/trip-delete/${currentTripId}`);
+    if (currentTripId == null) return;
+    const result = await deleteTripAction(currentTripId);
+    if (!result.ok) {
+      toast({ title: 'No se pudo eliminar', description: result.message, variant: 'destructive' });
+      return;
+    }
     setIsDeleteModalOpen(false);
     setCurrentTripId(null);
     refetch();
